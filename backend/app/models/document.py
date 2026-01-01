@@ -48,12 +48,22 @@ class Document(BaseModel):
 
     # Processing Status
     upload_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
-    ocr_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
+    ocr_status: Mapped[str] = mapped_column(
+        String(20), default="pending", nullable=False, index=True
+    )
     ocr_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    ocr_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    extraction_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, index=True)
-    extraction_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    extraction_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ocr_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    extraction_status: Mapped[str] = mapped_column(
+        String(20), default="pending", nullable=False, index=True
+    )
+    extraction_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    extraction_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Processing Outputs
     ocr_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -64,7 +74,9 @@ class Document(BaseModel):
     # Quality Metrics
     extraction_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     needs_human_review: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    human_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    human_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     human_reviewed_by: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
 
     # Upload Context

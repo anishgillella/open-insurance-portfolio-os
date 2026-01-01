@@ -43,7 +43,9 @@ class ExtractedFact(Base):
     bounding_box: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Status
-    status: Mapped[str] = mapped_column(String(20), default="auto_accepted", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="auto_accepted", nullable=False, index=True
+    )
     reviewed_by: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

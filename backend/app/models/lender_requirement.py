@@ -46,7 +46,9 @@ class LenderRequirement(BaseModel):
 
     # Compliance Status (computed)
     compliance_status: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
-    compliance_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    compliance_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     compliance_issues: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships

@@ -59,9 +59,7 @@ class InsuranceProgram(BaseModel):
     )
 
     # Unique constraint
-    __table_args__ = (
-        {"extend_existing": True},
-    )
+    __table_args__ = ({"extend_existing": True},)
 
     def __repr__(self) -> str:
         return f"<InsuranceProgram(id={self.id}, program_year={self.program_year})>"

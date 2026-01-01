@@ -3,6 +3,7 @@
 All models are imported here for Alembic to discover them.
 """
 
+from app.core.database import Base
 from app.models.base import BaseModel
 from app.models.building import Building
 from app.models.carrier import Carrier
@@ -23,9 +24,6 @@ from app.models.organization import Organization
 from app.models.policy import Policy
 from app.models.property import Property
 from app.models.valuation import Valuation
-
-# Import Base from database module for Alembic
-from app.core.database import Base
 
 __all__ = [
     "Base",

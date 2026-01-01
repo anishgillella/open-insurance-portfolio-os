@@ -1,7 +1,7 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,7 @@ from app.core.config import settings
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events."""
     # Startup
     print(f"Starting {settings.app_name} in {settings.environment} mode")
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_application() -> FastAPI:
     """Create and configure the FastAPI application."""
-    app = FastAPI(
+    application = FastAPI(
         title=settings.app_name,
         description="AI-powered insurance management platform for commercial real estate",
         version="0.1.0",
@@ -33,7 +33,7 @@ def create_application() -> FastAPI:
     )
 
     # Configure CORS
-    app.add_middleware(
+    application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
@@ -42,9 +42,9 @@ def create_application() -> FastAPI:
     )
 
     # Include API router
-    app.include_router(api_router, prefix=settings.api_v1_prefix)
+    application.include_router(api_router, prefix=settings.api_v1_prefix)
 
-    return app
+    return application
 
 
 app = create_application()

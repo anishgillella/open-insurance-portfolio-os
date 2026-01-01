@@ -1,11 +1,10 @@
 """Health check endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import AsyncSessionDep
@@ -39,7 +38,7 @@ async def health_check() -> HealthResponse:
         status="healthy",
         environment=settings.environment,
         version="0.1.0",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         database="not_checked",
     )
 
@@ -66,7 +65,10 @@ async def detailed_health_check(
 
     # Check external services (placeholder - will be implemented later)
     components["s3"] = {"status": "not_configured", "message": "S3 check not implemented"}
-    components["pinecone"] = {"status": "not_configured", "message": "Pinecone check not implemented"}
+    components["pinecone"] = {
+        "status": "not_configured",
+        "message": "Pinecone check not implemented",
+    }
 
     overall_status = "healthy" if db_status == "connected" else "degraded"
 
@@ -74,7 +76,7 @@ async def detailed_health_check(
         status=overall_status,
         environment=settings.environment,
         version="0.1.0",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         database=db_status,
         components=components,
     )

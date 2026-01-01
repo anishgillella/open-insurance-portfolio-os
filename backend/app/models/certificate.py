@@ -53,7 +53,9 @@ class Certificate(BaseModel):
     umbrella_limit: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     umbrella_deductible: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     auto_combined_single: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
-    workers_comp_each_accident: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    workers_comp_each_accident: Mapped[Decimal | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
 
     # Dates
     effective_date: Mapped[date | None] = mapped_column(Date, nullable=True)

@@ -2,7 +2,6 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Generator
-from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,11 +11,8 @@ from app.core.config import settings
 from app.core.database import Base, get_async_session
 from app.main import app
 
-
 # Use a separate test database
-TEST_DATABASE_URL = settings.database_url.replace(
-    "/open_insurance", "/open_insurance_test"
-)
+TEST_DATABASE_URL = settings.database_url.replace("/open_insurance", "/open_insurance_test")
 
 # Create test engine
 test_engine = create_async_engine(
@@ -54,7 +50,7 @@ async def setup_database() -> AsyncGenerator[None, None]:
 
 
 @pytest.fixture
-async def db_session(setup_database: None) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(setup_database: None) -> AsyncGenerator[AsyncSession, None]:  # noqa: ARG001
     """Create a test database session."""
     async with test_async_session_maker() as session:
         yield session
