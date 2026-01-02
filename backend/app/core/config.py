@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     mistral_api_key: str = ""
     gemini_api_key: str = ""
     openai_api_key: str = ""
+    openrouter_api_key: str = ""
+
+    # Local file storage (for development)
+    local_upload_dir: str = "./uploads"
 
     # Security
     secret_key: str = Field(
