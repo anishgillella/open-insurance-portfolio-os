@@ -1,0 +1,158 @@
+{
+  "classification": {
+    "document_type": "proposal",
+    "document_subtype": "comparison",
+    "policy_type": "unknown",
+    "confidence": 0.95,
+    "carrier_name": "Westminster, Great Point, Jupiter, Nautilus",
+    "policy_number": null,
+    "effective_date": "2024-12-23",
+    "expiration_date": "2025-12-23",
+    "insured_name": "Eastman Management Corp"
+  },
+  "policy": null,
+  "coi": null,
+  "invoice": null,
+  "sov": null,
+  "proposal": {
+    "proposal_title": "Eastman -2024-2025",
+    "proposal_type": "renewal",
+    "named_insured": "Eastman Management Corp",
+    "insured_address": null,
+    "effective_date": "2024-12-23",
+    "expiration_date": "2025-12-23",
+    "properties": [
+      {
+        "property_name": "The Bend",
+        "property_address": "825 Dickerson Road, Goodlettsville, TN",
+        "unit_count": 112,
+        "total_insured_value": 18151500.0,
+        "expiring_tiv": 18151500.0,
+        "renewal_tiv": 18151500.0,
+        "coverages": [
+          {
+            "coverage_type": "General Liability",
+            "carrier_name": "Westminster",
+            "limit_amount": 1000000.0,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": null,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Umbrella & Excess Liability",
+            "carrier_name": "Great Point",
+            "limit_amount": 5000000.0,
+            "deductible_amount": null,
+            "expiring_premium": 3493.0,
+            "renewal_premium": 3990.0,
+            "premium_change": 497.0,
+            "premium_change_pct": 0.1422
+          },
+          {
+            "coverage_type": "AOP deductible",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": 25000.0,
+            "expiring_premium": null,
+            "renewal_premium": null,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Property",
+            "carrier_name": "Westminster",
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": 65594.0,
+            "renewal_premium": 63967.0,
+            "premium_change": -1627.0,
+            "premium_change_pct": -0.0248
+          }
+        ],
+        "expiring_total_premium": 69087.0,
+        "renewal_total_premium": 67957.0,
+        "price_per_door_expiring": 617.0,
+        "price_per_door_renewal": 607.0
+      },
+      {
+        "property_name": "The Retreat",
+        "property_address": "8300 Terry Lane, Hermitage TN",
+        "unit_count": 126,
+        "total_insured_value": 15425333.0,
+        "expiring_tiv": 14369792.0,
+        "renewal_tiv": 15425333.0,
+        "coverages": [
+          {
+            "coverage_type": "General Liability",
+            "carrier_name": "Nautilus",
+            "limit_amount": 1000000.0,
+            "deductible_amount": null,
+            "expiring_premium": 1755.0,
+            "renewal_premium": 7357.0,
+            "premium_change": 5602.0,
+            "premium_change_pct": 3.1919
+          },
+          {
+            "coverage_type": "Umbrella & Excess Liability",
+            "carrier_name": "Great Point",
+            "limit_amount": 5000000.0,
+            "deductible_amount": null,
+            "expiring_premium": 3387.0,
+            "renewal_premium": 3837.0,
+            "premium_change": 450.0,
+            "premium_change_pct": 0.1328
+          },
+          {
+            "coverage_type": "AOP deductible",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": 25000.0,
+            "expiring_premium": null,
+            "renewal_premium": null,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "AOP deductible",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": 1000.0,
+            "expiring_premium": null,
+            "renewal_premium": null,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Property",
+            "carrier_name": "Jupiter",
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": 132521.0,
+            "renewal_premium": 77089.0,
+            "premium_change": -55432.0,
+            "premium_change_pct": -0.4183
+          }
+        ],
+        "expiring_total_premium": 137663.0,
+        "renewal_total_premium": 88283.0,
+        "price_per_door_expiring": 1093.0,
+        "price_per_door_renewal": 701.0
+      }
+    ],
+    "portfolio_expiring_premium": 206750.0,
+    "portfolio_renewal_premium": 156240.0,
+    "portfolio_premium_change": -50510.0,
+    "portfolio_premium_change_pct": -0.2443,
+    "carriers": [
+      "Westminster",
+      "Great Point",
+      "Jupiter",
+      "Nautilus"
+    ],
+    "confidence": 1.0
+  },
+  "raw_text": "<!-- Page 1 -->\n# Eastman -2024-2025\n\nEastman Management Corp\nProperty &amp; General Liability Proposal Comparison\nTerm: 12/23/2024-12/23/2025\nLocation: 825 Dickerson Road, Goodlettsville, TN &amp; 8300 Terry Lane, Hermitage TN\n\n|  Coverage Details | Expiring | Renewal  |\n| --- | --- | --- |\n|  Exposure # of Units The Bend | 112 | 112  |\n|  Exposure # of Units The Retreat | 126 | 126  |\n|  Total Insurable Value(TIV) - The Bend | $ 18,151,500 | $ 18,151,500  |\n|  Total Insurable Value(TIV) - The Retreat | $ 14,369,792 | $ 15,425,333  |\n|  The Bend  |   |   |\n|  General Liability | $ 1,000,000 | $ 1,000,000  |\n|  Umbrella & Excess Liability | $ 5,000,000 | $ 5,000,000  |\n|  AOP deductible | $ 25,000 | $ 25,000  |\n|  The Retreat  |   |   |\n|  General Liability | $ 1,000,000 | $ 1,000,000  |\n|  Umbrella & Excess Liability | $ 5,000,000 | $ 5,000,000  |\n|  AOP deductible | $ 25,000 | $ 25,000  |\n|  AOP deductible | $ - | $ 1,000  |\n|  Premium - The Bend  |   |   |\n|  Property: Carrier - Westminster (Renewal) | $ 65,594 | $ 63,967  |\n|  General Liability: Carrier - Westminster (Renewal) |  |   |\n|  Umbrella and Excess Liability: Carrier - Great Point (Renewal) | $ 3,493 | $ 3,990  |\n|  Total Premium | $ 69,087 | $ 67,957  |\n|  Price per door | $ 617 | $ 607  |\n|  Premium - The Retreat  |   |   |\n|  Property: Carrier - Jupiter (Renewal) | $ 132,521 | $ 77,089  |\n|  General Liability: Carrier - Nautilus (Renewal) | $ 1,755 | $ 7,357  |\n|  Umbrella and Excess Liability: Carrier - Great Point (Renewal) | $ 3,387 | $ 3,837  |\n|  Total Premium | $ 137,663 | $ 88,283  |\n|  Price per door | $ 1,093 | $ 701  |\n|  Portfolio Premium | $ 206,750 | $ 156,240  |\n|  Difference | $ (50,509.93)  |   |\n|  Change | -24%  |   |",
+  "overall_confidence": 1.0
+}
