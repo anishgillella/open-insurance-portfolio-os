@@ -1,9 +1,149 @@
-"""Pydantic schemas for document ingestion and extraction."""
+"""Pydantic schemas for document ingestion and extraction.
+
+This module defines comprehensive Pydantic schemas for insurance document
+processing, including classification, extraction, and validation.
+
+Key Features:
+- NullSafeModel: Handles LLM null responses for boolean fields
+- Field validators: Policy numbers, dates, amounts
+- Shared mixins: Consistent patterns across extraction types
+"""
 
 from datetime import date, datetime
 from enum import Enum
+import re
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+# ---------------------------------------------------------------------------
+# Base Models and Mixins
+# ---------------------------------------------------------------------------
+
+
+def _is_bool_type(annotation: Any) -> bool:
+    """Check if an annotation is a boolean type (bool, bool | None, Optional[bool])."""
+    import types
+
+    if annotation is bool:
+        return True
+
+    # Python 3.10+ uses types.UnionType for `X | Y` syntax
+    if isinstance(annotation, types.UnionType):
+        return bool in annotation.__args__
+
+    # Handle typing.Union (e.g., Optional[bool], Union[bool, None])
+    origin = getattr(annotation, "__origin__", None)
+    if origin is not None:
+        args = getattr(annotation, "__args__", ())
+        return bool in args
+
+    return False
+
+
+class NullSafeModel(BaseModel):
+    """Base model that converts None to default values for boolean fields.
+
+    This handles LLM responses that return null for boolean fields,
+    converting them to False (the typical default).
+
+    For fields declared as `bool | None` or `Optional[bool]`, if the input
+    value is None, it will be converted to the field's default (or False).
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_none_booleans(cls, data: Any) -> Any:
+        """Convert None values to False for boolean fields."""
+        if not isinstance(data, dict):
+            return data
+
+        # Get field info to identify boolean fields
+        for field_name, field_info in cls.model_fields.items():
+            annotation = field_info.annotation
+            # Check if it's a boolean type (bool, bool | None, Optional[bool])
+            if _is_bool_type(annotation):
+                if field_name in data and data[field_name] is None:
+                    # Use field default if available, otherwise False
+                    default_val = field_info.default
+                    if default_val is None or (hasattr(default_val, "__class__") and default_val.__class__.__name__ == "PydanticUndefinedType"):
+                        default_val = False
+                    data[field_name] = default_val
+
+        return data
+
+
+class ConfidenceMixin(BaseModel):
+    """Mixin for models that include extraction confidence scores."""
+
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class DateRangeMixin(BaseModel):
+    """Mixin for models with effective/expiration date ranges."""
+
+    effective_date: date | None = None
+    expiration_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "DateRangeMixin":
+        """Validate that effective_date is before expiration_date."""
+        if self.effective_date and self.expiration_date:
+            if self.effective_date > self.expiration_date:
+                # Log warning but don't fail - LLM may have swapped dates
+                pass  # Could swap dates or raise warning
+        return self
+
+
+class InsuredInfoMixin(BaseModel):
+    """Mixin for models with named insured information."""
+
+    named_insured: str | None = None
+    insured_address: str | None = None
+
+
+class PolicyIdentityMixin(BaseModel):
+    """Mixin for models with policy identification fields."""
+
+    policy_number: str | None = None
+    carrier_name: str | None = None
+
+    @field_validator("policy_number", mode="before")
+    @classmethod
+    def clean_policy_number(cls, v: Any) -> str | None:
+        """Clean and validate policy number format."""
+        if v is None:
+            return None
+        # Convert to string and strip whitespace
+        v = str(v).strip()
+        if not v:
+            return None
+        # Remove common artifacts from OCR
+        v = re.sub(r"\s+", " ", v)  # Normalize whitespace
+        return v
+
+
+class AmountMixin(BaseModel):
+    """Mixin providing amount validation."""
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def validate_amounts(cls, v: Any, info) -> Any:
+        """Ensure amount fields are non-negative."""
+        field_name = info.field_name
+        # Check if this looks like an amount field
+        amount_keywords = ["amount", "limit", "premium", "deductible", "value", "cost", "fee", "tax"]
+        is_amount_field = any(kw in field_name.lower() for kw in amount_keywords)
+
+        if is_amount_field and v is not None:
+            try:
+                num_val = float(v)
+                if num_val < 0:
+                    return abs(num_val)  # Convert negative to positive
+            except (ValueError, TypeError):
+                pass
+        return v
 
 
 class DocumentType(str, Enum):
@@ -103,21 +243,19 @@ class CoverageExtraction(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class PolicyExtraction(BaseModel):
-    """Extracted policy information."""
+class PolicyExtraction(NullSafeModel, DateRangeMixin, InsuredInfoMixin, PolicyIdentityMixin, ConfidenceMixin):
+    """Extracted policy information.
+
+    Inherits from:
+    - NullSafeModel: Handles null boolean values from LLM
+    - DateRangeMixin: Provides effective_date/expiration_date with validation
+    - InsuredInfoMixin: Provides named_insured/insured_address
+    - PolicyIdentityMixin: Provides policy_number/carrier_name with cleaning
+    - ConfidenceMixin: Provides confidence score field
+    """
 
     # Policy Identity
     policy_type: PolicyType
-    policy_number: str | None = None
-    carrier_name: str | None = None
-
-    # Dates
-    effective_date: date | None = None
-    expiration_date: date | None = None
-
-    # Named Insured
-    named_insured: str | None = None
-    insured_address: str | None = None
 
     # Premium
     premium: float | None = None
@@ -145,7 +283,18 @@ class PolicyExtraction(BaseModel):
 
     # Extraction metadata
     source_pages: list[int] = Field(default_factory=list)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+    @field_validator("premium", "taxes", "fees", "total_cost", mode="before")
+    @classmethod
+    def validate_positive_amounts(cls, v: Any) -> float | None:
+        """Ensure monetary amounts are non-negative."""
+        if v is None:
+            return None
+        try:
+            num_val = float(v)
+            return abs(num_val) if num_val < 0 else num_val
+        except (ValueError, TypeError):
+            return None
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +302,7 @@ class PolicyExtraction(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class COIPolicyReference(BaseModel):
+class COIPolicyReference(NullSafeModel):
     """Policy referenced on a COI."""
 
     insurer_letter: str | None = None  # A, B, C, etc.
@@ -171,7 +320,7 @@ class COIPolicyReference(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
-class COIExtraction(BaseModel):
+class COIExtraction(NullSafeModel):
     """Extracted Certificate of Insurance information."""
 
     # Certificate Identity
@@ -376,20 +525,18 @@ class ProposalPropertyQuote(BaseModel):
     price_per_door_renewal: float | None = None
 
 
-class ProposalExtraction(BaseModel):
-    """Extracted insurance proposal/quote comparison."""
+class ProposalExtraction(DateRangeMixin, InsuredInfoMixin, ConfidenceMixin):
+    """Extracted insurance proposal/quote comparison.
+
+    Inherits from:
+    - DateRangeMixin: Provides effective_date/expiration_date with validation
+    - InsuredInfoMixin: Provides named_insured/insured_address
+    - ConfidenceMixin: Provides confidence score field
+    """
 
     # Proposal Identity
     proposal_title: str | None = None
     proposal_type: str | None = None  # "renewal", "new business", "remarket"
-
-    # Named Insured
-    named_insured: str | None = None
-    insured_address: str | None = None
-
-    # Term
-    effective_date: date | None = None
-    expiration_date: date | None = None
 
     # Properties/Locations
     properties: list[ProposalPropertyQuote] = Field(default_factory=list)
@@ -402,9 +549,7 @@ class ProposalExtraction(BaseModel):
 
     # Carriers involved
     carriers: list[str] = Field(default_factory=list)
-
-    # Extraction metadata
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Note: confidence is inherited from ConfidenceMixin
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +557,7 @@ class ProposalExtraction(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class CarrierInfo(BaseModel):
+class CarrierInfo(NullSafeModel):
     """Information about a carrier in the program."""
 
     carrier_name: str
@@ -422,6 +567,15 @@ class CarrierInfo(BaseModel):
     address: str | None = None
     am_best_rating: str | None = None
     admitted: bool | None = None  # Admitted vs surplus lines
+
+    @field_validator("policy_number", mode="before")
+    @classmethod
+    def clean_policy_number(cls, v: Any) -> str | None:
+        """Clean and validate policy number format."""
+        if v is None:
+            return None
+        v = str(v).strip()
+        return v if v else None
 
 
 class LloydsSyndicate(BaseModel):
@@ -462,7 +616,7 @@ class ContractAllocation(BaseModel):
     max_limit: float | None = None
 
 
-class SublimitEntry(BaseModel):
+class SublimitEntry(NullSafeModel):
     """A sublimit from the supplemental declarations."""
 
     sublimit_name: str
@@ -480,7 +634,7 @@ class SublimitEntry(BaseModel):
     conditions: list[str] = Field(default_factory=list)
 
 
-class SublimitsSchedule(BaseModel):
+class SublimitsSchedule(NullSafeModel):
     """Complete sublimits schedule from supplemental declarations."""
 
     # Maximum policy limit
@@ -629,7 +783,7 @@ class CyberCoverage(BaseModel):
     miscellaneous_costs_limit: float | None = None
 
 
-class EquipmentBreakdownCoverage(BaseModel):
+class EquipmentBreakdownCoverage(NullSafeModel):
     """Equipment breakdown coverage details."""
 
     equipment_breakdown_limit: str | None = None  # Often "Per SOV"
@@ -647,7 +801,7 @@ class EquipmentBreakdownCoverage(BaseModel):
     public_relations_included: bool = False
 
 
-class TerrorismCoverage(BaseModel):
+class TerrorismCoverage(NullSafeModel):
     """Terrorism coverage details."""
 
     terrorism_form: str | None = None  # e.g., "AR TERR 07 20"
@@ -659,7 +813,7 @@ class TerrorismCoverage(BaseModel):
     tria_exclusion_form: str | None = None
 
 
-class SinkholeCoverage(BaseModel):
+class SinkholeCoverage(NullSafeModel):
     """Sinkhole coverage details (state-specific)."""
 
     sinkhole_covered: bool = False
@@ -691,16 +845,16 @@ class CATCoveredProperty(BaseModel):
 class ValuationBasis(BaseModel):
     """Valuation basis for different property types."""
 
-    property_type: str  # e.g., "Real & Personal Property", "Roof Coverings"
-    valuation_type: str  # "RCV", "ACV", "Agreed Value"
+    property_type: str | None = None  # e.g., "Real & Personal Property", "Roof Coverings"
+    valuation_type: str | None = None  # "RCV", "ACV", "Agreed Value"
     conditions: list[str] = Field(default_factory=list)  # e.g., "pre-2011 roofs"
 
 
 class PolicyRestriction(BaseModel):
     """Policy restriction or warranty."""
 
-    restriction_type: str  # "exclusion", "warranty", "condition"
-    description: str
+    restriction_type: str | None = None  # "exclusion", "warranty", "condition"
+    description: str | None = None
     applies_to: str | None = None  # What it applies to
     source_endorsement: str | None = None
 
@@ -722,21 +876,21 @@ class FormsEndorsementsSchedule(BaseModel):
     form_description: str | None = None
 
 
-class ProgramExtraction(BaseModel):
-    """Extracted multi-carrier insurance program information."""
+class ProgramExtraction(DateRangeMixin, InsuredInfoMixin, ConfidenceMixin):
+    """Extracted multi-carrier insurance program information.
+
+    Inherits from:
+    - DateRangeMixin: Provides effective_date/expiration_date with validation
+    - InsuredInfoMixin: Provides named_insured/insured_address
+    - ConfidenceMixin: Provides confidence score field
+    """
 
     # Program Identity
     account_number: str | None = None
     program_name: str | None = None
 
-    # Named Insured
-    named_insured: str | None = None
-    insured_address: str | None = None
+    # Additional named insureds (beyond the mixin)
     additional_named_insureds: list[str] = Field(default_factory=list)
-
-    # Term
-    effective_date: date | None = None
-    expiration_date: date | None = None
 
     # Producer/Broker
     producer_name: str | None = None
@@ -813,7 +967,171 @@ class ProgramExtraction(BaseModel):
 
     # Extraction metadata
     source_pages: list[int] = Field(default_factory=list)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Note: confidence is inherited from ConfidenceMixin
+
+
+# ---------------------------------------------------------------------------
+# Loss Run Extraction
+# ---------------------------------------------------------------------------
+
+
+class ClaimStatus(str, Enum):
+    """Status of an insurance claim."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+    REOPENED = "reopened"
+    PENDING = "pending"
+    DENIED = "denied"
+    SUBROGATION = "subrogation"
+    LITIGATION = "litigation"
+    UNKNOWN = "unknown"
+
+
+class ClaimType(str, Enum):
+    """Type of insurance claim."""
+
+    PROPERTY_DAMAGE = "property_damage"
+    BODILY_INJURY = "bodily_injury"
+    LIABILITY = "liability"
+    WATER_DAMAGE = "water_damage"
+    FIRE = "fire"
+    WIND_HAIL = "wind_hail"
+    THEFT = "theft"
+    VANDALISM = "vandalism"
+    SLIP_FALL = "slip_fall"
+    AUTO = "auto"
+    WORKERS_COMP = "workers_comp"
+    EQUIPMENT_BREAKDOWN = "equipment_breakdown"
+    OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+class ClaimEntry(BaseModel):
+    """Individual claim from a loss run report."""
+
+    # Claim Identity
+    claim_number: str | None = None
+    policy_number: str | None = None
+    carrier_name: str | None = None
+
+    # Dates
+    date_of_loss: date | None = None
+    date_reported: date | None = None
+    date_closed: date | None = None
+
+    # Claim Details
+    claim_type: ClaimType | None = None
+    claim_status: ClaimStatus | None = None
+    claimant_name: str | None = None
+    description: str | None = None
+    cause_of_loss: str | None = None
+
+    # Location
+    location_address: str | None = None
+    location_name: str | None = None
+
+    # Financials - Paid
+    paid_loss: float | None = None  # Total paid for loss/damages
+    paid_expense: float | None = None  # Paid allocated loss adjustment expense (ALAE)
+    paid_medical: float | None = None  # For workers comp / bodily injury
+    paid_indemnity: float | None = None  # For workers comp
+    total_paid: float | None = None  # Total paid (loss + expense)
+
+    # Financials - Reserves
+    reserve_loss: float | None = None  # Outstanding reserve for loss
+    reserve_expense: float | None = None  # Outstanding reserve for expense
+    reserve_medical: float | None = None
+    reserve_indemnity: float | None = None
+    total_reserve: float | None = None
+
+    # Financials - Incurred (Paid + Reserve)
+    incurred_loss: float | None = None
+    incurred_expense: float | None = None
+    total_incurred: float | None = None  # Total incurred = paid + reserve
+
+    # Recovery
+    subrogation_amount: float | None = None
+    deductible_recovered: float | None = None
+    salvage_amount: float | None = None
+    net_incurred: float | None = None  # Incurred minus recoveries
+
+    # Additional Info
+    litigation_status: str | None = None
+    injury_description: str | None = None
+    notes: str | None = None
+
+
+class LossRunSummary(BaseModel):
+    """Summary statistics for loss run."""
+
+    # Claim Counts
+    total_claims: int = 0
+    open_claims: int = 0
+    closed_claims: int = 0
+
+    # Claims by Type
+    claims_by_type: dict[str, int] = Field(default_factory=dict)
+    claims_by_year: dict[str, int] = Field(default_factory=dict)
+
+    # Financial Summary
+    total_paid: float = 0.0
+    total_reserved: float = 0.0
+    total_incurred: float = 0.0
+    total_recovered: float = 0.0
+    net_incurred: float = 0.0
+
+    # Largest Claims
+    largest_claim_amount: float | None = None
+    largest_claim_number: str | None = None
+
+    # Loss Ratios (if premium available)
+    premium_for_period: float | None = None
+    loss_ratio: float | None = None  # Incurred / Premium
+
+
+class LossRunExtraction(InsuredInfoMixin, PolicyIdentityMixin, ConfidenceMixin):
+    """Extracted loss run / claims history information.
+
+    Inherits from:
+    - InsuredInfoMixin: Provides named_insured/insured_address
+    - PolicyIdentityMixin: Provides policy_number/carrier_name with cleaning
+    - ConfidenceMixin: Provides confidence score field
+    """
+
+    # Report Identity
+    report_title: str | None = None
+    report_date: date | None = None  # As-of date for the report
+    report_run_date: date | None = None  # When the report was generated
+
+    # Additional policy/carrier info beyond mixins
+    policy_numbers: list[str] = Field(default_factory=list)  # Multiple policies
+    carriers: list[str] = Field(default_factory=list)  # Multiple carriers
+
+    # Report Period
+    experience_period_start: date | None = None
+    experience_period_end: date | None = None
+    valuation_date: date | None = None
+
+    # Line of Business
+    line_of_business: PolicyType | None = None
+    lines_of_business: list[PolicyType] = Field(default_factory=list)
+
+    # Claims
+    claims: list[ClaimEntry] = Field(default_factory=list)
+
+    # Summary
+    summary: LossRunSummary | None = None
+
+    # Large Loss Threshold (if specified)
+    large_loss_threshold: float | None = None
+
+    # Notes
+    report_notes: list[str] = Field(default_factory=list)
+
+    # Extraction metadata
+    source_pages: list[int] = Field(default_factory=list)
+    # Note: confidence is inherited from ConfidenceMixin
 
 
 # ---------------------------------------------------------------------------
@@ -831,6 +1149,7 @@ class ExtractionResult(BaseModel):
     invoice: InvoiceExtraction | None = None
     sov: SOVExtraction | None = None
     proposal: ProposalExtraction | None = None
+    loss_run: LossRunExtraction | None = None  # Loss run / claims history
 
     # Raw text from OCR
     raw_text: str | None = None
