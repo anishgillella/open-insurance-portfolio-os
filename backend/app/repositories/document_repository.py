@@ -210,3 +210,78 @@ class DocumentRepository(BaseRepository[Document]):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def find_by_filename_and_org(
+        self,
+        file_name: str,
+        organization_id: str,
+    ) -> Document | None:
+        """Find an existing document by filename and organization.
+
+        Used for deduplication - checks if a document with the same name
+        already exists for this organization.
+
+        Args:
+            file_name: The file name to search for.
+            organization_id: Organization ID.
+
+        Returns:
+            Existing Document or None if not found.
+        """
+        stmt = (
+            select(self.model)
+            .where(
+                self.model.deleted_at.is_(None),
+                self.model.file_name == file_name,
+                self.model.organization_id == organization_id,
+            )
+            .order_by(self.model.created_at.desc())  # Get most recent if multiple
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def reset_for_reprocessing(
+        self,
+        document_id: str,
+        file_url: str | None = None,
+        file_size_bytes: int | None = None,
+    ) -> Document | None:
+        """Reset a document for reprocessing.
+
+        Clears OCR and extraction data so the document can be reprocessed.
+
+        Args:
+            document_id: Document ID.
+            file_url: Optional new file URL.
+            file_size_bytes: Optional new file size.
+
+        Returns:
+            Updated Document or None if not found.
+        """
+        update_data = {
+            "ocr_status": ProcessingStatus.PENDING.value,
+            "extraction_status": ProcessingStatus.PENDING.value,
+            "ocr_started_at": None,
+            "ocr_completed_at": None,
+            "extraction_started_at": None,
+            "extraction_completed_at": None,
+            "ocr_markdown": None,
+            "ocr_error": None,
+            "extraction_json": None,
+            "extraction_error": None,
+            "extraction_confidence": None,
+            "document_type": None,
+            "document_subtype": None,
+            "carrier": None,
+            "policy_number": None,
+            "effective_date": None,
+            "expiration_date": None,
+        }
+
+        if file_url:
+            update_data["file_url"] = file_url
+        if file_size_bytes:
+            update_data["file_size_bytes"] = file_size_bytes
+
+        return await self.update(document_id, **update_data)
