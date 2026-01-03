@@ -3,6 +3,12 @@
 This service extracts structured data from insurance documents based on their
 document type. It uses type-specific prompts and Pydantic schemas for validation.
 
+Features:
+- JSON mode enforcement via OpenRouter response_format parameter
+- Validation retry with error context for failed extractions
+- Chunked extraction for large documents with parallel processing
+- Intelligent merge strategies for combining chunk extractions
+
 For large documents, it uses chunked extraction:
 1. Split document into chunks (~50K chars each)
 2. Extract from each chunk in parallel
@@ -13,14 +19,20 @@ import asyncio
 import json
 import logging
 import re
+from dataclasses import dataclass, field
 from datetime import date
+from typing import Any, TypeVar
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import settings
 from app.schemas.document import (
     CarrierInfo,
     CATCoveredProperty,
+    ClaimEntry,
+    ClaimStatus,
+    ClaimType,
     COIExtraction,
     COIPolicyReference,
     ContractAllocation,
@@ -37,6 +49,8 @@ from app.schemas.document import (
     InvoiceExtraction,
     InvoiceLineItem,
     LloydsSyndicate,
+    LossRunExtraction,
+    LossRunSummary,
     PolicyExtraction,
     PolicyRestriction,
     PolicyType,
@@ -67,6 +81,44 @@ class ExtractionAPIError(ExtractionError):
     """Raised when LLM API returns an error."""
 
     pass
+
+
+class ExtractionValidationError(ExtractionError):
+    """Raised when extracted data fails schema validation."""
+
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Extraction Configuration
+# ---------------------------------------------------------------------------
+
+T = TypeVar("T", bound=BaseModel)
+
+
+@dataclass
+class ExtractionConfig:
+    """Configuration for extraction with retry and JSON mode."""
+
+    # JSON Mode
+    use_json_mode: bool = True
+
+    # Retry settings
+    max_retries: int = 3
+    initial_delay: float = 1.0
+    backoff_multiplier: float = 2.0
+
+    # Chunking settings
+    max_chunk_chars: int = 50000
+    chunk_overlap_chars: int = 2000
+    max_concurrent_chunks: int = 5
+
+    # Validation settings
+    fail_on_validation_error: bool = False
+
+
+# Default configuration
+DEFAULT_CONFIG = ExtractionConfig()
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +414,119 @@ IMPORTANT:
 - Identify all carriers mentioned for each coverage type
 - Calculate or extract premium changes
 - Separate data by property/location when multiple are shown
+
+Return ONLY the JSON object. Use null for missing fields."""
+
+
+LOSS_RUN_EXTRACTION_PROMPT = """You are an expert insurance document analyst. Extract ALL information from this loss run / claims history document.
+
+DOCUMENT TEXT:
+{document_text}
+
+---
+
+This is a loss run or claims history report. It shows historical claims data for an insured, including dates, amounts paid, reserves, and claim status.
+
+Extract ALL information and return as JSON:
+
+{{
+    "report_title": "<title of the report>",
+    "report_date": "<YYYY-MM-DD - as-of date for the data>",
+    "report_run_date": "<YYYY-MM-DD - when report was generated>",
+
+    "named_insured": "<insured name>",
+    "insured_address": "<insured address if shown>",
+
+    "policy_number": "<primary policy number>",
+    "policy_numbers": ["<all policy numbers listed>"],
+    "carrier_name": "<primary carrier>",
+    "carriers": ["<all carriers if multiple>"],
+
+    "experience_period_start": "<YYYY-MM-DD - start of experience period>",
+    "experience_period_end": "<YYYY-MM-DD - end of experience period>",
+    "valuation_date": "<YYYY-MM-DD - valuation date>",
+
+    "line_of_business": "<property|general_liability|auto|workers_comp|etc>",
+    "lines_of_business": ["<all lines if multiple>"],
+
+    "claims": [
+        {{
+            "claim_number": "<claim number>",
+            "policy_number": "<policy number for this claim>",
+            "carrier_name": "<carrier handling claim>",
+
+            "date_of_loss": "<YYYY-MM-DD>",
+            "date_reported": "<YYYY-MM-DD>",
+            "date_closed": "<YYYY-MM-DD or null if open>",
+
+            "claim_type": "<property_damage|bodily_injury|liability|water_damage|fire|wind_hail|theft|vandalism|slip_fall|auto|workers_comp|equipment_breakdown|other|unknown>",
+            "claim_status": "<open|closed|reopened|pending|denied|subrogation|litigation|unknown>",
+            "claimant_name": "<claimant name if shown>",
+            "description": "<description of loss>",
+            "cause_of_loss": "<cause code or description>",
+
+            "location_address": "<location where loss occurred>",
+            "location_name": "<location name if shown>",
+
+            "paid_loss": <amount paid for damages>,
+            "paid_expense": <amount paid for expenses/ALAE>,
+            "paid_medical": <medical payments if applicable>,
+            "paid_indemnity": <indemnity payments if workers comp>,
+            "total_paid": <total paid amount>,
+
+            "reserve_loss": <outstanding reserve for loss>,
+            "reserve_expense": <outstanding reserve for expense>,
+            "reserve_medical": <medical reserve>,
+            "reserve_indemnity": <indemnity reserve>,
+            "total_reserve": <total outstanding reserve>,
+
+            "incurred_loss": <incurred loss = paid + reserve>,
+            "incurred_expense": <incurred expense>,
+            "total_incurred": <total incurred>,
+
+            "subrogation_amount": <subrogation recovery>,
+            "deductible_recovered": <deductible recovered>,
+            "salvage_amount": <salvage if any>,
+            "net_incurred": <incurred minus recoveries>,
+
+            "litigation_status": "<litigation status if in suit>",
+            "injury_description": "<injury description for BI claims>",
+            "notes": "<any notes>"
+        }}
+    ],
+
+    "summary": {{
+        "total_claims": <total number of claims>,
+        "open_claims": <number of open claims>,
+        "closed_claims": <number of closed claims>,
+
+        "claims_by_type": {{"property_damage": 5, "liability": 3}},
+        "claims_by_year": {{"2023": 10, "2024": 5}},
+
+        "total_paid": <total paid across all claims>,
+        "total_reserved": <total outstanding reserves>,
+        "total_incurred": <total incurred>,
+        "total_recovered": <total recoveries>,
+        "net_incurred": <net incurred after recoveries>,
+
+        "largest_claim_amount": <largest single claim incurred>,
+        "largest_claim_number": "<claim number of largest claim>",
+
+        "premium_for_period": <premium if shown>,
+        "loss_ratio": <loss ratio if calculable>
+    }},
+
+    "large_loss_threshold": <threshold for large loss reporting if specified>,
+    "report_notes": ["<any report notes or caveats>"],
+    "confidence": <overall confidence 0.0-1.0>
+}}
+
+IMPORTANT:
+- Extract EVERY claim listed, not just a sample
+- Calculate totals if not explicitly shown
+- Preserve claim numbers and dates exactly as shown
+- Identify claim types from descriptions if not explicitly categorized
+- Note any claims in litigation or subrogation
 
 Return ONLY the JSON object. Use null for missing fields."""
 
@@ -706,25 +871,75 @@ Return ONLY the JSON object. Extract EVERYTHING visible. Use null for truly miss
 
 
 class ExtractionService:
-    """Service for extracting structured data from insurance documents."""
+    """Service for extracting structured data from insurance documents.
+
+    Features:
+    - JSON mode enforcement via OpenRouter API
+    - Validation retry with error context
+    - Chunked extraction for large documents
+    - Parallel processing with intelligent merge
+    - Custom validation hooks
+    """
 
     OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
     MODEL = "google/gemini-2.5-flash"
 
-    # Chunking configuration
+    # Chunking configuration (kept for backward compatibility)
     MAX_CHARS_PER_CHUNK = 50000  # ~50K chars per chunk
     CHUNK_OVERLAP = 2000  # Overlap between chunks to avoid splitting mid-sentence
     MAX_SINGLE_PASS_CHARS = 60000  # Documents under this size use single-pass extraction
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        config: ExtractionConfig | None = None,
+    ):
         """Initialize extraction service.
 
         Args:
             api_key: OpenRouter API key.
+            config: Extraction configuration (uses DEFAULT_CONFIG if not provided).
         """
         self.api_key = api_key or settings.openrouter_api_key
+        self.config = config or DEFAULT_CONFIG
+
         if not self.api_key:
             logger.warning("OpenRouter API key not configured")
+
+        # Lazy-load services to avoid circular imports
+        self._chunking_service = None
+        self._merge_service = None
+        self._validation_service = None
+
+    @property
+    def chunking_service(self):
+        """Get or create chunking service."""
+        if self._chunking_service is None:
+            from app.services.chunking_service import ChunkingService
+
+            self._chunking_service = ChunkingService(
+                max_chars=self.config.max_chunk_chars,
+                overlap_chars=self.config.chunk_overlap_chars,
+            )
+        return self._chunking_service
+
+    @property
+    def merge_service(self):
+        """Get or create merge service."""
+        if self._merge_service is None:
+            from app.services.merge_service import MergeService
+
+            self._merge_service = MergeService()
+        return self._merge_service
+
+    @property
+    def validation_service(self):
+        """Get or create validation service."""
+        if self._validation_service is None:
+            from app.services.validation_service import ValidationService
+
+            self._validation_service = ValidationService()
+        return self._validation_service
 
     def _split_into_chunks(self, text: str) -> list[str]:
         """Split document text into chunks for parallel processing.
@@ -982,38 +1197,130 @@ class ExtractionService:
         return content
 
     async def _call_llm_with_retry(
-        self, prompt: str, max_retries: int = 2
+        self,
+        prompt: str,
+        config: ExtractionConfig | None = None,
     ) -> dict:
-        """Call the LLM with retry logic and JSON repair.
+        """Call the LLM with retry logic, JSON repair, and validation context.
+
+        Features:
+        - Exponential backoff retry
+        - JSON mode enforcement
+        - Error context added to retry prompts
+        - JSON repair for malformed responses
 
         Args:
             prompt: The prompt to send to the LLM.
-            max_retries: Maximum number of retries on failure.
+            config: Extraction configuration (uses DEFAULT_CONFIG if not provided).
 
         Returns:
             Parsed JSON response as a dictionary.
         """
-        last_error = None
+        if config is None:
+            config = DEFAULT_CONFIG
 
-        for attempt in range(max_retries + 1):
+        last_error = None
+        last_raw_response = ""
+        delay = config.initial_delay
+        current_prompt = prompt
+
+        for attempt in range(config.max_retries):
             try:
-                return await self._call_llm(prompt)
+                result = await self._call_llm(current_prompt, use_json_mode=config.use_json_mode)
+                return result
             except ExtractionError as e:
                 last_error = e
-                if attempt < max_retries:
+                error_str = str(e)
+
+                # Extract raw response if available for error context
+                if "First 500 chars:" in error_str:
+                    # Parse out the raw response from error message
+                    last_raw_response = error_str
+
+                if attempt < config.max_retries - 1:
                     logger.warning(
-                        f"Extraction attempt {attempt + 1} failed, retrying... Error: {e}"
+                        f"Extraction attempt {attempt + 1}/{config.max_retries} failed, "
+                        f"retrying in {delay:.1f}s... Error: {e}"
                     )
-                    # Add a small delay before retry
-                    await asyncio.sleep(1)
+
+                    # Add error context to prompt for retry
+                    current_prompt = self._add_error_context_to_prompt(
+                        prompt, error_str, last_raw_response
+                    )
+
+                    # Exponential backoff
+                    await asyncio.sleep(delay)
+                    delay *= config.backoff_multiplier
 
         # All retries failed
         raise last_error
 
-    async def _call_llm(self, prompt: str) -> dict:
-        """Call the LLM and return parsed JSON response."""
+    def _add_error_context_to_prompt(
+        self, original_prompt: str, error: str, raw_response: str
+    ) -> str:
+        """Add error context to prompt for retry attempts.
+
+        This helps the LLM understand what went wrong and produce valid output.
+
+        Args:
+            original_prompt: The original extraction prompt.
+            error: The error message from the failed attempt.
+            raw_response: The raw response that failed (if available).
+
+        Returns:
+            Updated prompt with error context.
+        """
+        error_context = """
+
+IMPORTANT - RETRY CONTEXT:
+Your previous response could not be parsed as valid JSON.
+"""
+        if "JSONDecodeError" in error or "parse" in error.lower():
+            error_context += """
+Error type: Invalid JSON format
+Please ensure your response is ONLY valid JSON with no additional text, markdown, or explanation.
+Do not wrap the JSON in code blocks (```).
+"""
+        elif "validation" in error.lower():
+            error_context += f"""
+Error type: Schema validation failed
+Details: {error[:500]}
+Please ensure all required fields are present and have the correct data types.
+"""
+        else:
+            error_context += f"""
+Error: {error[:300]}
+"""
+
+        error_context += """
+Respond with ONLY the JSON object. No markdown, no explanation, just valid JSON."""
+
+        return original_prompt + error_context
+
+    async def _call_llm(self, prompt: str, use_json_mode: bool = True) -> dict:
+        """Call the LLM and return parsed JSON response.
+
+        Args:
+            prompt: The prompt to send to the LLM.
+            use_json_mode: Whether to enforce JSON output mode via API parameter.
+
+        Returns:
+            Parsed JSON response as a dictionary.
+        """
         if not self.api_key:
             raise ExtractionError("OpenRouter API key not configured")
+
+        # Build request body
+        request_body = {
+            "model": self.MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 16000,  # Increased for complex extractions
+        }
+
+        # Add JSON mode if enabled - forces valid JSON output at API level
+        if use_json_mode:
+            request_body["response_format"] = {"type": "json_object"}
 
         async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
@@ -1024,12 +1331,7 @@ class ExtractionService:
                     "HTTP-Referer": "https://open-insurance.dev",
                     "X-Title": "Open Insurance Platform",
                 },
-                json={
-                    "model": self.MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.1,
-                    "max_tokens": 16000,  # Increased for complex extractions
-                },
+                json=request_body,
             )
 
             if response.status_code != 200:
@@ -1353,6 +1655,132 @@ class ExtractionService:
             portfolio_premium_change=data.get("portfolio_premium_change"),
             portfolio_premium_change_pct=data.get("portfolio_premium_change_pct"),
             carriers=data.get("carriers", []),
+            confidence=data.get("confidence", 0.5),
+        )
+
+    async def extract_loss_run(self, document_text: str) -> LossRunExtraction:
+        """Extract loss run / claims history information."""
+        logger.info("Extracting loss run information...")
+
+        prompt = LOSS_RUN_EXTRACTION_PROMPT.format(document_text=document_text)
+        data = await self._call_llm_with_retry(prompt)
+
+        # Parse claims
+        claims = []
+        for claim_data in data.get("claims", []):
+            # Parse claim type
+            claim_type = None
+            claim_type_str = claim_data.get("claim_type")
+            if claim_type_str:
+                try:
+                    claim_type = ClaimType(claim_type_str.lower())
+                except ValueError:
+                    claim_type = ClaimType.UNKNOWN
+
+            # Parse claim status
+            claim_status = None
+            status_str = claim_data.get("claim_status")
+            if status_str:
+                try:
+                    claim_status = ClaimStatus(status_str.lower())
+                except ValueError:
+                    claim_status = ClaimStatus.UNKNOWN
+
+            claims.append(
+                ClaimEntry(
+                    claim_number=claim_data.get("claim_number"),
+                    policy_number=claim_data.get("policy_number"),
+                    carrier_name=claim_data.get("carrier_name"),
+                    date_of_loss=self._parse_date(claim_data.get("date_of_loss")),
+                    date_reported=self._parse_date(claim_data.get("date_reported")),
+                    date_closed=self._parse_date(claim_data.get("date_closed")),
+                    claim_type=claim_type,
+                    claim_status=claim_status,
+                    claimant_name=claim_data.get("claimant_name"),
+                    description=claim_data.get("description"),
+                    cause_of_loss=claim_data.get("cause_of_loss"),
+                    location_address=claim_data.get("location_address"),
+                    location_name=claim_data.get("location_name"),
+                    paid_loss=claim_data.get("paid_loss"),
+                    paid_expense=claim_data.get("paid_expense"),
+                    paid_medical=claim_data.get("paid_medical"),
+                    paid_indemnity=claim_data.get("paid_indemnity"),
+                    total_paid=claim_data.get("total_paid"),
+                    reserve_loss=claim_data.get("reserve_loss"),
+                    reserve_expense=claim_data.get("reserve_expense"),
+                    reserve_medical=claim_data.get("reserve_medical"),
+                    reserve_indemnity=claim_data.get("reserve_indemnity"),
+                    total_reserve=claim_data.get("total_reserve"),
+                    incurred_loss=claim_data.get("incurred_loss"),
+                    incurred_expense=claim_data.get("incurred_expense"),
+                    total_incurred=claim_data.get("total_incurred"),
+                    subrogation_amount=claim_data.get("subrogation_amount"),
+                    deductible_recovered=claim_data.get("deductible_recovered"),
+                    salvage_amount=claim_data.get("salvage_amount"),
+                    net_incurred=claim_data.get("net_incurred"),
+                    litigation_status=claim_data.get("litigation_status"),
+                    injury_description=claim_data.get("injury_description"),
+                    notes=claim_data.get("notes"),
+                )
+            )
+
+        # Parse summary
+        summary = None
+        summary_data = data.get("summary")
+        if summary_data:
+            summary = LossRunSummary(
+                total_claims=summary_data.get("total_claims", 0),
+                open_claims=summary_data.get("open_claims", 0),
+                closed_claims=summary_data.get("closed_claims", 0),
+                claims_by_type=summary_data.get("claims_by_type", {}),
+                claims_by_year=summary_data.get("claims_by_year", {}),
+                total_paid=summary_data.get("total_paid", 0.0),
+                total_reserved=summary_data.get("total_reserved", 0.0),
+                total_incurred=summary_data.get("total_incurred", 0.0),
+                total_recovered=summary_data.get("total_recovered", 0.0),
+                net_incurred=summary_data.get("net_incurred", 0.0),
+                largest_claim_amount=summary_data.get("largest_claim_amount"),
+                largest_claim_number=summary_data.get("largest_claim_number"),
+                premium_for_period=summary_data.get("premium_for_period"),
+                loss_ratio=summary_data.get("loss_ratio"),
+            )
+
+        # Parse lines of business
+        lines_of_business = []
+        for lob in data.get("lines_of_business", []):
+            try:
+                lines_of_business.append(PolicyType(lob.lower()))
+            except ValueError:
+                lines_of_business.append(PolicyType.UNKNOWN)
+
+        # Parse primary line of business
+        line_of_business = None
+        lob_str = data.get("line_of_business")
+        if lob_str:
+            try:
+                line_of_business = PolicyType(lob_str.lower())
+            except ValueError:
+                line_of_business = PolicyType.UNKNOWN
+
+        return LossRunExtraction(
+            report_title=data.get("report_title"),
+            report_date=self._parse_date(data.get("report_date")),
+            report_run_date=self._parse_date(data.get("report_run_date")),
+            named_insured=data.get("named_insured"),
+            insured_address=data.get("insured_address"),
+            policy_number=data.get("policy_number"),
+            policy_numbers=data.get("policy_numbers", []),
+            carrier_name=data.get("carrier_name"),
+            carriers=data.get("carriers", []),
+            experience_period_start=self._parse_date(data.get("experience_period_start")),
+            experience_period_end=self._parse_date(data.get("experience_period_end")),
+            valuation_date=self._parse_date(data.get("valuation_date")),
+            line_of_business=line_of_business,
+            lines_of_business=lines_of_business,
+            claims=claims,
+            summary=summary,
+            large_loss_threshold=data.get("large_loss_threshold"),
+            report_notes=data.get("report_notes", []),
             confidence=data.get("confidence", 0.5),
         )
 
@@ -2006,14 +2434,14 @@ class ExtractionService:
         """Extract structured data based on document classification.
 
         For large documents, uses chunked extraction with parallel processing
-        and result merging.
+        and result merging. Includes validation with warnings/errors.
 
         Args:
             document_text: OCR-extracted text from the document.
             classification: Document classification result.
 
         Returns:
-            ExtractionResult with type-specific extracted data.
+            ExtractionResult with type-specific extracted data and validation info.
         """
         result = ExtractionResult(
             classification=classification,
@@ -2026,6 +2454,8 @@ class ExtractionService:
         if is_large_doc:
             logger.info(f"Large document detected ({len(document_text)} chars), using chunked extraction")
 
+        extraction_model = None
+
         try:
             if doc_type == DocumentType.PROGRAM:
                 # Multi-carrier insurance program
@@ -2034,6 +2464,7 @@ class ExtractionService:
                 else:
                     result.program = await self.extract_program(document_text)
                 result.overall_confidence = result.program.confidence
+                extraction_model = result.program
 
             elif doc_type in (DocumentType.POLICY, DocumentType.DECLARATION, DocumentType.ENDORSEMENT):
                 if is_large_doc:
@@ -2041,6 +2472,7 @@ class ExtractionService:
                 else:
                     result.policy = await self.extract_policy(document_text)
                 result.overall_confidence = result.policy.confidence
+                extraction_model = result.policy
 
             elif doc_type in (DocumentType.COI, DocumentType.EOP):
                 if is_large_doc:
@@ -2048,18 +2480,27 @@ class ExtractionService:
                 else:
                     result.coi = await self.extract_coi(document_text)
                 result.overall_confidence = result.coi.confidence
+                extraction_model = result.coi
 
             elif doc_type == DocumentType.INVOICE:
                 result.invoice = await self.extract_invoice(document_text)
                 result.overall_confidence = result.invoice.confidence
+                extraction_model = result.invoice
 
             elif doc_type == DocumentType.SOV:
                 result.sov = await self.extract_sov(document_text)
                 result.overall_confidence = result.sov.confidence
+                extraction_model = result.sov
 
             elif doc_type == DocumentType.PROPOSAL:
                 result.proposal = await self.extract_proposal(document_text)
                 result.overall_confidence = result.proposal.confidence
+                extraction_model = result.proposal
+
+            elif doc_type == DocumentType.LOSS_RUN:
+                result.loss_run = await self.extract_loss_run(document_text)
+                result.overall_confidence = result.loss_run.confidence
+                extraction_model = result.loss_run
 
             else:
                 # For unknown types, try policy extraction as default
@@ -2069,6 +2510,29 @@ class ExtractionService:
                 else:
                     result.policy = await self.extract_policy(document_text)
                 result.overall_confidence = result.policy.confidence * 0.5  # Lower confidence
+                extraction_model = result.policy
+
+            # Run validation on the extracted data
+            if extraction_model is not None:
+                try:
+                    validation_result = self.validation_service.validate(extraction_model)
+
+                    if validation_result.warnings:
+                        logger.info(f"Extraction validation warnings: {validation_result.warnings}")
+
+                    if not validation_result.is_valid:
+                        logger.warning(f"Extraction validation errors: {validation_result.errors}")
+                        # Store validation info in result (could add to ExtractionResult schema)
+                        # For now, just log and optionally reduce confidence
+                        if self.config.fail_on_validation_error:
+                            raise ExtractionValidationError(
+                                f"Validation failed: {validation_result.errors}"
+                            )
+                        else:
+                            # Reduce confidence for validation failures
+                            result.overall_confidence *= 0.8
+                except Exception as val_error:
+                    logger.warning(f"Validation service error: {val_error}")
 
         except ExtractionError as e:
             logger.error(f"Extraction failed: {e}")
