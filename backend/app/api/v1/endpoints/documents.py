@@ -17,6 +17,8 @@ from app.schemas.document import (
     DocumentClassification,
     DocumentResponse,
     ExtractionResult,
+    IngestDirectoryRequest,
+    IngestDirectoryResponse,
     IngestRequest,
     IngestResponse,
 )
@@ -81,6 +83,7 @@ async def ingest_document(
         result = await service.ingest_file(
             file_path=request.file_path,
             organization_id=request.organization_id,
+            property_name=request.property_name,
             property_id=request.property_id,
         )
         await db.commit()
@@ -92,10 +95,67 @@ async def ingest_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/ingest-directory", response_model=IngestDirectoryResponse)
+async def ingest_directory(
+    request: IngestDirectoryRequest,
+    db: AsyncSession = Depends(get_db),
+) -> IngestDirectoryResponse:
+    """Ingest all documents in a directory.
+
+    This endpoint processes all PDF/image files in a directory through the
+    full ingestion pipeline: OCR → Classification → Extraction → Storage.
+
+    Args:
+        request: Directory ingest request with path and organization ID.
+        db: Database session.
+
+    Returns:
+        IngestDirectoryResponse with results for each file.
+    """
+    # Validate directory exists
+    directory_path = Path(request.directory_path)
+    if not directory_path.exists():
+        raise HTTPException(status_code=404, detail=f"Directory not found: {request.directory_path}")
+
+    if not directory_path.is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.directory_path}")
+
+    # Process directory
+    service = IngestionService(db)
+
+    try:
+        results = await service.ingest_directory(
+            directory_path=request.directory_path,
+            organization_id=request.organization_id,
+            property_name=request.property_name,
+            property_id=request.property_id,
+            program_id=request.program_id,
+        )
+        await db.commit()
+
+        # Calculate summary
+        successful = sum(1 for r in results if r.status == "completed")
+        failed = sum(1 for r in results if r.status != "completed")
+
+        return IngestDirectoryResponse(
+            directory_path=request.directory_path,
+            total_files=len(results),
+            successful=successful,
+            failed=failed,
+            results=results,
+        )
+
+    except Exception as e:
+        logger.error(f"Directory ingestion failed: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/upload", response_model=IngestResponse)
 async def upload_and_ingest_document(
     file: UploadFile = File(...),
     organization_id: str = Form(...),
+    property_name: str = Form(...),
     property_id: str | None = Form(None),
     program_id: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
@@ -108,6 +168,7 @@ async def upload_and_ingest_document(
     Args:
         file: Uploaded file.
         organization_id: Organization ID.
+        property_name: Property name (used for folder organization in storage).
         property_id: Optional property ID.
         program_id: Optional insurance program ID.
         db: Database session.
@@ -156,6 +217,7 @@ async def upload_and_ingest_document(
         result = await service.ingest_file(
             file_path=str(final_path),
             organization_id=organization_id,
+            property_name=property_name,
             property_id=property_id,
             program_id=program_id,
         )

@@ -228,10 +228,13 @@ class CoverageExtraction(BaseModel):
     sublimit_applies_to: str | None = None
     deductible_amount: float | None = None
     deductible_type: str | None = None  # e.g., "per occurrence", "percentage"
-    deductible_percentage: float | None = None
-    coinsurance_percentage: float | None = None
+    deductible_pct: float | None = None  # Matches DB column name (percentage 0-100)
+    deductible_minimum: float | None = None
+    deductible_maximum: float | None = None
+    coinsurance_pct: float | None = None  # Matches DB column name
     waiting_period_hours: int | None = None
     valuation_type: str | None = None  # e.g., "RCV", "ACV"
+    margin_clause_pct: float | None = None  # Matches DB column name
     exclusions: list[str] = Field(default_factory=list)
     conditions: list[str] = Field(default_factory=list)
     source_page: int | None = None
@@ -1201,6 +1204,7 @@ class IngestRequest(BaseModel):
 
     file_path: str
     organization_id: str
+    property_name: str
     property_id: str | None = None
 
 
@@ -1213,3 +1217,23 @@ class IngestResponse(BaseModel):
     classification: DocumentClassification | None = None
     extraction_summary: dict | None = None
     errors: list[str] = Field(default_factory=list)
+
+
+class IngestDirectoryRequest(BaseModel):
+    """Request to ingest all documents in a directory."""
+
+    directory_path: str
+    organization_id: str
+    property_name: str | None = None  # Defaults to directory name if not provided
+    property_id: str | None = None
+    program_id: str | None = None
+
+
+class IngestDirectoryResponse(BaseModel):
+    """Response from directory ingestion."""
+
+    directory_path: str
+    total_files: int
+    successful: int
+    failed: int
+    results: list[IngestResponse]
