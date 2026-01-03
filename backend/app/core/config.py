@@ -41,7 +41,10 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    aws_s3_bucket: str = "open-insurance-docs"
+    aws_s3_bucket: str = "insurance-docs-open"
+
+    # Local storage
+    local_storage_path: str = "./storage"
 
     # Pinecone
     pinecone_api_key: str = ""

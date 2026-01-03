@@ -1204,6 +1204,7 @@ class IngestRequest(BaseModel):
 
     file_path: str
     organization_id: str
+    property_name: str
     property_id: str | None = None
 
 
@@ -1216,3 +1217,23 @@ class IngestResponse(BaseModel):
     classification: DocumentClassification | None = None
     extraction_summary: dict | None = None
     errors: list[str] = Field(default_factory=list)
+
+
+class IngestDirectoryRequest(BaseModel):
+    """Request to ingest all documents in a directory."""
+
+    directory_path: str
+    organization_id: str
+    property_name: str | None = None  # Defaults to directory name if not provided
+    property_id: str | None = None
+    program_id: str | None = None
+
+
+class IngestDirectoryResponse(BaseModel):
+    """Response from directory ingestion."""
+
+    directory_path: str
+    total_files: int
+    successful: int
+    failed: int
+    results: list[IngestResponse]

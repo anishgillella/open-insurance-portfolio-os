@@ -6,6 +6,7 @@ This service orchestrates the complete document ingestion pipeline:
 3. Classification (Gemini)
 4. Extraction (Gemini)
 5. Database record creation
+6. File storage (local + S3)
 """
 
 import logging
@@ -27,6 +28,7 @@ from app.schemas.document import (
 from app.services.classification_service import ClassificationService, get_classification_service
 from app.services.extraction_service import ExtractionService, get_extraction_service
 from app.services.ocr_service import OCRService, get_ocr_service
+from app.services.storage_service import StorageService, get_storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ class IngestionService:
         ocr_service: OCRService | None = None,
         classification_service: ClassificationService | None = None,
         extraction_service: ExtractionService | None = None,
+        storage_service: StorageService | None = None,
     ):
         """Initialize ingestion service.
 
@@ -54,11 +57,13 @@ class IngestionService:
             ocr_service: OCR service instance.
             classification_service: Classification service instance.
             extraction_service: Extraction service instance.
+            storage_service: Storage service instance.
         """
         self.session = session
         self.ocr_service = ocr_service or get_ocr_service()
         self.classification_service = classification_service or get_classification_service()
         self.extraction_service = extraction_service or get_extraction_service()
+        self.storage_service = storage_service or get_storage_service()
 
         # Repositories
         self.document_repo = DocumentRepository(session)
@@ -71,6 +76,7 @@ class IngestionService:
         self,
         file_path: str,
         organization_id: str,
+        property_name: str,
         property_id: str | None = None,
         program_id: str | None = None,
     ) -> IngestResponse:
@@ -79,7 +85,8 @@ class IngestionService:
         Args:
             file_path: Path to the document file.
             organization_id: Organization ID.
-            property_id: Optional property ID.
+            property_name: Property name (used for folder organization in storage).
+            property_id: Optional property ID (for database relations).
             program_id: Optional insurance program ID (for creating policies).
 
         Returns:
@@ -117,7 +124,12 @@ class IngestionService:
 
         logger.info(f"Created document record: {document.id}")
 
+        # Variables to store for later file storage
+        ocr_markdown: str | None = None
+        extraction_json: dict | None = None
+
         # Step 1: OCR
+        markdown_text: str = ""
         try:
             await self.document_repo.update_ocr_status(
                 document.id, ProcessingStatus.PROCESSING
@@ -126,6 +138,9 @@ class IngestionService:
             ocr_result = await self.ocr_service.process_file_with_metadata(path)
             markdown_text = ocr_result["markdown"]
             page_count = ocr_result["page_count"]
+
+            # Store for file storage later
+            ocr_markdown = markdown_text
 
             await self.document_repo.update_ocr_status(
                 document.id,
@@ -185,6 +200,9 @@ class IngestionService:
                 markdown_text, classification
             )
 
+            # Store for file storage later
+            extraction_json = extraction_result.model_dump(mode="json")
+
             await self.document_repo.update_extraction_status(
                 document.id,
                 ProcessingStatus.COMPLETED,
@@ -218,10 +236,38 @@ class IngestionService:
                 logger.error(error_msg)
                 errors.append(error_msg)
 
+        # Step 5: Store files (local + S3)
+        storage_urls: dict[str, str] = {}
+        try:
+            storage_urls = await self.storage_service.store_document(
+                file_path=path,
+                organization_id=organization_id,
+                property_name=property_name,
+                ocr_markdown=ocr_markdown,
+                extraction_json=extraction_json,
+            )
+            logger.info(f"Files stored: {list(storage_urls.keys())}")
+
+            # Update document with S3 URL if available
+            if "original_s3" in storage_urls:
+                await self.document_repo.update(
+                    document.id, file_url=storage_urls["original_s3"]
+                )
+
+        except Exception as e:
+            error_msg = f"Storage failed: {e}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+
         # Build summary
         extraction_summary = None
         if extraction_result:
             extraction_summary = self._build_extraction_summary(extraction_result)
+
+        # Add storage URLs to summary
+        if storage_urls:
+            extraction_summary = extraction_summary or {}
+            extraction_summary["storage"] = storage_urls
 
         status = "completed" if not errors else "completed_with_errors"
 
@@ -238,6 +284,7 @@ class IngestionService:
         self,
         directory_path: str,
         organization_id: str,
+        property_name: str | None = None,
         property_id: str | None = None,
         program_id: str | None = None,
         extensions: set[str] | None = None,
@@ -247,6 +294,7 @@ class IngestionService:
         Args:
             directory_path: Path to directory.
             organization_id: Organization ID.
+            property_name: Property name for storage (defaults to directory name).
             property_id: Optional property ID.
             program_id: Optional insurance program ID.
             extensions: File extensions to process (default: pdf, png, jpg, jpeg).
@@ -261,16 +309,21 @@ class IngestionService:
         if not directory.is_dir():
             raise IngestionError(f"Not a directory: {directory_path}")
 
+        # Use directory name as property name if not provided
+        if property_name is None:
+            property_name = directory.name
+
         results = []
         files = [f for f in directory.iterdir() if f.suffix.lower() in extensions]
 
-        logger.info(f"Found {len(files)} files to ingest in {directory_path}")
+        logger.info(f"Found {len(files)} files to ingest in {directory_path} (property: {property_name})")
 
         for file_path in files:
             try:
                 result = await self.ingest_file(
                     str(file_path),
                     organization_id=organization_id,
+                    property_name=property_name,
                     property_id=property_id,
                     program_id=program_id,
                 )
