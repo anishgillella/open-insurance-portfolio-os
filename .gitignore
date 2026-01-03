@@ -110,3 +110,7 @@ temp/
 *.key
 credentials.json
 secrets.json
+
+# Sample/test documents (use sample_docs/ for tracked examples only)
+*.pdf
+*.PDF

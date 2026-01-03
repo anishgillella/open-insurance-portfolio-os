@@ -38,9 +38,9 @@ DOCUMENT TEXT:
 Classify this document and extract key metadata. Respond with a JSON object containing:
 
 {{
-    "document_type": "<one of: policy, coi, eop, invoice, sov, loss_run, endorsement, declaration, proposal, unknown>",
+    "document_type": "<one of: program, policy, coi, eop, invoice, sov, loss_run, endorsement, declaration, proposal, unknown>",
     "document_subtype": "<optional specific subtype, e.g., 'ACORD 25' for COI, 'renewal' for policy, 'comparison' for proposal>",
-    "policy_type": "<if document_type is policy/endorsement, one of: property, general_liability, umbrella, excess, flood, earthquake, terrorism, crime, cyber, epl, dno, auto, workers_comp, boiler_machinery, unknown>",
+    "policy_type": "<if document_type is policy/endorsement/program, one of: property, general_liability, umbrella, excess, flood, earthquake, terrorism, crime, cyber, epl, dno, auto, workers_comp, boiler_machinery, unknown>",
     "confidence": <float between 0.0 and 1.0>,
     "carrier_name": "<insurance company name if found>",
     "policy_number": "<policy number if found>",
@@ -50,7 +50,8 @@ Classify this document and extract key metadata. Respond with a JSON object cont
 }}
 
 CLASSIFICATION GUIDE:
-- "policy": Full insurance policy document with declarations, terms, conditions
+- "program": Multi-carrier insurance program with CONTRACT ALLOCATION table showing multiple insurers (Lloyd's, QBE, Steadfast, etc.) sharing risk with participation percentages. Look for: Contract Allocation Endorsement, multiple policy numbers for different carriers, peril codes (NW, Q, AR), layer structures, Lloyd's syndicates. This is different from a simple policy - it's a shared/layered program.
+- "policy": Full insurance policy document with declarations, terms, conditions (single carrier)
 - "coi": Certificate of Insurance (ACORD 25, ACORD 28, etc.)
 - "eop": Evidence of Property Insurance (for lenders)
 - "invoice": Premium invoice or billing statement
@@ -60,6 +61,8 @@ CLASSIFICATION GUIDE:
 - "declaration": Declarations page only
 - "proposal": Insurance proposal, quote, or premium comparison document (often shows "Expiring" vs "Renewal" columns, multiple carriers, or premium comparisons)
 - "unknown": Cannot determine document type
+
+IMPORTANT: If you see multiple carriers with policy numbers listed together, a "Contract Allocation" table, participation percentages, or Lloyd's syndicates, classify as "program" NOT "policy" or "endorsement".
 
 Return ONLY the JSON object, no additional text."""
 
@@ -93,6 +96,7 @@ class ClassificationService:
     def _parse_document_type(self, type_str: str) -> DocumentType:
         """Parse document type string to enum."""
         type_map = {
+            "program": DocumentType.PROGRAM,
             "policy": DocumentType.POLICY,
             "coi": DocumentType.COI,
             "eop": DocumentType.EOP,

@@ -19,21 +19,39 @@ import httpx
 
 from app.core.config import settings
 from app.schemas.document import (
+    CarrierInfo,
+    CATCoveredProperty,
     COIExtraction,
     COIPolicyReference,
+    ContractAllocation,
+    ContractAllocationLayer,
     CoverageExtraction,
+    CyberCoverage,
+    DeductibleEntry,
+    DeductibleSchedule,
     DocumentClassification,
     DocumentType,
+    EquipmentBreakdownCoverage,
     ExtractionResult,
+    FormsEndorsementsSchedule,
     InvoiceExtraction,
     InvoiceLineItem,
+    LloydsSyndicate,
     PolicyExtraction,
+    PolicyRestriction,
     PolicyType,
+    ProgramExtraction,
     ProposalCoverageQuote,
     ProposalExtraction,
     ProposalPropertyQuote,
+    ServiceOfSuit,
+    SinkholeCoverage,
     SOVExtraction,
     SOVPropertyExtraction,
+    SublimitEntry,
+    SublimitsSchedule,
+    TerrorismCoverage,
+    ValuationBasis,
 )
 
 logger = logging.getLogger(__name__)
@@ -348,6 +366,345 @@ IMPORTANT:
 Return ONLY the JSON object. Use null for missing fields."""
 
 
+PROGRAM_EXTRACTION_PROMPT = """You are an expert insurance document analyst specializing in multi-carrier commercial property programs. This document is a MULTI-CARRIER INSURANCE PROGRAM with multiple insurers sharing risk through a Contract Allocation structure.
+
+DOCUMENT TEXT:
+{document_text}
+
+---
+
+Extract ALL program information comprehensively. This is critical insurance data used for claims processing, carrier notification, and coverage determination.
+
+Return as JSON:
+
+{{
+    "account_number": "<account number like 1053867>",
+    "program_name": "<program name if shown>",
+
+    "named_insured": "<full named insured>",
+    "insured_address": "<complete address>",
+    "additional_named_insureds": ["<any additional named insureds>"],
+
+    "effective_date": "<YYYY-MM-DD>",
+    "expiration_date": "<YYYY-MM-DD>",
+
+    "producer_name": "<broker/producer name>",
+    "producer_address": "<broker address>",
+
+    "program_manager": "<program manager like AmRisc, LLC>",
+    "program_manager_address": "<program manager address>",
+    "correspondent": "<correspondent if different>",
+
+    "total_premium": <total premium number>,
+    "premium_by_state": {{"SC": 104482.00}},
+    "taxes": <taxes amount>,
+    "fees": <fees amount>,
+    "surplus_lines_tax": <surplus lines tax>,
+    "inspection_fee": <inspection fee>,
+    "program_fee": <program fee>,
+    "total_cost": <grand total>,
+    "minimum_earned_premium": <minimum earned premium>,
+
+    "carriers": [
+        {{
+            "carrier_name": "<full carrier name>",
+            "carrier_code": "<short code like NFM, QBE, Lloyds>",
+            "policy_number": "<policy number>",
+            "naic_number": "<NAIC number if shown>",
+            "address": "<carrier address>",
+            "admitted": <true if admitted, false if surplus lines>
+        }}
+    ],
+
+    "lloyds_syndicates": [
+        {{
+            "syndicate_number": "<number like 510>",
+            "syndicate_abbreviation": "<abbreviation like KLN>"
+        }}
+    ],
+
+    "contract_allocation": {{
+        "account_number": "<account number>",
+        "layers": [
+            {{
+                "layer_description": "<e.g., $24,808,864 excess of $15,000>",
+                "attachment_point": <attachment point number>,
+                "layer_limit": <layer limit number>,
+                "perils_covered": ["<peril codes like AR EXCL NW>"],
+                "peril_codes": ["NW", "Q"],
+                "carrier_code": "<carrier code>",
+                "carrier_name": "<carrier name>",
+                "policy_number": "<policy number>",
+                "participation_amount": <dollar amount>,
+                "participation_percentage": <percentage as decimal, e.g., 0.33 for 33%>,
+                "rate_per_hundred": <rate like 0.065>
+            }}
+        ],
+        "peril_symbols": {{
+            "NW": "Named Windstorm",
+            "Q": "Earthquake",
+            "AR": "All Risk",
+            "EBD": "Equipment Breakdown",
+            "CYB": "Cyber",
+            "T": "Terrorism",
+            "F": "Flood",
+            "WH": "Windstorm and Hail"
+        }},
+        "max_risk_basis": "<e.g., Any One Occurrence>",
+        "max_limit": <maximum limit number>
+    }},
+
+    "carrier_premiums": {{
+        "<policy_number>": {{
+            "property": <property premium>,
+            "tria": <TRIA premium>
+        }}
+    }},
+
+    "sublimits": {{
+        "maximum_limit_of_liability": <max limit>,
+        "limit_basis": "<per_occurrence or blanket>",
+
+        "earth_movement_aggregate": <amount or null>,
+        "earth_movement_california_aggregate": <amount or null if NOT COVERED>,
+        "earth_movement_pacific_nw_aggregate": <amount or null>,
+        "earth_movement_new_madrid_aggregate": <amount or null>,
+        "flood_aggregate": <amount or null if NOT COVERED>,
+        "flood_sfha_aggregate": <amount or null>,
+        "named_storm_limit": <amount or null>,
+        "named_storm_is_included": <true if INCLUDED>,
+
+        "accounts_receivable": <amount>,
+        "civil_authority_days": <number of days>,
+        "civil_authority_limit": <limit amount>,
+        "contingent_time_element_days": <days>,
+        "contingent_time_element_limit": <limit>,
+        "debris_removal_percentage": <percentage as decimal>,
+        "debris_removal_limit": <limit>,
+        "electronic_data_media": <limit>,
+        "errors_omissions": <limit>,
+        "extended_period_of_indemnity_days": <days>,
+        "extra_expense": <limit>,
+        "fine_arts": <limit>,
+        "fire_brigade_charges": <limit>,
+        "fungus_mold_aggregate": <annual aggregate>,
+        "ingress_egress_days": <days>,
+        "ingress_egress_limit": <limit>,
+        "leasehold_interest": <limit>,
+        "pollution_aggregate": <limit>,
+        "newly_acquired_property_days": <days>,
+        "newly_acquired_property_limit": <limit>,
+        "ordinance_law_coverage_a": "<text like Included in Building Limit>",
+        "ordinance_law_coverage_b": <limit or null>,
+        "ordinance_law_coverage_b_percentage": <percentage of building value>,
+        "ordinance_law_coverage_c": "<text>",
+        "ordinance_law_coverage_d": "<text>",
+        "ordinance_law_coverage_e": "<text>",
+        "ordinary_payroll_days": <days>,
+        "service_interruption_limit": <limit>,
+        "service_interruption_waiting_hours": <hours>,
+        "spoilage": <limit>,
+        "transit": <limit>,
+        "valuable_papers_records": <limit>,
+
+        "additional_sublimits": [
+            {{
+                "sublimit_name": "<name>",
+                "limit_amount": <amount or null>,
+                "limit_type": "<per_occurrence, annual_aggregate, per_location>",
+                "duration_days": <days if time-based>,
+                "is_included": <true if INCLUDED>,
+                "is_not_covered": <true if NOT COVERED>,
+                "percentage_of": "<TIV, building_value>",
+                "percentage_value": <percentage as decimal>,
+                "minimum_amount": <minimum>,
+                "maximum_amount": <maximum>,
+                "applies_to": "<what it applies to>",
+                "conditions": ["<conditions>"]
+            }}
+        ]
+    }},
+
+    "deductibles": {{
+        "base_property_deductible": <amount>,
+        "base_time_element_deductible": <amount>,
+        "base_combined_deductible": <amount if combined>,
+
+        "earth_movement_percentage": <percentage as decimal, e.g., 0.02 for 2%>,
+        "earth_movement_minimum": <minimum amount>,
+        "earth_movement_california_percentage": <percentage>,
+        "earth_movement_california_minimum": <minimum>,
+
+        "windstorm_hail_percentage": <percentage>,
+        "windstorm_hail_minimum": <minimum>,
+
+        "named_storm_percentage": <percentage, e.g., 0.05 for 5%>,
+        "named_storm_minimum": <CRITICAL - minimum like 1241193>,
+
+        "hurricane_percentage": <percentage>,
+        "hurricane_minimum": <minimum>,
+
+        "flood_deductible": <amount>,
+        "flood_sfha_deductible": <amount>,
+
+        "equipment_breakdown_deductible": <amount>,
+        "cyber_deductible": <amount>,
+        "terrorism_deductible": <amount>,
+
+        "deductible_application_rules": ["<rules for applying deductibles>"],
+
+        "additional_deductibles": [
+            {{
+                "deductible_name": "<name>",
+                "deductible_type": "<flat, percentage, waiting_period>",
+                "flat_amount": <amount>,
+                "percentage_of_tiv": <percentage>,
+                "percentage_basis": "<per_location, per_building>",
+                "minimum_amount": <minimum>,
+                "applies_to_perils": ["<perils>"],
+                "applies_to_locations": "<location description>",
+                "conditions": ["<conditions>"]
+            }}
+        ]
+    }},
+
+    "cyber_coverage": {{
+        "cyber_aggregate_limit": <annual aggregate>,
+        "cyber_deductible": <deductible>,
+        "identity_recovery_limit": <limit per person>,
+        "forensic_it_review_limit": <limit>,
+        "legal_review_limit": <limit>,
+        "public_relations_limit": <limit>,
+        "regulatory_fines_limit": <limit>,
+        "pci_fines_limit": <limit>,
+        "first_party_malware_limit": <limit>,
+        "loss_of_business_limit": <limit>,
+        "data_restoration_limit": <limit>,
+        "cyber_extortion_limit": <limit>,
+        "data_compromise_liability_limit": <limit>,
+        "lost_wages_limit": <limit>,
+        "mental_health_counseling_limit": <limit>,
+        "miscellaneous_costs_limit": <limit>
+    }},
+
+    "equipment_breakdown": {{
+        "equipment_breakdown_limit": "<Per SOV or amount>",
+        "equipment_breakdown_deductible": <deductible>,
+        "time_element_coverage": "<Per SOV or description>",
+        "extra_expense_limit": <limit>,
+        "data_restoration_limit": <limit>,
+        "expediting_expenses_limit": <limit>,
+        "green_upgrades_limit": <limit>,
+        "hazardous_substances_limit": <limit>,
+        "off_premises_limit": <limit>,
+        "service_interruption_included": <true/false>,
+        "spoilage_limit": <limit>,
+        "spoilage_coinsurance": <percentage>,
+        "public_relations_included": <true/false>
+    }},
+
+    "terrorism_coverage": {{
+        "terrorism_form": "<form number like AR TERR 07 20>",
+        "terrorism_limit": <limit or null if as per schedule>,
+        "terrorism_limit_basis": "<per_occurrence, as_per_schedule>",
+        "terrorism_deductible": <deductible>,
+        "certified_terrorism_covered": <true/false - TRIA coverage>,
+        "non_certified_terrorism_covered": <true/false>,
+        "tria_exclusion_form": "<form number if TRIA excluded>"
+    }},
+
+    "sinkhole_coverage": {{
+        "sinkhole_covered": <true/false>,
+        "catastrophic_ground_cover_collapse_covered": <true/false>,
+        "florida_specific": <true if Florida-specific rules apply>,
+        "valuation_type": "<ACV or RCV>",
+        "neutral_evaluation_available": <true/false>,
+        "stabilization_requirements": ["<requirements>"],
+        "exclusions": ["<exclusions>"]
+    }},
+
+    "cat_covered_property": {{
+        "cat_property_limit": <max limit like 100000>,
+        "cat_property_deductible_percentage": <percentage>,
+        "cat_property_minimum_deductible": <minimum>,
+        "excluded_property_types": ["<list of excluded property types>"],
+        "requires_scheduling": ["<property types requiring scheduling>"],
+        "covered_if_scheduled": ["<property covered only if scheduled>"]
+    }},
+
+    "valuation_bases": [
+        {{
+            "property_type": "<Real & Personal Property>",
+            "valuation_type": "<RCV, ACV, Agreed Value>",
+            "conditions": ["<conditions like pre-2011 roofs>"]
+        }}
+    ],
+
+    "restrictions": [
+        {{
+            "restriction_type": "<exclusion, warranty, condition>",
+            "description": "<description>",
+            "applies_to": "<what it applies to>",
+            "source_endorsement": "<endorsement number>"
+        }}
+    ],
+
+    "major_exclusions": ["<major exclusions like Flood, Named Storm in existence>"],
+
+    "coverage_territory": "<coverage territory>",
+
+    "service_of_suit": [
+        {{
+            "carrier_name": "<carrier>",
+            "service_address": "<address for service of process>",
+            "contact_name": "<contact name if shown>",
+            "lma_form": "<LMA form number>"
+        }}
+    ],
+
+    "forms_schedule": [
+        {{
+            "form_number": "<form number>",
+            "form_title": "<form title>",
+            "form_description": "<description>"
+        }}
+    ],
+
+    "state_notices": {{
+        "<state code>": "<notice description>"
+    }},
+
+    "coverages": [
+        {{
+            "coverage_name": "<name>",
+            "coverage_category": "<property, liability, etc>",
+            "limit_amount": <limit>,
+            "deductible_amount": <deductible>,
+            "valuation_type": "<RCV, ACV>",
+            "exclusions": ["<exclusions>"],
+            "conditions": ["<conditions>"],
+            "source_page": <page number>,
+            "confidence": <0.0-1.0>
+        }}
+    ],
+
+    "source_pages": [<page numbers>],
+    "confidence": <overall confidence 0.0-1.0>
+}}
+
+CRITICAL EXTRACTION PRIORITIES:
+1. CONTRACT ALLOCATION TABLE - Extract ALL layers with carriers, participation %, rates
+2. DEDUCTIBLES - Especially Named Storm minimum (often $1M+), critical for claims
+3. SUBLIMITS - All 36+ sublimits from Supplemental Declarations
+4. CARRIERS - All 8+ carriers with policy numbers
+5. LLOYD'S SYNDICATES - All syndicate numbers and abbreviations
+6. CYBER COVERAGE - Full cyber suite with all sublimits
+7. EXCLUSIONS - Major exclusions (Flood status, Named Storm restrictions)
+8. PREMIUM BREAKDOWN - By carrier and coverage type
+
+Return ONLY the JSON object. Extract EVERYTHING visible. Use null for truly missing fields."""
+
+
 class ExtractionService:
     """Service for extracting structured data from insurance documents."""
 
@@ -586,12 +943,79 @@ class ExtractionService:
         }
         return type_map.get(type_str.lower(), PolicyType.UNKNOWN)
 
+    def _repair_json(self, content: str) -> str:
+        """Attempt to repair malformed JSON.
+
+        Common issues:
+        - Trailing commas
+        - Missing quotes around keys
+        - Truncated JSON (missing closing brackets)
+        - Control characters in strings
+        """
+        # Remove any text before the first { or [
+        first_brace = content.find("{")
+        first_bracket = content.find("[")
+        if first_brace == -1 and first_bracket == -1:
+            return content
+        if first_brace == -1:
+            start = first_bracket
+        elif first_bracket == -1:
+            start = first_brace
+        else:
+            start = min(first_brace, first_bracket)
+        content = content[start:]
+
+        # Remove trailing commas before } or ]
+        content = re.sub(r",\s*}", "}", content)
+        content = re.sub(r",\s*]", "]", content)
+
+        # Remove control characters except newlines and tabs
+        content = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", content)
+
+        # Try to balance brackets if truncated
+        open_braces = content.count("{") - content.count("}")
+        open_brackets = content.count("[") - content.count("]")
+
+        # Add missing closing brackets/braces
+        content = content + ("]" * open_brackets) + ("}" * open_braces)
+
+        return content
+
+    async def _call_llm_with_retry(
+        self, prompt: str, max_retries: int = 2
+    ) -> dict:
+        """Call the LLM with retry logic and JSON repair.
+
+        Args:
+            prompt: The prompt to send to the LLM.
+            max_retries: Maximum number of retries on failure.
+
+        Returns:
+            Parsed JSON response as a dictionary.
+        """
+        last_error = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                return await self._call_llm(prompt)
+            except ExtractionError as e:
+                last_error = e
+                if attempt < max_retries:
+                    logger.warning(
+                        f"Extraction attempt {attempt + 1} failed, retrying... Error: {e}"
+                    )
+                    # Add a small delay before retry
+                    await asyncio.sleep(1)
+
+        # All retries failed
+        raise last_error
+
     async def _call_llm(self, prompt: str) -> dict:
         """Call the LLM and return parsed JSON response."""
         if not self.api_key:
             raise ExtractionError("OpenRouter API key not configured")
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 self.OPENROUTER_URL,
                 headers={
@@ -604,7 +1028,7 @@ class ExtractionService:
                     "model": self.MODEL,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.1,
-                    "max_tokens": 8000,
+                    "max_tokens": 16000,  # Increased for complex extractions
                 },
             )
 
@@ -621,6 +1045,8 @@ class ExtractionService:
         try:
             content = result["choices"][0]["message"]["content"]
             content = content.strip()
+
+            # Strip markdown code blocks
             if content.startswith("```json"):
                 content = content[7:]
             if content.startswith("```"):
@@ -629,17 +1055,33 @@ class ExtractionService:
                 content = content[:-3]
             content = content.strip()
 
-            return json.loads(content)
-        except (KeyError, IndexError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to parse extraction response: {e}")
-            raise ExtractionError(f"Failed to parse LLM response: {e}")
+            # First try to parse as-is
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # Try to repair the JSON
+                logger.warning("Initial JSON parse failed, attempting repair...")
+                repaired = self._repair_json(content)
+                try:
+                    return json.loads(repaired)
+                except json.JSONDecodeError as repair_error:
+                    # Log the problematic content for debugging
+                    logger.error(f"JSON repair failed. First 500 chars: {repaired[:500]}")
+                    logger.error(f"Last 500 chars: {repaired[-500:]}")
+                    raise ExtractionError(
+                        f"Failed to parse LLM response even after repair: {repair_error}"
+                    )
+
+        except (KeyError, IndexError) as e:
+            logger.error(f"Failed to extract content from LLM response: {e}")
+            raise ExtractionError(f"Failed to extract content from LLM response: {e}")
 
     async def extract_policy(self, document_text: str) -> PolicyExtraction:
         """Extract policy information from document text."""
         logger.info("Extracting policy information...")
 
         prompt = POLICY_EXTRACTION_PROMPT.format(document_text=document_text)
-        data = await self._call_llm(prompt)
+        data = await self._call_llm_with_retry(prompt)
 
         # Parse coverages
         coverages = []
@@ -696,7 +1138,7 @@ class ExtractionService:
         logger.info("Extracting COI information...")
 
         prompt = COI_EXTRACTION_PROMPT.format(document_text=document_text)
-        data = await self._call_llm(prompt)
+        data = await self._call_llm_with_retry(prompt)
 
         # Parse policies referenced in COI
         policies = []
@@ -792,7 +1234,7 @@ class ExtractionService:
         logger.info("Extracting invoice information...")
 
         prompt = INVOICE_EXTRACTION_PROMPT.format(document_text=document_text)
-        data = await self._call_llm(prompt)
+        data = await self._call_llm_with_retry(prompt)
 
         # Parse line items
         line_items = []
@@ -825,7 +1267,7 @@ class ExtractionService:
         logger.info("Extracting SOV information...")
 
         prompt = SOV_EXTRACTION_PROMPT.format(document_text=document_text)
-        data = await self._call_llm(prompt)
+        data = await self._call_llm_with_retry(prompt)
 
         # Parse properties
         properties = []
@@ -861,7 +1303,7 @@ class ExtractionService:
         logger.info("Extracting proposal information...")
 
         prompt = PROPOSAL_EXTRACTION_PROMPT.format(document_text=document_text)
-        data = await self._call_llm(prompt)
+        data = await self._call_llm_with_retry(prompt)
 
         # Parse properties
         properties = []
@@ -913,6 +1355,570 @@ class ExtractionService:
             carriers=data.get("carriers", []),
             confidence=data.get("confidence", 0.5),
         )
+
+    async def extract_program(self, document_text: str) -> ProgramExtraction:
+        """Extract multi-carrier insurance program information."""
+        logger.info("Extracting program information...")
+
+        prompt = PROGRAM_EXTRACTION_PROMPT.format(document_text=document_text)
+        data = await self._call_llm_with_retry(prompt)
+
+        # Parse carriers
+        carriers = []
+        for carrier_data in data.get("carriers", []):
+            carriers.append(
+                CarrierInfo(
+                    carrier_name=carrier_data.get("carrier_name", "Unknown"),
+                    carrier_code=carrier_data.get("carrier_code"),
+                    policy_number=carrier_data.get("policy_number"),
+                    naic_number=carrier_data.get("naic_number"),
+                    address=carrier_data.get("address"),
+                    am_best_rating=carrier_data.get("am_best_rating"),
+                    admitted=carrier_data.get("admitted"),
+                )
+            )
+
+        # Parse Lloyd's syndicates
+        lloyds_syndicates = []
+        for synd_data in data.get("lloyds_syndicates", []):
+            lloyds_syndicates.append(
+                LloydsSyndicate(
+                    syndicate_number=synd_data.get("syndicate_number", ""),
+                    syndicate_abbreviation=synd_data.get("syndicate_abbreviation"),
+                    participation_percentage=synd_data.get("participation_percentage"),
+                )
+            )
+
+        # Parse contract allocation
+        contract_allocation = None
+        ca_data = data.get("contract_allocation")
+        if ca_data:
+            layers = []
+            for layer_data in ca_data.get("layers", []):
+                layers.append(
+                    ContractAllocationLayer(
+                        layer_description=layer_data.get("layer_description", ""),
+                        attachment_point=layer_data.get("attachment_point"),
+                        layer_limit=layer_data.get("layer_limit"),
+                        perils_covered=layer_data.get("perils_covered", []),
+                        peril_codes=layer_data.get("peril_codes", []),
+                        carrier_code=layer_data.get("carrier_code"),
+                        carrier_name=layer_data.get("carrier_name"),
+                        policy_number=layer_data.get("policy_number"),
+                        participation_amount=layer_data.get("participation_amount"),
+                        participation_percentage=layer_data.get("participation_percentage"),
+                        rate_per_hundred=layer_data.get("rate_per_hundred"),
+                    )
+                )
+            contract_allocation = ContractAllocation(
+                account_number=ca_data.get("account_number"),
+                layers=layers,
+                peril_symbols=ca_data.get("peril_symbols", {}),
+                max_risk_basis=ca_data.get("max_risk_basis"),
+                max_limit=ca_data.get("max_limit"),
+            )
+
+        # Parse sublimits schedule
+        sublimits = None
+        sub_data = data.get("sublimits")
+        if sub_data:
+            additional_sublimits = []
+            for sub_entry in sub_data.get("additional_sublimits", []):
+                additional_sublimits.append(
+                    SublimitEntry(
+                        sublimit_name=sub_entry.get("sublimit_name", ""),
+                        limit_amount=sub_entry.get("limit_amount"),
+                        limit_type=sub_entry.get("limit_type"),
+                        duration_days=sub_entry.get("duration_days"),
+                        duration_type=sub_entry.get("duration_type"),
+                        is_included=sub_entry.get("is_included", False),
+                        is_not_covered=sub_entry.get("is_not_covered", False),
+                        percentage_of=sub_entry.get("percentage_of"),
+                        percentage_value=sub_entry.get("percentage_value"),
+                        minimum_amount=sub_entry.get("minimum_amount"),
+                        maximum_amount=sub_entry.get("maximum_amount"),
+                        applies_to=sub_entry.get("applies_to"),
+                        conditions=sub_entry.get("conditions", []),
+                    )
+                )
+            sublimits = SublimitsSchedule(
+                maximum_limit_of_liability=sub_data.get("maximum_limit_of_liability"),
+                limit_basis=sub_data.get("limit_basis"),
+                earth_movement_aggregate=sub_data.get("earth_movement_aggregate"),
+                earth_movement_california_aggregate=sub_data.get("earth_movement_california_aggregate"),
+                earth_movement_pacific_nw_aggregate=sub_data.get("earth_movement_pacific_nw_aggregate"),
+                earth_movement_new_madrid_aggregate=sub_data.get("earth_movement_new_madrid_aggregate"),
+                flood_aggregate=sub_data.get("flood_aggregate"),
+                flood_sfha_aggregate=sub_data.get("flood_sfha_aggregate"),
+                named_storm_limit=sub_data.get("named_storm_limit"),
+                named_storm_is_included=sub_data.get("named_storm_is_included", False),
+                accounts_receivable=sub_data.get("accounts_receivable"),
+                civil_authority_days=sub_data.get("civil_authority_days"),
+                civil_authority_limit=sub_data.get("civil_authority_limit"),
+                contingent_time_element_days=sub_data.get("contingent_time_element_days"),
+                contingent_time_element_limit=sub_data.get("contingent_time_element_limit"),
+                debris_removal_percentage=sub_data.get("debris_removal_percentage"),
+                debris_removal_limit=sub_data.get("debris_removal_limit"),
+                electronic_data_media=sub_data.get("electronic_data_media"),
+                errors_omissions=sub_data.get("errors_omissions"),
+                extended_period_of_indemnity_days=sub_data.get("extended_period_of_indemnity_days"),
+                extra_expense=sub_data.get("extra_expense"),
+                fine_arts=sub_data.get("fine_arts"),
+                fire_brigade_charges=sub_data.get("fire_brigade_charges"),
+                fungus_mold_aggregate=sub_data.get("fungus_mold_aggregate"),
+                ingress_egress_days=sub_data.get("ingress_egress_days"),
+                ingress_egress_limit=sub_data.get("ingress_egress_limit"),
+                leasehold_interest=sub_data.get("leasehold_interest"),
+                pollution_aggregate=sub_data.get("pollution_aggregate"),
+                newly_acquired_property_days=sub_data.get("newly_acquired_property_days"),
+                newly_acquired_property_limit=sub_data.get("newly_acquired_property_limit"),
+                ordinance_law_coverage_a=sub_data.get("ordinance_law_coverage_a"),
+                ordinance_law_coverage_b=sub_data.get("ordinance_law_coverage_b"),
+                ordinance_law_coverage_b_percentage=sub_data.get("ordinance_law_coverage_b_percentage"),
+                ordinance_law_coverage_c=sub_data.get("ordinance_law_coverage_c"),
+                ordinance_law_coverage_d=sub_data.get("ordinance_law_coverage_d"),
+                ordinance_law_coverage_e=sub_data.get("ordinance_law_coverage_e"),
+                ordinary_payroll_days=sub_data.get("ordinary_payroll_days"),
+                service_interruption_limit=sub_data.get("service_interruption_limit"),
+                service_interruption_waiting_hours=sub_data.get("service_interruption_waiting_hours"),
+                spoilage=sub_data.get("spoilage"),
+                transit=sub_data.get("transit"),
+                valuable_papers_records=sub_data.get("valuable_papers_records"),
+                additional_sublimits=additional_sublimits,
+            )
+
+        # Parse deductible schedule
+        deductibles = None
+        ded_data = data.get("deductibles")
+        if ded_data:
+            additional_deductibles = []
+            for ded_entry in ded_data.get("additional_deductibles", []):
+                additional_deductibles.append(
+                    DeductibleEntry(
+                        deductible_name=ded_entry.get("deductible_name", ""),
+                        deductible_type=ded_entry.get("deductible_type"),
+                        flat_amount=ded_entry.get("flat_amount"),
+                        percentage_of_tiv=ded_entry.get("percentage_of_tiv"),
+                        percentage_basis=ded_entry.get("percentage_basis"),
+                        minimum_amount=ded_entry.get("minimum_amount"),
+                        maximum_amount=ded_entry.get("maximum_amount"),
+                        waiting_period_hours=ded_entry.get("waiting_period_hours"),
+                        applies_to_perils=ded_entry.get("applies_to_perils", []),
+                        applies_to_locations=ded_entry.get("applies_to_locations"),
+                        conditions=ded_entry.get("conditions", []),
+                    )
+                )
+            deductibles = DeductibleSchedule(
+                base_property_deductible=ded_data.get("base_property_deductible"),
+                base_time_element_deductible=ded_data.get("base_time_element_deductible"),
+                base_combined_deductible=ded_data.get("base_combined_deductible"),
+                earth_movement_percentage=ded_data.get("earth_movement_percentage"),
+                earth_movement_minimum=ded_data.get("earth_movement_minimum"),
+                earth_movement_california_percentage=ded_data.get("earth_movement_california_percentage"),
+                earth_movement_california_minimum=ded_data.get("earth_movement_california_minimum"),
+                windstorm_hail_percentage=ded_data.get("windstorm_hail_percentage"),
+                windstorm_hail_minimum=ded_data.get("windstorm_hail_minimum"),
+                named_storm_percentage=ded_data.get("named_storm_percentage"),
+                named_storm_minimum=ded_data.get("named_storm_minimum"),
+                hurricane_percentage=ded_data.get("hurricane_percentage"),
+                hurricane_minimum=ded_data.get("hurricane_minimum"),
+                flood_deductible=ded_data.get("flood_deductible"),
+                flood_sfha_deductible=ded_data.get("flood_sfha_deductible"),
+                equipment_breakdown_deductible=ded_data.get("equipment_breakdown_deductible"),
+                cyber_deductible=ded_data.get("cyber_deductible"),
+                terrorism_deductible=ded_data.get("terrorism_deductible"),
+                deductible_application_rules=ded_data.get("deductible_application_rules", []),
+                additional_deductibles=additional_deductibles,
+            )
+
+        # Parse cyber coverage
+        cyber_coverage = None
+        cyber_data = data.get("cyber_coverage")
+        if cyber_data:
+            cyber_coverage = CyberCoverage(
+                cyber_aggregate_limit=cyber_data.get("cyber_aggregate_limit"),
+                cyber_deductible=cyber_data.get("cyber_deductible"),
+                identity_recovery_limit=cyber_data.get("identity_recovery_limit"),
+                forensic_it_review_limit=cyber_data.get("forensic_it_review_limit"),
+                legal_review_limit=cyber_data.get("legal_review_limit"),
+                notification_limit=cyber_data.get("notification_limit"),
+                public_relations_limit=cyber_data.get("public_relations_limit"),
+                regulatory_fines_limit=cyber_data.get("regulatory_fines_limit"),
+                pci_fines_limit=cyber_data.get("pci_fines_limit"),
+                first_party_malware_limit=cyber_data.get("first_party_malware_limit"),
+                loss_of_business_limit=cyber_data.get("loss_of_business_limit"),
+                data_restoration_limit=cyber_data.get("data_restoration_limit"),
+                system_restoration_limit=cyber_data.get("system_restoration_limit"),
+                cyber_extortion_limit=cyber_data.get("cyber_extortion_limit"),
+                data_compromise_liability_limit=cyber_data.get("data_compromise_liability_limit"),
+                network_security_liability_limit=cyber_data.get("network_security_liability_limit"),
+                electronic_media_liability_limit=cyber_data.get("electronic_media_liability_limit"),
+                lost_wages_limit=cyber_data.get("lost_wages_limit"),
+                mental_health_counseling_limit=cyber_data.get("mental_health_counseling_limit"),
+                miscellaneous_costs_limit=cyber_data.get("miscellaneous_costs_limit"),
+            )
+
+        # Parse equipment breakdown
+        equipment_breakdown = None
+        eb_data = data.get("equipment_breakdown")
+        if eb_data:
+            equipment_breakdown = EquipmentBreakdownCoverage(
+                equipment_breakdown_limit=eb_data.get("equipment_breakdown_limit"),
+                equipment_breakdown_deductible=eb_data.get("equipment_breakdown_deductible"),
+                time_element_coverage=eb_data.get("time_element_coverage"),
+                extra_expense_limit=eb_data.get("extra_expense_limit"),
+                data_restoration_limit=eb_data.get("data_restoration_limit"),
+                expediting_expenses_limit=eb_data.get("expediting_expenses_limit"),
+                green_upgrades_limit=eb_data.get("green_upgrades_limit"),
+                hazardous_substances_limit=eb_data.get("hazardous_substances_limit"),
+                off_premises_limit=eb_data.get("off_premises_limit"),
+                service_interruption_included=eb_data.get("service_interruption_included", False),
+                spoilage_limit=eb_data.get("spoilage_limit"),
+                spoilage_coinsurance=eb_data.get("spoilage_coinsurance"),
+                public_relations_included=eb_data.get("public_relations_included", False),
+            )
+
+        # Parse terrorism coverage
+        terrorism_coverage = None
+        terr_data = data.get("terrorism_coverage")
+        if terr_data:
+            terrorism_coverage = TerrorismCoverage(
+                terrorism_form=terr_data.get("terrorism_form"),
+                terrorism_limit=terr_data.get("terrorism_limit"),
+                terrorism_limit_basis=terr_data.get("terrorism_limit_basis"),
+                terrorism_deductible=terr_data.get("terrorism_deductible"),
+                certified_terrorism_covered=terr_data.get("certified_terrorism_covered"),
+                non_certified_terrorism_covered=terr_data.get("non_certified_terrorism_covered"),
+                tria_exclusion_form=terr_data.get("tria_exclusion_form"),
+            )
+
+        # Parse sinkhole coverage
+        sinkhole_coverage = None
+        sink_data = data.get("sinkhole_coverage")
+        if sink_data:
+            sinkhole_coverage = SinkholeCoverage(
+                sinkhole_covered=sink_data.get("sinkhole_covered", False),
+                catastrophic_ground_cover_collapse_covered=sink_data.get(
+                    "catastrophic_ground_cover_collapse_covered", False
+                ),
+                florida_specific=sink_data.get("florida_specific", False),
+                valuation_type=sink_data.get("valuation_type"),
+                neutral_evaluation_available=sink_data.get("neutral_evaluation_available", False),
+                stabilization_requirements=sink_data.get("stabilization_requirements", []),
+                exclusions=sink_data.get("exclusions", []),
+            )
+
+        # Parse CAT covered property
+        cat_covered_property = None
+        cat_data = data.get("cat_covered_property")
+        if cat_data:
+            cat_covered_property = CATCoveredProperty(
+                cat_property_limit=cat_data.get("cat_property_limit"),
+                cat_property_deductible_percentage=cat_data.get("cat_property_deductible_percentage"),
+                cat_property_minimum_deductible=cat_data.get("cat_property_minimum_deductible"),
+                excluded_property_types=cat_data.get("excluded_property_types", []),
+                requires_scheduling=cat_data.get("requires_scheduling", []),
+                covered_if_scheduled=cat_data.get("covered_if_scheduled", []),
+            )
+
+        # Parse valuation bases
+        valuation_bases = []
+        for val_data in data.get("valuation_bases", []):
+            valuation_bases.append(
+                ValuationBasis(
+                    property_type=val_data.get("property_type", ""),
+                    valuation_type=val_data.get("valuation_type", ""),
+                    conditions=val_data.get("conditions", []),
+                )
+            )
+
+        # Parse restrictions
+        restrictions = []
+        for restr_data in data.get("restrictions", []):
+            restrictions.append(
+                PolicyRestriction(
+                    restriction_type=restr_data.get("restriction_type", ""),
+                    description=restr_data.get("description", ""),
+                    applies_to=restr_data.get("applies_to"),
+                    source_endorsement=restr_data.get("source_endorsement"),
+                )
+            )
+
+        # Parse service of suit
+        service_of_suit = []
+        for sos_data in data.get("service_of_suit", []):
+            service_of_suit.append(
+                ServiceOfSuit(
+                    carrier_name=sos_data.get("carrier_name", ""),
+                    service_address=sos_data.get("service_address"),
+                    contact_name=sos_data.get("contact_name"),
+                    lma_form=sos_data.get("lma_form"),
+                )
+            )
+
+        # Parse forms schedule
+        forms_schedule = []
+        for form_data in data.get("forms_schedule", []):
+            forms_schedule.append(
+                FormsEndorsementsSchedule(
+                    form_number=form_data.get("form_number", ""),
+                    form_title=form_data.get("form_title"),
+                    form_description=form_data.get("form_description"),
+                )
+            )
+
+        # Parse coverages
+        coverages = []
+        for cov_data in data.get("coverages", []):
+            coverages.append(
+                CoverageExtraction(
+                    coverage_name=cov_data.get("coverage_name", "Unknown"),
+                    coverage_category=cov_data.get("coverage_category"),
+                    limit_amount=cov_data.get("limit_amount"),
+                    limit_type=cov_data.get("limit_type"),
+                    deductible_amount=cov_data.get("deductible_amount"),
+                    deductible_type=cov_data.get("deductible_type"),
+                    valuation_type=cov_data.get("valuation_type"),
+                    exclusions=cov_data.get("exclusions", []),
+                    conditions=cov_data.get("conditions", []),
+                    source_page=cov_data.get("source_page"),
+                    confidence=cov_data.get("confidence", 0.5),
+                )
+            )
+
+        return ProgramExtraction(
+            account_number=data.get("account_number"),
+            program_name=data.get("program_name"),
+            named_insured=data.get("named_insured"),
+            insured_address=data.get("insured_address"),
+            additional_named_insureds=data.get("additional_named_insureds", []),
+            effective_date=self._parse_date(data.get("effective_date")),
+            expiration_date=self._parse_date(data.get("expiration_date")),
+            producer_name=data.get("producer_name"),
+            producer_address=data.get("producer_address"),
+            program_manager=data.get("program_manager"),
+            program_manager_address=data.get("program_manager_address"),
+            correspondent=data.get("correspondent"),
+            total_premium=data.get("total_premium"),
+            premium_by_state=data.get("premium_by_state", {}),
+            taxes=data.get("taxes"),
+            fees=data.get("fees"),
+            surplus_lines_tax=data.get("surplus_lines_tax"),
+            inspection_fee=data.get("inspection_fee"),
+            program_fee=data.get("program_fee"),
+            total_cost=data.get("total_cost"),
+            minimum_earned_premium=data.get("minimum_earned_premium"),
+            carriers=carriers,
+            lloyds_syndicates=lloyds_syndicates,
+            contract_allocation=contract_allocation,
+            carrier_premiums=data.get("carrier_premiums", {}),
+            sublimits=sublimits,
+            deductibles=deductibles,
+            cyber_coverage=cyber_coverage,
+            equipment_breakdown=equipment_breakdown,
+            terrorism_coverage=terrorism_coverage,
+            sinkhole_coverage=sinkhole_coverage,
+            cat_covered_property=cat_covered_property,
+            valuation_bases=valuation_bases,
+            restrictions=restrictions,
+            major_exclusions=data.get("major_exclusions", []),
+            coverage_territory=data.get("coverage_territory"),
+            service_of_suit=service_of_suit,
+            forms_schedule=forms_schedule,
+            state_notices=data.get("state_notices", {}),
+            coverages=coverages,
+            source_pages=data.get("source_pages", []),
+            confidence=data.get("confidence", 0.5),
+        )
+
+    async def _extract_program_from_chunk(
+        self, chunk: str, chunk_index: int
+    ) -> ProgramExtraction | None:
+        """Extract program from a single chunk, handling errors gracefully."""
+        try:
+            logger.info(f"Extracting program from chunk {chunk_index + 1} ({len(chunk)} chars)")
+            return await self.extract_program(chunk)
+        except Exception as e:
+            logger.warning(f"Chunk {chunk_index + 1} program extraction failed: {e}")
+            return None
+
+    def _merge_program_extractions(
+        self, extractions: list[ProgramExtraction], chunk_indices: list[int] | None = None
+    ) -> ProgramExtraction:
+        """Merge multiple program extractions into one.
+
+        Prioritizes early chunks for key metadata (declaration pages are at the start),
+        combines lists, and deduplicates.
+        """
+        if not extractions:
+            return ProgramExtraction()
+
+        if len(extractions) == 1:
+            return extractions[0]
+
+        # If we have chunk indices, pair them with extractions
+        if chunk_indices:
+            indexed_extractions = list(zip(chunk_indices, extractions))
+            indexed_extractions.sort(key=lambda x: x[0])
+            extractions_ordered = [ext for _, ext in indexed_extractions]
+        else:
+            extractions_ordered = extractions
+
+        # Start with the first chunk's extraction as base
+        merged = extractions_ordered[0].model_copy(deep=True)
+
+        # Collect items for merging
+        all_carriers = {c.policy_number or c.carrier_name: c for c in merged.carriers}
+        all_syndicates = {s.syndicate_number: s for s in merged.lloyds_syndicates}
+        all_layers = []
+        all_valuation_bases = []
+        all_restrictions = []
+        all_service_of_suit = {s.carrier_name: s for s in merged.service_of_suit}
+        all_forms = {f.form_number: f for f in merged.forms_schedule}
+        all_coverages = {c.coverage_name.lower(): c for c in merged.coverages}
+        all_major_exclusions = set(merged.major_exclusions)
+
+        if merged.contract_allocation:
+            all_layers.extend(merged.contract_allocation.layers)
+
+        for ext in extractions_ordered[1:]:
+            # Merge carriers
+            for carrier in ext.carriers:
+                key = carrier.policy_number or carrier.carrier_name
+                if key not in all_carriers:
+                    all_carriers[key] = carrier
+
+            # Merge syndicates
+            for synd in ext.lloyds_syndicates:
+                if synd.syndicate_number not in all_syndicates:
+                    all_syndicates[synd.syndicate_number] = synd
+
+            # Merge contract allocation layers
+            if ext.contract_allocation:
+                all_layers.extend(ext.contract_allocation.layers)
+                # Merge peril symbols
+                if merged.contract_allocation:
+                    merged.contract_allocation.peril_symbols.update(
+                        ext.contract_allocation.peril_symbols
+                    )
+
+            # Merge valuation bases
+            all_valuation_bases.extend(ext.valuation_bases)
+
+            # Merge restrictions
+            all_restrictions.extend(ext.restrictions)
+
+            # Merge service of suit
+            for sos in ext.service_of_suit:
+                if sos.carrier_name not in all_service_of_suit:
+                    all_service_of_suit[sos.carrier_name] = sos
+
+            # Merge forms
+            for form in ext.forms_schedule:
+                if form.form_number not in all_forms:
+                    all_forms[form.form_number] = form
+
+            # Merge coverages (take highest confidence)
+            for cov in ext.coverages:
+                key = cov.coverage_name.lower()
+                if key not in all_coverages or cov.confidence > all_coverages[key].confidence:
+                    all_coverages[key] = cov
+
+            # Merge major exclusions
+            all_major_exclusions.update(ext.major_exclusions)
+
+            # Fill in missing scalar fields from later chunks
+            if ext.account_number and not merged.account_number:
+                merged.account_number = ext.account_number
+            if ext.named_insured and not merged.named_insured:
+                merged.named_insured = ext.named_insured
+            if ext.total_premium and not merged.total_premium:
+                merged.total_premium = ext.total_premium
+            if ext.total_cost and not merged.total_cost:
+                merged.total_cost = ext.total_cost
+
+            # Merge sublimits (take first non-null)
+            if ext.sublimits and not merged.sublimits:
+                merged.sublimits = ext.sublimits
+
+            # Merge deductibles (take first non-null)
+            if ext.deductibles and not merged.deductibles:
+                merged.deductibles = ext.deductibles
+
+            # Merge cyber coverage
+            if ext.cyber_coverage and not merged.cyber_coverage:
+                merged.cyber_coverage = ext.cyber_coverage
+
+            # Merge equipment breakdown
+            if ext.equipment_breakdown and not merged.equipment_breakdown:
+                merged.equipment_breakdown = ext.equipment_breakdown
+
+            # Merge terrorism coverage
+            if ext.terrorism_coverage and not merged.terrorism_coverage:
+                merged.terrorism_coverage = ext.terrorism_coverage
+
+            # Merge sinkhole coverage
+            if ext.sinkhole_coverage and not merged.sinkhole_coverage:
+                merged.sinkhole_coverage = ext.sinkhole_coverage
+
+            # Merge CAT covered property
+            if ext.cat_covered_property and not merged.cat_covered_property:
+                merged.cat_covered_property = ext.cat_covered_property
+
+            # Merge state notices
+            merged.state_notices.update(ext.state_notices)
+
+            # Merge carrier premiums
+            merged.carrier_premiums.update(ext.carrier_premiums)
+
+        # Apply merged collections
+        merged.carriers = list(all_carriers.values())
+        merged.lloyds_syndicates = list(all_syndicates.values())
+        if merged.contract_allocation:
+            # Deduplicate layers by description
+            seen_layers = {}
+            for layer in all_layers:
+                key = f"{layer.layer_description}_{layer.carrier_code}_{layer.policy_number}"
+                if key not in seen_layers:
+                    seen_layers[key] = layer
+            merged.contract_allocation.layers = list(seen_layers.values())
+        merged.valuation_bases = all_valuation_bases
+        merged.restrictions = all_restrictions
+        merged.service_of_suit = list(all_service_of_suit.values())
+        merged.forms_schedule = list(all_forms.values())
+        merged.coverages = list(all_coverages.values())
+        merged.major_exclusions = list(all_major_exclusions)
+
+        # Average confidence
+        merged.confidence = sum(e.confidence for e in extractions) / len(extractions)
+
+        return merged
+
+    async def extract_program_chunked(self, document_text: str) -> ProgramExtraction:
+        """Extract program information using chunked processing for large documents."""
+        chunks = self._split_into_chunks(document_text)
+
+        if len(chunks) == 1:
+            return await self.extract_program(chunks[0])
+
+        logger.info(f"Processing {len(chunks)} chunks in parallel for program extraction")
+
+        tasks = [self._extract_program_from_chunk(chunk, i) for i, chunk in enumerate(chunks)]
+        results = await asyncio.gather(*tasks)
+
+        valid_extractions = []
+        valid_indices = []
+        for i, result in enumerate(results):
+            if result is not None:
+                valid_extractions.append(result)
+                valid_indices.append(i)
+
+        if not valid_extractions:
+            raise ExtractionError("All chunk extractions failed")
+
+        logger.info(f"Merging {len(valid_extractions)} successful program chunk extractions")
+
+        return self._merge_program_extractions(valid_extractions, valid_indices)
 
     async def _extract_policy_from_chunk(self, chunk: str, chunk_index: int) -> PolicyExtraction | None:
         """Extract policy from a single chunk, handling errors gracefully."""
@@ -1021,7 +2027,15 @@ class ExtractionService:
             logger.info(f"Large document detected ({len(document_text)} chars), using chunked extraction")
 
         try:
-            if doc_type in (DocumentType.POLICY, DocumentType.DECLARATION, DocumentType.ENDORSEMENT):
+            if doc_type == DocumentType.PROGRAM:
+                # Multi-carrier insurance program
+                if is_large_doc:
+                    result.program = await self.extract_program_chunked(document_text)
+                else:
+                    result.program = await self.extract_program(document_text)
+                result.overall_confidence = result.program.confidence
+
+            elif doc_type in (DocumentType.POLICY, DocumentType.DECLARATION, DocumentType.ENDORSEMENT):
                 if is_large_doc:
                     result.policy = await self.extract_policy_chunked(document_text)
                 else:
