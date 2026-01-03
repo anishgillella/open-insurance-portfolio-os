@@ -130,18 +130,21 @@ async def ingest_directory(
             property_name=request.property_name,
             property_id=request.property_id,
             program_id=request.program_id,
+            force_reprocess=request.force_reprocess,
         )
         await db.commit()
 
         # Calculate summary
         successful = sum(1 for r in results if r.status == "completed")
-        failed = sum(1 for r in results if r.status != "completed")
+        failed = sum(1 for r in results if r.status == "failed")
+        skipped = sum(1 for r in results if r.status == "skipped")
 
         return IngestDirectoryResponse(
             directory_path=request.directory_path,
             total_files=len(results),
             successful=successful,
             failed=failed,
+            skipped=skipped,
             results=results,
         )
 

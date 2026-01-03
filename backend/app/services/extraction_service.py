@@ -1451,27 +1451,48 @@ Respond with ONLY the JSON object. No markdown, no explanation, just valid JSON.
         # Parse policies referenced in COI
         policies = []
         for pol_data in data.get("policies", []):
-            # Filter out None values from limits dict
+            # The limits dict is now handled by COIPolicyReference's field_validator
+            # which uses parse_flexible_numeric_dict to handle "2%", "$1M", etc.
             raw_limits = pol_data.get("limits", {})
-            limits = {k: v for k, v in raw_limits.items() if v is not None} if raw_limits else {}
 
-            policies.append(
-                COIPolicyReference(
-                    insurer_letter=pol_data.get("insurer_letter"),
-                    policy_type=self._parse_policy_type(pol_data.get("policy_type")),
-                    policy_number=pol_data.get("policy_number"),
-                    carrier_name=pol_data.get("carrier_name"),
-                    naic_number=pol_data.get("naic_number"),
-                    effective_date=self._parse_date(pol_data.get("effective_date")),
-                    expiration_date=self._parse_date(pol_data.get("expiration_date")),
-                    coverage_form=pol_data.get("coverage_form"),
-                    is_additional_insured=bool(pol_data.get("is_additional_insured")),
-                    is_subrogation_waived=bool(pol_data.get("is_subrogation_waived")),
-                    aggregate_limit_applies_per=pol_data.get("aggregate_limit_applies_per"),
-                    limits=limits,
-                    confidence=pol_data.get("confidence", 0.5),
+            try:
+                policies.append(
+                    COIPolicyReference(
+                        insurer_letter=pol_data.get("insurer_letter"),
+                        policy_type=self._parse_policy_type(pol_data.get("policy_type")),
+                        policy_number=pol_data.get("policy_number"),
+                        carrier_name=pol_data.get("carrier_name"),
+                        naic_number=pol_data.get("naic_number"),
+                        effective_date=self._parse_date(pol_data.get("effective_date")),
+                        expiration_date=self._parse_date(pol_data.get("expiration_date")),
+                        coverage_form=pol_data.get("coverage_form"),
+                        is_additional_insured=bool(pol_data.get("is_additional_insured")),
+                        is_subrogation_waived=bool(pol_data.get("is_subrogation_waived")),
+                        aggregate_limit_applies_per=pol_data.get("aggregate_limit_applies_per"),
+                        limits=raw_limits,
+                        confidence=pol_data.get("confidence", 0.5),
+                    )
                 )
-            )
+            except ValidationError as e:
+                # Log the validation error but continue with what we can parse
+                logger.warning(f"COIPolicyReference validation error: {e}. Attempting graceful recovery...")
+                # Try again with just the fields we know work
+                try:
+                    policies.append(
+                        COIPolicyReference(
+                            insurer_letter=pol_data.get("insurer_letter"),
+                            policy_type=self._parse_policy_type(pol_data.get("policy_type")),
+                            policy_number=pol_data.get("policy_number"),
+                            carrier_name=pol_data.get("carrier_name"),
+                            effective_date=self._parse_date(pol_data.get("effective_date")),
+                            expiration_date=self._parse_date(pol_data.get("expiration_date")),
+                            limits={},  # Skip problematic limits
+                            confidence=pol_data.get("confidence", 0.3),  # Lower confidence due to recovery
+                        )
+                    )
+                    logger.info("Successfully recovered COIPolicyReference with reduced data")
+                except Exception as e2:
+                    logger.error(f"Could not recover COIPolicyReference: {e2}")
 
         return COIExtraction(
             # Certificate Identity

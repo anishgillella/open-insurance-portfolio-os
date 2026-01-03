@@ -5,6 +5,7 @@ processing, including classification, extraction, and validation.
 
 Key Features:
 - NullSafeModel: Handles LLM null responses for boolean fields
+- FlexibleNumericModel: Parses percentage strings, currency, and other LLM formats
 - Field validators: Policy numbers, dates, amounts
 - Shared mixins: Consistent patterns across extraction types
 """
@@ -15,6 +16,85 @@ import re
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+# ---------------------------------------------------------------------------
+# Numeric Parsing Utilities
+# ---------------------------------------------------------------------------
+
+
+def parse_flexible_numeric(value: Any) -> float | None:
+    """Parse various numeric formats from LLM output.
+
+    Handles:
+    - Percentages: "2%", "5.5%" -> 0.02, 0.055 (as decimal)
+    - Currency: "$1,000", "$1M", "$2.5B" -> 1000, 1000000, 2500000000
+    - Plain numbers: "1000", 1000, 1000.50
+    - Strings with commas: "1,234,567" -> 1234567
+    - Words: "null", "N/A", "" -> None
+
+    Args:
+        value: The value to parse (string, int, float, or None)
+
+    Returns:
+        Parsed float value or None if unparseable
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if not isinstance(value, str):
+        return None
+
+    # Clean the string
+    value = value.strip()
+
+    # Handle empty or null-like values
+    if not value or value.lower() in ("null", "n/a", "none", "-", ""):
+        return None
+
+    # Check if it's a percentage
+    is_percentage = value.endswith("%")
+    if is_percentage:
+        value = value[:-1].strip()
+
+    # Remove currency symbols and commas
+    value = value.replace("$", "").replace(",", "").strip()
+
+    # Handle shorthand (M for million, B for billion, K for thousand)
+    multiplier = 1.0
+    if value.upper().endswith("M"):
+        multiplier = 1_000_000
+        value = value[:-1].strip()
+    elif value.upper().endswith("B"):
+        multiplier = 1_000_000_000
+        value = value[:-1].strip()
+    elif value.upper().endswith("K"):
+        multiplier = 1_000
+        value = value[:-1].strip()
+
+    try:
+        result = float(value) * multiplier
+        # If it was a percentage, convert to decimal (e.g., 2% -> 0.02)
+        if is_percentage:
+            result = result / 100.0
+        return result
+    except ValueError:
+        return None
+
+
+def parse_flexible_numeric_dict(d: dict[str, Any]) -> dict[str, float | None]:
+    """Parse all values in a dictionary using flexible numeric parsing.
+
+    Args:
+        d: Dictionary with string keys and various value types
+
+    Returns:
+        Dictionary with parsed float values (or None for unparseable)
+    """
+    return {k: parse_flexible_numeric(v) for k, v in d.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +402,14 @@ class COIPolicyReference(NullSafeModel):
     limits: dict[str, float | None] = Field(default_factory=dict)  # Flexible limit storage
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
+    @field_validator("limits", mode="before")
+    @classmethod
+    def parse_limits(cls, v: Any) -> dict[str, float | None]:
+        """Parse limits dict, handling percentage strings like '2%'."""
+        if not isinstance(v, dict):
+            return {}
+        return parse_flexible_numeric_dict(v)
+
 
 class COIExtraction(NullSafeModel):
     """Extracted Certificate of Insurance information."""
@@ -348,6 +436,17 @@ class COIExtraction(NullSafeModel):
 
     # Insurers (A, B, C, D, E, F)
     insurers: dict[str, dict] = Field(default_factory=dict)  # {"A": {"name": "...", "naic": "..."}}
+
+    @field_validator("insurers", mode="before")
+    @classmethod
+    def filter_null_insurers(cls, v: Any) -> dict[str, dict]:
+        """Filter out null values from insurers dict.
+
+        LLM often returns null for unused insurer slots (B-F).
+        """
+        if not isinstance(v, dict):
+            return {}
+        return {k: val for k, val in v.items() if val is not None and isinstance(val, dict)}
 
     # Policy References (detailed)
     policies: list[COIPolicyReference] = Field(default_factory=list)
@@ -1227,6 +1326,7 @@ class IngestDirectoryRequest(BaseModel):
     property_name: str | None = None  # Defaults to directory name if not provided
     property_id: str | None = None
     program_id: str | None = None
+    force_reprocess: bool = True  # If True, reprocess existing docs. If False, skip them.
 
 
 class IngestDirectoryResponse(BaseModel):
@@ -1236,4 +1336,5 @@ class IngestDirectoryResponse(BaseModel):
     total_files: int
     successful: int
     failed: int
+    skipped: int = 0  # Documents that already existed and were skipped
     results: list[IngestResponse]

@@ -7,13 +7,19 @@ This service orchestrates the complete document ingestion pipeline:
 4. Extraction (Gemini)
 5. Database record creation
 6. File storage (local + S3)
+
+Features:
+- Parallel processing of multiple files in a directory
+- Each file processed in its own async task for maximum throughput
 """
 
+import asyncio
 import logging
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import async_session_maker
 from app.repositories.certificate_repository import CertificateRepository
 from app.repositories.claim_repository import ClaimRepository
 from app.repositories.document_repository import DocumentRepository
@@ -79,8 +85,12 @@ class IngestionService:
         property_name: str,
         property_id: str | None = None,
         program_id: str | None = None,
+        force_reprocess: bool = True,
     ) -> IngestResponse:
         """Ingest a single document file.
+
+        If a document with the same filename already exists for this organization,
+        it will be reprocessed (updated) instead of creating a duplicate.
 
         Args:
             file_path: Path to the document file.
@@ -88,6 +98,7 @@ class IngestionService:
             property_name: Property name (used for folder organization in storage).
             property_id: Optional property ID (for database relations).
             program_id: Optional insurance program ID (for creating policies).
+            force_reprocess: If True, reprocess existing documents. If False, skip them.
 
         Returns:
             IngestResponse with results and any errors.
@@ -111,18 +122,48 @@ class IngestionService:
         file_type = path.suffix.lower().lstrip(".")
         mime_type = self._get_mime_type(path)
 
-        # Create document record
-        document = await self.document_repo.create_from_file(
+        # Check for existing document (deduplication)
+        existing_document = await self.document_repo.find_by_filename_and_org(
             file_name=path.name,
-            file_url=str(path.absolute()),
             organization_id=organization_id,
-            property_id=property_id,
-            file_size_bytes=file_size,
-            file_type=file_type,
-            mime_type=mime_type,
         )
 
-        logger.info(f"Created document record: {document.id}")
+        if existing_document:
+            if not force_reprocess:
+                logger.info(f"Document already exists, skipping: {path.name} (id: {existing_document.id})")
+                return IngestResponse(
+                    document_id=existing_document.id,
+                    file_name=path.name,
+                    status="skipped",
+                    errors=["Document already exists. Use force_reprocess=True to reprocess."],
+                )
+
+            # Reprocess existing document
+            logger.info(f"Document exists, reprocessing: {path.name} (id: {existing_document.id})")
+            document = await self.document_repo.reset_for_reprocessing(
+                document_id=existing_document.id,
+                file_url=str(path.absolute()),
+                file_size_bytes=file_size,
+            )
+            if not document:
+                return IngestResponse(
+                    document_id=existing_document.id,
+                    file_name=path.name,
+                    status="failed",
+                    errors=["Failed to reset document for reprocessing"],
+                )
+        else:
+            # Create new document record
+            document = await self.document_repo.create_from_file(
+                file_name=path.name,
+                file_url=str(path.absolute()),
+                organization_id=organization_id,
+                property_id=property_id,
+                file_size_bytes=file_size,
+                file_type=file_type,
+                mime_type=mime_type,
+            )
+            logger.info(f"Created new document record: {document.id}")
 
         # Variables to store for later file storage
         ocr_markdown: str | None = None
@@ -288,8 +329,13 @@ class IngestionService:
         property_id: str | None = None,
         program_id: str | None = None,
         extensions: set[str] | None = None,
+        max_concurrent: int = 5,
+        force_reprocess: bool = True,
     ) -> list[IngestResponse]:
-        """Ingest all documents in a directory.
+        """Ingest all documents in a directory in PARALLEL.
+
+        Each file is processed in its own async task for maximum throughput.
+        Uses semaphore to limit concurrent API calls.
 
         Args:
             directory_path: Path to directory.
@@ -298,6 +344,8 @@ class IngestionService:
             property_id: Optional property ID.
             program_id: Optional insurance program ID.
             extensions: File extensions to process (default: pdf, png, jpg, jpeg).
+            max_concurrent: Maximum number of files to process concurrently (default: 5).
+            force_reprocess: If True, reprocess existing documents. If False, skip them.
 
         Returns:
             List of IngestResponse for each file.
@@ -313,33 +361,76 @@ class IngestionService:
         if property_name is None:
             property_name = directory.name
 
-        results = []
         files = [f for f in directory.iterdir() if f.suffix.lower() in extensions]
 
-        logger.info(f"Found {len(files)} files to ingest in {directory_path} (property: {property_name})")
+        logger.info(
+            f"Found {len(files)} files to ingest in {directory_path} "
+            f"(property: {property_name}, parallel: {max_concurrent}, force_reprocess: {force_reprocess})"
+        )
 
-        for file_path in files:
-            try:
-                result = await self.ingest_file(
-                    str(file_path),
-                    organization_id=organization_id,
-                    property_name=property_name,
-                    property_id=property_id,
-                    program_id=program_id,
-                )
-                results.append(result)
-            except Exception as e:
-                logger.error(f"Failed to ingest {file_path.name}: {e}")
-                results.append(
-                    IngestResponse(
-                        document_id="",
-                        file_name=file_path.name,
-                        status="failed",
-                        errors=[str(e)],
-                    )
-                )
+        # Semaphore to limit concurrent processing
+        semaphore = asyncio.Semaphore(max_concurrent)
 
-        return results
+        async def process_file(file_path: Path) -> IngestResponse:
+            """Process a single file with its own database session.
+
+            Each parallel task gets its own session to avoid SQLAlchemy
+            concurrent session access errors.
+            """
+            async with semaphore:
+                # Create a new session for this task
+                async with async_session_maker() as task_session:
+                    try:
+                        logger.info(f"[PARALLEL] Starting ingestion: {file_path.name}")
+
+                        # Create a new IngestionService with the task-specific session
+                        task_service = IngestionService(
+                            session=task_session,
+                            ocr_service=self.ocr_service,
+                            classification_service=self.classification_service,
+                            extraction_service=self.extraction_service,
+                            storage_service=self.storage_service,
+                        )
+
+                        result = await task_service.ingest_file(
+                            str(file_path),
+                            organization_id=organization_id,
+                            property_name=property_name,
+                            property_id=property_id,
+                            program_id=program_id,
+                            force_reprocess=force_reprocess,
+                        )
+
+                        # Commit the task's session
+                        await task_session.commit()
+
+                        logger.info(f"[PARALLEL] Completed: {file_path.name} - {result.status}")
+                        return result
+                    except Exception as e:
+                        await task_session.rollback()
+                        logger.error(f"[PARALLEL] Failed: {file_path.name} - {e}")
+                        return IngestResponse(
+                            document_id="",
+                            file_name=file_path.name,
+                            status="failed",
+                            errors=[str(e)],
+                        )
+
+        # Process all files in parallel using asyncio.gather
+        tasks = [process_file(file_path) for file_path in files]
+        results = await asyncio.gather(*tasks)
+
+        # Log summary
+        successful = sum(1 for r in results if r.status == "completed")
+        failed = sum(1 for r in results if r.status == "failed")
+        skipped = sum(1 for r in results if r.status == "skipped")
+        partial = sum(1 for r in results if r.status == "completed_with_errors")
+        logger.info(
+            f"[PARALLEL] Directory ingestion complete: "
+            f"{successful} successful, {partial} partial, {failed} failed, {skipped} skipped"
+        )
+
+        return list(results)
 
     async def _create_records_from_extraction(
         self,
