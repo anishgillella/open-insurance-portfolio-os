@@ -228,10 +228,13 @@ class CoverageExtraction(BaseModel):
     sublimit_applies_to: str | None = None
     deductible_amount: float | None = None
     deductible_type: str | None = None  # e.g., "per occurrence", "percentage"
-    deductible_percentage: float | None = None
-    coinsurance_percentage: float | None = None
+    deductible_pct: float | None = None  # Matches DB column name (percentage 0-100)
+    deductible_minimum: float | None = None
+    deductible_maximum: float | None = None
+    coinsurance_pct: float | None = None  # Matches DB column name
     waiting_period_hours: int | None = None
     valuation_type: str | None = None  # e.g., "RCV", "ACV"
+    margin_clause_pct: float | None = None  # Matches DB column name
     exclusions: list[str] = Field(default_factory=list)
     conditions: list[str] = Field(default_factory=list)
     source_page: int | None = None

@@ -13,6 +13,8 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.repositories.certificate_repository import CertificateRepository
+from app.repositories.claim_repository import ClaimRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.policy_repository import CoverageRepository, PolicyRepository
 from app.schemas.document import (
@@ -62,6 +64,8 @@ class IngestionService:
         self.document_repo = DocumentRepository(session)
         self.policy_repo = PolicyRepository(session)
         self.coverage_repo = CoverageRepository(session)
+        self.certificate_repo = CertificateRepository(session)
+        self.claim_repo = ClaimRepository(session)
 
     async def ingest_file(
         self,
@@ -204,7 +208,10 @@ class IngestionService:
         if extraction_result and program_id:
             try:
                 await self._create_records_from_extraction(
-                    extraction_result, program_id, document.id
+                    extraction_result,
+                    program_id=program_id,
+                    document_id=document.id,
+                    property_id=property_id,
                 )
             except Exception as e:
                 error_msg = f"Record creation failed: {e}"
@@ -286,6 +293,7 @@ class IngestionService:
         extraction: ExtractionResult,
         program_id: str,
         document_id: str,
+        property_id: str | None = None,
     ) -> None:
         """Create database records from extraction result.
 
@@ -293,6 +301,7 @@ class IngestionService:
             extraction: Extraction result.
             program_id: Insurance program ID.
             document_id: Source document ID.
+            property_id: Property ID for claims.
         """
         # Create policy and coverages if we extracted policy data
         if extraction.policy:
@@ -312,21 +321,44 @@ class IngestionService:
                 )
                 logger.info(f"Created {len(coverages)} coverages")
 
-        # Handle COI policies (they reference policies, not create full ones)
-        if extraction.coi and extraction.coi.policies:
-            for pol_extraction in extraction.coi.policies:
-                # Check if policy already exists
-                if pol_extraction.policy_number:
-                    existing = await self.policy_repo.get_by_policy_number(
-                        pol_extraction.policy_number
-                    )
-                    if not existing:
-                        policy = await self.policy_repo.create_from_extraction(
-                            pol_extraction,
-                            program_id=program_id,
-                            document_id=document_id,
+        # Create certificate from COI/EOP extraction
+        if extraction.coi:
+            # Determine certificate type
+            cert_type = "coi"
+            if extraction.classification.document_type == DocumentType.EOP:
+                cert_type = "eop"
+
+            certificate = await self.certificate_repo.create_from_extraction(
+                extraction.coi,
+                program_id=program_id,
+                document_id=document_id,
+                certificate_type=cert_type,
+            )
+            logger.info(f"Created certificate: {certificate.id}")
+
+            # Also create stub policies from COI references if they don't exist
+            if extraction.coi.policies:
+                for pol_extraction in extraction.coi.policies:
+                    if pol_extraction.policy_number:
+                        existing = await self.policy_repo.get_by_policy_number(
+                            pol_extraction.policy_number
                         )
-                        logger.info(f"Created policy from COI: {policy.id}")
+                        if not existing:
+                            policy = await self.policy_repo.create_from_extraction(
+                                pol_extraction,
+                                program_id=program_id,
+                                document_id=document_id,
+                            )
+                            logger.info(f"Created policy from COI: {policy.id}")
+
+        # Create claims from loss run extraction
+        if extraction.loss_run and extraction.loss_run.claims and property_id:
+            claims = await self.claim_repo.create_many_from_extraction(
+                extraction.loss_run.claims,
+                property_id=property_id,
+                document_id=document_id,
+            )
+            logger.info(f"Created {len(claims)} claims from loss run")
 
     def _build_extraction_summary(self, extraction: ExtractionResult) -> dict:
         """Build a summary of extraction results.
@@ -380,6 +412,25 @@ class IngestionService:
                 "properties_count": len(extraction.sov.properties),
                 "total_tiv": extraction.sov.total_insured_value,
             }
+
+        if extraction.loss_run:
+            summary["loss_run"] = {
+                "claims_count": len(extraction.loss_run.claims),
+                "experience_period_start": (
+                    extraction.loss_run.experience_period_start.isoformat()
+                    if extraction.loss_run.experience_period_start
+                    else None
+                ),
+                "experience_period_end": (
+                    extraction.loss_run.experience_period_end.isoformat()
+                    if extraction.loss_run.experience_period_end
+                    else None
+                ),
+            }
+            if extraction.loss_run.summary:
+                summary["loss_run"]["total_incurred"] = extraction.loss_run.summary.total_incurred
+                summary["loss_run"]["open_claims"] = extraction.loss_run.summary.open_claims
+                summary["loss_run"]["closed_claims"] = extraction.loss_run.summary.closed_claims
 
         return summary
 

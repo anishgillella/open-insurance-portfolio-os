@@ -131,10 +131,17 @@ class CoverageRepository(BaseRepository[Coverage]):
                 Decimal(str(extraction.deductible_amount)) if extraction.deductible_amount else None
             ),
             deductible_type=extraction.deductible_type,
-            deductible_pct=extraction.deductible_percentage,
-            coinsurance_pct=extraction.coinsurance_percentage,
+            deductible_pct=extraction.deductible_pct,
+            deductible_minimum=(
+                Decimal(str(extraction.deductible_minimum)) if extraction.deductible_minimum else None
+            ),
+            deductible_maximum=(
+                Decimal(str(extraction.deductible_maximum)) if extraction.deductible_maximum else None
+            ),
+            coinsurance_pct=extraction.coinsurance_pct,
             waiting_period_hours=extraction.waiting_period_hours,
             valuation_type=extraction.valuation_type,
+            margin_clause_pct=extraction.margin_clause_pct,
             exclusions_text="\n".join(extraction.exclusions) if extraction.exclusions else None,
             conditions_text="\n".join(extraction.conditions) if extraction.conditions else None,
             source_page=extraction.source_page,
