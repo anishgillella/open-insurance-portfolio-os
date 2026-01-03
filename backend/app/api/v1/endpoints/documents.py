@@ -4,19 +4,47 @@ import logging
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import get_db
 from app.repositories.document_repository import DocumentRepository
-from app.schemas.document import DocumentResponse, IngestRequest, IngestResponse
+from app.schemas.document import (
+    DocumentClassification,
+    DocumentResponse,
+    ExtractionResult,
+    IngestRequest,
+    IngestResponse,
+)
+from app.services.classification_service import get_classification_service
+from app.services.extraction_service import get_extraction_service
 from app.services.ingestion_service import IngestionService
+from app.services.ocr_service import get_ocr_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class ProcessRequest(BaseModel):
+    """Request to process a document from a file path."""
+
+    file_path: str
+
+
+class ProcessResponse(BaseModel):
+    """Response from document processing (without database)."""
+
+    file_name: str
+    page_count: int
+    classification: DocumentClassification
+    extraction: dict[str, Any] | None = None
+    ocr_text: str | None = None
+    errors: list[str] = []
 
 
 @router.post("/ingest", response_model=IngestResponse)
@@ -235,3 +263,196 @@ async def get_document_text(
         "page_count": document.page_count,
         "text": document.ocr_markdown,
     }
+
+
+@router.post("/process", response_model=ProcessResponse)
+async def process_document(request: ProcessRequest) -> ProcessResponse:
+    """Process a document without storing to database.
+
+    This endpoint runs the full OCR → Classification → Extraction pipeline
+    without any database operations. Useful for testing and quick analysis.
+
+    Args:
+        request: ProcessRequest with file path.
+
+    Returns:
+        ProcessResponse with classification and extraction results.
+    """
+    file_path = Path(request.file_path)
+    errors: list[str] = []
+
+    # Validate file exists
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {request.file_path}")
+
+    if not file_path.is_file():
+        raise HTTPException(status_code=400, detail=f"Path is not a file: {request.file_path}")
+
+    # Step 1: OCR
+    logger.info(f"Processing document: {file_path.name}")
+    ocr_service = get_ocr_service()
+
+    try:
+        ocr_result = await ocr_service.process_file_with_metadata(str(file_path))
+        markdown = ocr_result.get("markdown", "")
+        page_count = ocr_result.get("page_count", 1)
+        logger.info(f"OCR completed: {page_count} pages, {len(markdown)} chars")
+    except Exception as e:
+        logger.error(f"OCR failed: {e}")
+        raise HTTPException(status_code=500, detail=f"OCR failed: {e}")
+
+    # Step 2: Classification
+    classification_service = get_classification_service()
+
+    try:
+        classification = await classification_service.classify(markdown)
+        logger.info(
+            f"Classification: {classification.document_type.value} "
+            f"(confidence: {classification.confidence})"
+        )
+    except Exception as e:
+        logger.error(f"Classification failed: {e}")
+        errors.append(f"Classification failed: {e}")
+        # Return partial result with unknown classification
+        from app.schemas.document import DocumentType
+
+        classification = DocumentClassification(
+            document_type=DocumentType.UNKNOWN,
+            confidence=0.0,
+        )
+        return ProcessResponse(
+            file_name=file_path.name,
+            page_count=page_count,
+            classification=classification,
+            ocr_text=markdown,
+            errors=errors,
+        )
+
+    # Step 3: Extraction
+    extraction_service = get_extraction_service()
+    extraction_dict: dict[str, Any] | None = None
+
+    try:
+        extraction_result = await extraction_service.extract(markdown, classification)
+        extraction_dict = extraction_result.model_dump(mode="json")
+        logger.info(f"Extraction completed (confidence: {extraction_result.overall_confidence})")
+    except Exception as e:
+        logger.error(f"Extraction failed: {e}")
+        errors.append(f"Extraction failed: {e}")
+
+    return ProcessResponse(
+        file_name=file_path.name,
+        page_count=page_count,
+        classification=classification,
+        extraction=extraction_dict,
+        ocr_text=markdown,
+        errors=errors,
+    )
+
+
+@router.post("/process/upload", response_model=ProcessResponse)
+async def process_uploaded_document(
+    file: UploadFile = File(...),
+    include_ocr_text: bool = Form(False),
+) -> ProcessResponse:
+    """Upload and process a document without storing to database.
+
+    This endpoint accepts a file upload and runs the full pipeline
+    without any database operations.
+
+    Args:
+        file: Uploaded file.
+        include_ocr_text: Whether to include raw OCR text in response.
+
+    Returns:
+        ProcessResponse with classification and extraction results.
+    """
+    errors: list[str] = []
+
+    # Validate file type
+    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".tif"}
+    file_ext = Path(file.filename or "").suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+        )
+
+    # Save to temp file
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=file_ext,
+        ) as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            temp_path = Path(tmp_file.name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+
+    try:
+        # Step 1: OCR
+        logger.info(f"Processing uploaded document: {file.filename}")
+        ocr_service = get_ocr_service()
+
+        try:
+            ocr_result = await ocr_service.process_file_with_metadata(str(temp_path))
+            markdown = ocr_result.get("markdown", "")
+            page_count = ocr_result.get("page_count", 1)
+            logger.info(f"OCR completed: {page_count} pages, {len(markdown)} chars")
+        except Exception as e:
+            logger.error(f"OCR failed: {e}")
+            raise HTTPException(status_code=500, detail=f"OCR failed: {e}")
+
+        # Step 2: Classification
+        classification_service = get_classification_service()
+
+        try:
+            classification = await classification_service.classify(markdown)
+            logger.info(
+                f"Classification: {classification.document_type.value} "
+                f"(confidence: {classification.confidence})"
+            )
+        except Exception as e:
+            logger.error(f"Classification failed: {e}")
+            errors.append(f"Classification failed: {e}")
+            from app.schemas.document import DocumentType
+
+            classification = DocumentClassification(
+                document_type=DocumentType.UNKNOWN,
+                confidence=0.0,
+            )
+            return ProcessResponse(
+                file_name=file.filename or "unknown",
+                page_count=page_count,
+                classification=classification,
+                ocr_text=markdown if include_ocr_text else None,
+                errors=errors,
+            )
+
+        # Step 3: Extraction
+        extraction_service = get_extraction_service()
+        extraction_dict: dict[str, Any] | None = None
+
+        try:
+            extraction_result = await extraction_service.extract(markdown, classification)
+            extraction_dict = extraction_result.model_dump(mode="json")
+            logger.info(f"Extraction completed (confidence: {extraction_result.overall_confidence})")
+        except Exception as e:
+            logger.error(f"Extraction failed: {e}")
+            errors.append(f"Extraction failed: {e}")
+
+        return ProcessResponse(
+            file_name=file.filename or "unknown",
+            page_count=page_count,
+            classification=classification,
+            extraction=extraction_dict,
+            ocr_text=markdown if include_ocr_text else None,
+            errors=errors,
+        )
+
+    finally:
+        # Clean up temp file
+        try:
+            temp_path.unlink()
+        except Exception:
+            pass

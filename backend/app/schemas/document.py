@@ -10,6 +10,7 @@ class DocumentType(str, Enum):
     """Types of insurance documents."""
 
     POLICY = "policy"
+    PROGRAM = "program"  # Multi-carrier insurance program with contract allocation
     COI = "coi"  # Certificate of Insurance
     EOP = "eop"  # Evidence of Property
     INVOICE = "invoice"
@@ -407,6 +408,415 @@ class ProposalExtraction(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Program Extraction (Multi-Carrier Insurance Program)
+# ---------------------------------------------------------------------------
+
+
+class CarrierInfo(BaseModel):
+    """Information about a carrier in the program."""
+
+    carrier_name: str
+    carrier_code: str | None = None  # Short code like "NFM", "QBE", "Lloyds"
+    policy_number: str | None = None
+    naic_number: str | None = None
+    address: str | None = None
+    am_best_rating: str | None = None
+    admitted: bool | None = None  # Admitted vs surplus lines
+
+
+class LloydsSyndicate(BaseModel):
+    """Lloyd's syndicate information."""
+
+    syndicate_number: str
+    syndicate_abbreviation: str | None = None
+    participation_percentage: float | None = None
+
+
+class ContractAllocationLayer(BaseModel):
+    """A layer in the contract allocation table."""
+
+    layer_description: str  # e.g., "$24,808,864 excess of $15,000"
+    attachment_point: float | None = None  # e.g., 15000
+    layer_limit: float | None = None  # e.g., 24808864
+    perils_covered: list[str] = Field(default_factory=list)  # e.g., ["AR EXCL NW", "NW,Q"]
+    peril_codes: list[str] = Field(default_factory=list)  # e.g., ["NW", "Q", "AR"]
+    carrier_code: str | None = None
+    carrier_name: str | None = None
+    policy_number: str | None = None
+    participation_amount: float | None = None
+    participation_percentage: float | None = None
+    rate_per_hundred: float | None = None
+
+
+class ContractAllocation(BaseModel):
+    """Contract allocation table for multi-carrier programs."""
+
+    account_number: str | None = None
+    layers: list[ContractAllocationLayer] = Field(default_factory=list)
+
+    # Peril symbol definitions
+    peril_symbols: dict[str, str] = Field(default_factory=dict)  # e.g., {"NW": "Named Windstorm"}
+
+    # Maximum risk definition
+    max_risk_basis: str | None = None  # e.g., "Any One Occurrence"
+    max_limit: float | None = None
+
+
+class SublimitEntry(BaseModel):
+    """A sublimit from the supplemental declarations."""
+
+    sublimit_name: str
+    limit_amount: float | None = None
+    limit_type: str | None = None  # "per_occurrence", "annual_aggregate", "per_location"
+    duration_days: int | None = None  # For time-based sublimits like Civil Authority
+    duration_type: str | None = None  # "days", "months"
+    is_included: bool = False  # True if "INCLUDED" rather than a specific amount
+    is_not_covered: bool = False  # True if "NOT COVERED"
+    percentage_of: str | None = None  # e.g., "TIV", "building_value"
+    percentage_value: float | None = None
+    minimum_amount: float | None = None
+    maximum_amount: float | None = None
+    applies_to: str | None = None  # What the sublimit applies to
+    conditions: list[str] = Field(default_factory=list)
+
+
+class SublimitsSchedule(BaseModel):
+    """Complete sublimits schedule from supplemental declarations."""
+
+    # Maximum policy limit
+    maximum_limit_of_liability: float | None = None
+    limit_basis: str | None = None  # e.g., "per_occurrence", "blanket"
+
+    # Named peril sublimits (Priority 1)
+    earth_movement_aggregate: float | None = None
+    earth_movement_california_aggregate: float | None = None
+    earth_movement_pacific_nw_aggregate: float | None = None
+    earth_movement_new_madrid_aggregate: float | None = None
+    flood_aggregate: float | None = None
+    flood_sfha_aggregate: float | None = None  # Special Flood Hazard Areas
+    named_storm_limit: float | None = None
+    named_storm_is_included: bool = False
+
+    # Common sublimits (typed fields for frequent ones)
+    accounts_receivable: float | None = None
+    civil_authority_days: int | None = None
+    civil_authority_limit: float | None = None
+    contingent_time_element_days: int | None = None
+    contingent_time_element_limit: float | None = None
+    debris_removal_percentage: float | None = None
+    debris_removal_limit: float | None = None
+    electronic_data_media: float | None = None
+    errors_omissions: float | None = None
+    extended_period_of_indemnity_days: int | None = None
+    extra_expense: float | None = None
+    fine_arts: float | None = None
+    fire_brigade_charges: float | None = None
+    fungus_mold_aggregate: float | None = None
+    ingress_egress_days: int | None = None
+    ingress_egress_limit: float | None = None
+    leasehold_interest: float | None = None
+    pollution_aggregate: float | None = None
+    newly_acquired_property_days: int | None = None
+    newly_acquired_property_limit: float | None = None
+    ordinance_law_coverage_a: str | None = None  # Often "Included in Building Limit"
+    ordinance_law_coverage_b: float | None = None
+    ordinance_law_coverage_b_percentage: float | None = None
+    ordinance_law_coverage_c: str | None = None
+    ordinance_law_coverage_d: str | None = None
+    ordinance_law_coverage_e: str | None = None
+    ordinary_payroll_days: int | None = None
+    service_interruption_limit: float | None = None
+    service_interruption_waiting_hours: int | None = None
+    spoilage: float | None = None
+    transit: float | None = None
+    valuable_papers_records: float | None = None
+
+    # Flexible storage for additional sublimits
+    additional_sublimits: list[SublimitEntry] = Field(default_factory=list)
+
+
+class DeductibleEntry(BaseModel):
+    """A deductible from the deductible schedule."""
+
+    deductible_name: str
+    deductible_type: str | None = None  # "flat", "percentage", "waiting_period"
+    flat_amount: float | None = None
+    percentage_of_tiv: float | None = None
+    percentage_basis: str | None = None  # "per_location", "per_building"
+    minimum_amount: float | None = None
+    maximum_amount: float | None = None
+    waiting_period_hours: int | None = None
+    applies_to_perils: list[str] = Field(default_factory=list)
+    applies_to_locations: str | None = None  # e.g., "All Locations", "California only"
+    conditions: list[str] = Field(default_factory=list)
+
+
+class DeductibleSchedule(BaseModel):
+    """Complete deductible schedule."""
+
+    # Base deductible
+    base_property_deductible: float | None = None
+    base_time_element_deductible: float | None = None
+    base_combined_deductible: float | None = None
+
+    # Catastrophe deductibles (Priority 1 - Critical for claims)
+    earth_movement_percentage: float | None = None
+    earth_movement_minimum: float | None = None
+    earth_movement_california_percentage: float | None = None
+    earth_movement_california_minimum: float | None = None
+
+    windstorm_hail_percentage: float | None = None
+    windstorm_hail_minimum: float | None = None
+
+    named_storm_percentage: float | None = None
+    named_storm_minimum: float | None = None  # CRITICAL - often $1M+
+
+    hurricane_percentage: float | None = None
+    hurricane_minimum: float | None = None
+
+    flood_deductible: float | None = None
+    flood_sfha_deductible: float | None = None
+
+    # Equipment breakdown
+    equipment_breakdown_deductible: float | None = None
+
+    # Cyber
+    cyber_deductible: float | None = None
+
+    # Terrorism
+    terrorism_deductible: float | None = None
+
+    # Rules for applying deductibles
+    deductible_application_rules: list[str] = Field(default_factory=list)
+
+    # Additional/specific deductibles
+    additional_deductibles: list[DeductibleEntry] = Field(default_factory=list)
+
+
+class CyberCoverage(BaseModel):
+    """Cyber suite coverage details."""
+
+    # Aggregate limits
+    cyber_aggregate_limit: float | None = None
+    cyber_deductible: float | None = None
+
+    # Identity recovery
+    identity_recovery_limit: float | None = None
+
+    # Data compromise response
+    forensic_it_review_limit: float | None = None
+    legal_review_limit: float | None = None
+    notification_limit: float | None = None
+    public_relations_limit: float | None = None
+    regulatory_fines_limit: float | None = None
+    pci_fines_limit: float | None = None
+    first_party_malware_limit: float | None = None
+
+    # Computer attack
+    loss_of_business_limit: float | None = None
+    data_restoration_limit: float | None = None
+    system_restoration_limit: float | None = None
+    cyber_extortion_limit: float | None = None
+
+    # Liability
+    data_compromise_liability_limit: float | None = None
+    network_security_liability_limit: float | None = None
+    electronic_media_liability_limit: float | None = None
+
+    # Identity recovery sublimits
+    lost_wages_limit: float | None = None
+    mental_health_counseling_limit: float | None = None
+    miscellaneous_costs_limit: float | None = None
+
+
+class EquipmentBreakdownCoverage(BaseModel):
+    """Equipment breakdown coverage details."""
+
+    equipment_breakdown_limit: str | None = None  # Often "Per SOV"
+    equipment_breakdown_deductible: float | None = None
+    time_element_coverage: str | None = None
+    extra_expense_limit: float | None = None
+    data_restoration_limit: float | None = None
+    expediting_expenses_limit: float | None = None
+    green_upgrades_limit: float | None = None
+    hazardous_substances_limit: float | None = None
+    off_premises_limit: float | None = None
+    service_interruption_included: bool = False
+    spoilage_limit: float | None = None
+    spoilage_coinsurance: float | None = None
+    public_relations_included: bool = False
+
+
+class TerrorismCoverage(BaseModel):
+    """Terrorism coverage details."""
+
+    terrorism_form: str | None = None  # e.g., "AR TERR 07 20"
+    terrorism_limit: float | None = None
+    terrorism_limit_basis: str | None = None  # "per_occurrence", "as_per_schedule"
+    terrorism_deductible: float | None = None
+    certified_terrorism_covered: bool | None = None  # TRIA coverage
+    non_certified_terrorism_covered: bool | None = None
+    tria_exclusion_form: str | None = None
+
+
+class SinkholeCoverage(BaseModel):
+    """Sinkhole coverage details (state-specific)."""
+
+    sinkhole_covered: bool = False
+    catastrophic_ground_cover_collapse_covered: bool = False
+    florida_specific: bool = False
+    valuation_type: str | None = None  # "ACV" until stabilization in FL
+    neutral_evaluation_available: bool = False
+    stabilization_requirements: list[str] = Field(default_factory=list)
+    exclusions: list[str] = Field(default_factory=list)
+
+
+class CATCoveredProperty(BaseModel):
+    """CAT Covered Property endorsement details."""
+
+    cat_property_limit: float | None = None  # Often $100,000 max
+    cat_property_deductible_percentage: float | None = None
+    cat_property_minimum_deductible: float | None = None
+
+    # Property exclusions (not covered for CAT perils)
+    excluded_property_types: list[str] = Field(default_factory=list)
+
+    # Property that requires scheduling
+    requires_scheduling: list[str] = Field(default_factory=list)
+
+    # Covered if scheduled
+    covered_if_scheduled: list[str] = Field(default_factory=list)
+
+
+class ValuationBasis(BaseModel):
+    """Valuation basis for different property types."""
+
+    property_type: str  # e.g., "Real & Personal Property", "Roof Coverings"
+    valuation_type: str  # "RCV", "ACV", "Agreed Value"
+    conditions: list[str] = Field(default_factory=list)  # e.g., "pre-2011 roofs"
+
+
+class PolicyRestriction(BaseModel):
+    """Policy restriction or warranty."""
+
+    restriction_type: str  # "exclusion", "warranty", "condition"
+    description: str
+    applies_to: str | None = None  # What it applies to
+    source_endorsement: str | None = None
+
+
+class ServiceOfSuit(BaseModel):
+    """Service of suit clause for a carrier."""
+
+    carrier_name: str
+    service_address: str | None = None
+    contact_name: str | None = None
+    lma_form: str | None = None  # e.g., "LMA5020"
+
+
+class FormsEndorsementsSchedule(BaseModel):
+    """Schedule of forms and endorsements."""
+
+    form_number: str
+    form_title: str | None = None
+    form_description: str | None = None
+
+
+class ProgramExtraction(BaseModel):
+    """Extracted multi-carrier insurance program information."""
+
+    # Program Identity
+    account_number: str | None = None
+    program_name: str | None = None
+
+    # Named Insured
+    named_insured: str | None = None
+    insured_address: str | None = None
+    additional_named_insureds: list[str] = Field(default_factory=list)
+
+    # Term
+    effective_date: date | None = None
+    expiration_date: date | None = None
+
+    # Producer/Broker
+    producer_name: str | None = None
+    producer_address: str | None = None
+
+    # Program Manager/Correspondent
+    program_manager: str | None = None
+    program_manager_address: str | None = None
+    correspondent: str | None = None
+
+    # Premium Summary
+    total_premium: float | None = None
+    premium_by_state: dict[str, float] = Field(default_factory=dict)
+    taxes: float | None = None
+    fees: float | None = None
+    surplus_lines_tax: float | None = None
+    inspection_fee: float | None = None
+    program_fee: float | None = None
+    total_cost: float | None = None
+    minimum_earned_premium: float | None = None
+
+    # Carriers (all carriers in the program)
+    carriers: list[CarrierInfo] = Field(default_factory=list)
+
+    # Lloyd's syndicates (if applicable)
+    lloyds_syndicates: list[LloydsSyndicate] = Field(default_factory=list)
+
+    # Contract Allocation
+    contract_allocation: ContractAllocation | None = None
+
+    # Premium by Carrier
+    carrier_premiums: dict[str, dict[str, float]] = Field(
+        default_factory=dict
+    )  # {"AMR-81904": {"property": 10543, "tria": 0}}
+
+    # Sublimits Schedule
+    sublimits: SublimitsSchedule | None = None
+
+    # Deductible Schedule
+    deductibles: DeductibleSchedule | None = None
+
+    # Specialty Coverages
+    cyber_coverage: CyberCoverage | None = None
+    equipment_breakdown: EquipmentBreakdownCoverage | None = None
+    terrorism_coverage: TerrorismCoverage | None = None
+    sinkhole_coverage: SinkholeCoverage | None = None
+
+    # CAT Property Endorsement
+    cat_covered_property: CATCoveredProperty | None = None
+
+    # Valuation
+    valuation_bases: list[ValuationBasis] = Field(default_factory=list)
+
+    # Policy Restrictions and Warranties
+    restrictions: list[PolicyRestriction] = Field(default_factory=list)
+
+    # Policy Exclusions (major exclusions)
+    major_exclusions: list[str] = Field(default_factory=list)  # e.g., "Flood", "Named Storm in existence"
+
+    # Coverage Territory
+    coverage_territory: str | None = None
+
+    # Service of Suit
+    service_of_suit: list[ServiceOfSuit] = Field(default_factory=list)
+
+    # Forms and Endorsements Schedule
+    forms_schedule: list[FormsEndorsementsSchedule] = Field(default_factory=list)
+
+    # State-specific notices
+    state_notices: dict[str, str] = Field(default_factory=dict)  # {"SC": "Hurricane deductible notice"}
+
+    # Individual policy/coverage details (from the existing schema)
+    coverages: list[CoverageExtraction] = Field(default_factory=list)
+
+    # Extraction metadata
+    source_pages: list[int] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+# ---------------------------------------------------------------------------
 # Unified Extraction Result
 # ---------------------------------------------------------------------------
 
@@ -416,6 +826,7 @@ class ExtractionResult(BaseModel):
 
     classification: DocumentClassification
     policy: PolicyExtraction | None = None
+    program: ProgramExtraction | None = None  # Multi-carrier insurance program
     coi: COIExtraction | None = None
     invoice: InvoiceExtraction | None = None
     sov: SOVExtraction | None = None
