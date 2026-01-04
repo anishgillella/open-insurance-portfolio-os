@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     conflicts,
     dashboard,
     documents,
+    enrichment,
     gaps,
     health,
     health_score,
@@ -32,3 +33,4 @@ api_router.include_router(completeness.router, prefix="/completeness", tags=["co
 api_router.include_router(health_score.router, prefix="/health-score", tags=["health-score"])
 api_router.include_router(conflicts.router, prefix="/conflicts", tags=["conflicts"])
 api_router.include_router(renewals.router, prefix="/renewals", tags=["renewals"])
+api_router.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])

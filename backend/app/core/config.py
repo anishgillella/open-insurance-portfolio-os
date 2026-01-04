@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openrouter_api_key: str = ""
 
+    # Parallel AI (Web Research)
+    parallel_api_key: str = ""
+    parallel_base_url: str = "https://api.parallel.ai/v1"
+    parallel_default_processor: str = "core-fast"
+
     # Local file storage (for development)
     local_upload_dir: str = "./uploads"
 
