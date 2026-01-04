@@ -3,8 +3,8 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -58,6 +58,18 @@ class CoverageGap(BaseModel):
         nullable=False,
     )
     detection_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # LLM Analysis Fields
+    llm_enhanced_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_risk_assessment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    llm_recommendations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    llm_potential_consequences: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    llm_industry_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_action_priority: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    llm_estimated_impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    llm_model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Relationships
     property: Mapped["Property"] = relationship(  # noqa: F821

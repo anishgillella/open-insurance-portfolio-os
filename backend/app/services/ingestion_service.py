@@ -304,6 +304,14 @@ class IngestionService:
                 error_msg = f"Record creation failed: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
+
+            # Step 4.5: Auto-run gap detection and compliance checking
+            if property_id:
+                try:
+                    await self._run_gap_detection(property_id)
+                except Exception as e:
+                    # Gap detection errors are non-fatal
+                    logger.warning(f"Gap detection failed for property {property_id}: {e}")
         elif extraction_result and not program_id:
             logger.warning(
                 f"Skipping record creation for {path.name}: no program_id available. "
@@ -697,3 +705,85 @@ class IngestionService:
             ".tif": "image/tiff",
         }
         return mime_types.get(ext, "application/octet-stream")
+
+    async def _run_gap_detection(self, property_id: str) -> None:
+        """Run gap detection, compliance checking, and LLM analysis for a property.
+
+        This is called automatically after document extraction to:
+        1. Detect coverage gaps using rule-based thresholds
+        2. Check compliance against lender requirements
+        3. Enrich gaps with LLM-powered analysis
+
+        Args:
+            property_id: Property ID to check.
+        """
+        from app.services.compliance_service import ComplianceService
+        from app.services.gap_detection_service import GapDetectionService
+
+        logger.info(f"Running auto gap detection for property {property_id}")
+
+        # Step 1: Run rule-based gap detection
+        gap_service = GapDetectionService(self.session)
+        gaps = await gap_service.detect_gaps_for_property(
+            property_id, clear_existing=True
+        )
+        logger.info(f"Auto gap detection found {len(gaps)} gaps for property {property_id}")
+
+        # Step 2: Run compliance checking (only if lender requirements exist)
+        compliance_service = ComplianceService(self.session)
+        results = await compliance_service.check_compliance_for_property(
+            property_id, create_gaps=True
+        )
+        if results:
+            total_issues = sum(len(r.issues) for r in results)
+            logger.info(
+                f"Auto compliance check found {total_issues} issues "
+                f"across {len(results)} requirements for property {property_id}"
+            )
+
+        # Step 3: Run LLM-enhanced analysis on detected gaps
+        if gaps:
+            await self._run_llm_gap_analysis(property_id, gaps)
+
+    async def _run_llm_gap_analysis(self, property_id: str, gaps: list) -> None:
+        """Run LLM-enhanced analysis on detected gaps.
+
+        This enriches rule-based gaps with AI-powered insights including:
+        - Enhanced descriptions
+        - Risk assessments and scores
+        - Actionable recommendations
+        - Industry context
+
+        Args:
+            property_id: Property ID.
+            gaps: List of detected gaps.
+        """
+        from app.services.gap_analysis_service import GapAnalysisService, GapAnalysisError
+
+        try:
+            logger.info(f"Running LLM gap analysis for property {property_id} ({len(gaps)} gaps)")
+
+            analysis_service = GapAnalysisService(self.session)
+
+            # Analyze each gap individually
+            analyzed_count = 0
+            for gap in gaps:
+                try:
+                    analysis = await analysis_service.analyze_gap(gap.id)
+                    analyzed_count += 1
+                    logger.debug(
+                        f"Gap {gap.id} analyzed: risk_score={analysis.risk_score}, "
+                        f"priority={analysis.action_priority}"
+                    )
+                except GapAnalysisError as e:
+                    logger.warning(f"Failed to analyze gap {gap.id}: {e}")
+                    continue
+
+            logger.info(
+                f"LLM gap analysis complete for property {property_id}: "
+                f"{analyzed_count}/{len(gaps)} gaps analyzed"
+            )
+
+        except Exception as e:
+            # LLM analysis errors are non-fatal - gaps are still detected
+            logger.warning(f"LLM gap analysis failed for property {property_id}: {e}")
