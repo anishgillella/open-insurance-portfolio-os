@@ -1,6 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
   Building2,
   DollarSign,
@@ -10,21 +12,26 @@ import {
   Clock,
   CheckCircle,
   ArrowRight,
+  LayoutGrid,
+  BarChart3,
 } from 'lucide-react';
 import { DataCard, GlassCard, ScoreRing, GradientProgress, StatusBadge } from '@/components/patterns';
 import { Button, Card, Badge } from '@/components/primitives';
+import { PortfolioTreemap, PortfolioBubbleChart } from '@/components/features/portfolio';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
+import { mockProperties, mockDashboardSummary } from '@/lib/mock-data';
 
 // Mock data for demo
 const mockDashboardData = {
-  totalProperties: 7,
-  totalInsuredValue: 125400000,
-  totalPremium: 652340,
-  healthScore: 75,
+  totalProperties: mockDashboardSummary.totalProperties,
+  totalInsuredValue: mockDashboardSummary.totalInsuredValue,
+  totalPremium: mockDashboardSummary.totalPremium,
+  healthScore: mockDashboardSummary.averageHealthScore,
   expirations: [
-    { id: '1', name: 'Shoaff Park Apartments', days: 15, severity: 'critical' as const },
-    { id: '2', name: 'Buffalo Run', days: 45, severity: 'warning' as const },
-    { id: '3', name: 'Lake Sheri', days: 78, severity: 'info' as const },
+    { id: 'prop-1', name: 'Shoaff Park Apartments', days: 15, severity: 'critical' as const },
+    { id: 'prop-7', name: 'Eastwood Manor', days: 35, severity: 'warning' as const },
+    { id: 'prop-2', name: 'Buffalo Run', days: 45, severity: 'warning' as const },
+    { id: 'prop-3', name: 'Lake Sheri', days: 78, severity: 'info' as const },
   ],
   alerts: [
     { id: '1', type: 'gap', severity: 'critical' as const, title: 'Underinsurance Gap', description: 'Shoaff Park - $2.1M below recommended', property: 'Shoaff Park' },
@@ -54,6 +61,8 @@ function getGreeting() {
 }
 
 export default function Dashboard() {
+  const [portfolioView, setPortfolioView] = useState<'treemap' | 'bubble'>('treemap');
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -235,6 +244,52 @@ export default function Dashboard() {
           </GlassCard>
         </motion.div>
       </div>
+
+      {/* Portfolio Visualization */}
+      <motion.div variants={staggerItem}>
+        <Card padding="lg">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                Portfolio Overview
+              </h2>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Click any property to view details
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={portfolioView === 'treemap' ? 'primary' : 'ghost'}
+                size="sm"
+                leftIcon={<LayoutGrid className="h-4 w-4" />}
+                onClick={() => setPortfolioView('treemap')}
+              >
+                Treemap
+              </Button>
+              <Button
+                variant={portfolioView === 'bubble' ? 'primary' : 'ghost'}
+                size="sm"
+                leftIcon={<BarChart3 className="h-4 w-4" />}
+                onClick={() => setPortfolioView('bubble')}
+              >
+                Bubble
+              </Button>
+            </div>
+          </div>
+          {portfolioView === 'treemap' ? (
+            <PortfolioTreemap properties={mockProperties} height={350} />
+          ) : (
+            <PortfolioBubbleChart properties={mockProperties} height={350} />
+          )}
+          <div className="mt-4 flex justify-center">
+            <Link href="/properties">
+              <Button variant="ghost" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                View all properties
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Recommendations */}
       <motion.div variants={staggerItem}>

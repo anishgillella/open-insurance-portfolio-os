@@ -13,10 +13,14 @@ The 3D elements in Open Insurance aren't decorative—they're **functional visua
 | Use Case | Why |
 |----------|-----|
 | Health Score Globe | The score is THE hero metric—it deserves a hero presentation |
-| Property City | Spatial relationships help users understand their portfolio |
 | Coverage Shield | Abstract concept (protection) becomes tangible |
 | Renewal Timeline | Journey metaphor is more engaging than a list |
 | Document Pipeline | Processing feels more real when visualized |
+
+> **Note:** PropertyCity was removed from the plan since we don't have property photos. Use 2D alternatives instead:
+> - `PortfolioTreemap` - Properties sized by TIV, colored by health score
+> - `PortfolioMap` - Interactive map with geocoded pins/bubbles
+> - `PortfolioBubbleChart` - Multi-dimensional data visualization
 
 ### When NOT to Use 3D
 
@@ -407,31 +411,30 @@ export function HealthScoreGlobe({
 
 ---
 
-## Property City Visualization
+## Portfolio Visualizations (2D Alternatives)
 
-Your portfolio as a 3D cityscape:
+Instead of PropertyCity (which would require property photos), use these data-driven 2D visualizations:
+
+### PortfolioTreemap
+
+A treemap where rectangles are sized by TIV and colored by health score:
 
 ```tsx
-// components/three/PropertyCity/PropertyCity.tsx
+// components/features/portfolio/PortfolioTreemap.tsx
 'use client';
 
-import { useRef, useState } from 'react';
-import { useFrame, ThreeEvent } from '@react-three/fiber';
-import { Html, Float, Text, RoundedBox } from '@react-three/drei';
-import * as THREE from 'three';
-import { Scene } from '../shared/Scene';
+import { ResponsiveTreeMap } from '@nivo/treemap';
+import { useRouter } from 'next/navigation';
 
 interface Property {
   id: string;
   name: string;
   tiv: number;
   healthScore: number;
-  address: string;
 }
 
-interface PropertyCityProps {
+interface PortfolioTreemapProps {
   properties: Property[];
-  onPropertyClick?: (propertyId: string) => void;
   className?: string;
 }
 
@@ -443,159 +446,195 @@ function getScoreColor(score: number): string {
   return '#EF4444';
 }
 
-function Building({
-  property,
-  position,
-  onClick,
-}: {
-  property: Property;
-  position: [number, number, number];
-  onClick?: () => void;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [hovered, setHovered] = useState(false);
+export function PortfolioTreemap({ properties, className }: PortfolioTreemapProps) {
+  const router = useRouter();
 
-  // Height based on TIV (normalized)
-  const maxTiv = 50000000; // $50M
-  const height = 0.5 + (property.tiv / maxTiv) * 2.5;
-
-  // Color based on health score
-  const color = getScoreColor(property.healthScore);
-
-  useFrame(() => {
-    if (meshRef.current) {
-      // Subtle hover animation
-      const targetScale = hovered ? 1.05 : 1;
-      meshRef.current.scale.x = THREE.MathUtils.lerp(
-        meshRef.current.scale.x,
-        targetScale,
-        0.1
-      );
-      meshRef.current.scale.z = THREE.MathUtils.lerp(
-        meshRef.current.scale.z,
-        targetScale,
-        0.1
-      );
-    }
-  });
+  const data = {
+    name: 'Portfolio',
+    children: properties.map((p) => ({
+      id: p.id,
+      name: p.name,
+      value: p.tiv,
+      healthScore: p.healthScore,
+      color: getScoreColor(p.healthScore),
+    })),
+  };
 
   return (
-    <group position={position}>
-      {/* Building */}
-      <RoundedBox
-        ref={meshRef}
-        args={[0.8, height, 0.8]}
-        radius={0.05}
-        position={[0, height / 2, 0]}
-        onClick={onClick}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <meshStandardMaterial
-          color={color}
-          metalness={0.3}
-          roughness={0.5}
-          emissive={color}
-          emissiveIntensity={hovered ? 0.3 : 0.1}
-        />
-      </RoundedBox>
-
-      {/* Windows (instanced for performance) */}
-      {Array.from({ length: Math.floor(height * 3) }).map((_, i) => (
-        <group key={i} position={[0, 0.3 + i * 0.3, 0]}>
-          {[-0.2, 0.2].map((x) => (
-            <mesh key={x} position={[x, 0, 0.41]}>
-              <planeGeometry args={[0.15, 0.15]} />
-              <meshStandardMaterial
-                color="#FEF3C7"
-                emissive="#FEF3C7"
-                emissiveIntensity={0.5}
-              />
-            </mesh>
-          ))}
-        </group>
-      ))}
-
-      {/* Hover label */}
-      {hovered && (
-        <Html position={[0, height + 0.5, 0]} center>
-          <div className="bg-white rounded-xl shadow-xl p-3 min-w-[150px] animate-fade-in">
-            <div className="font-semibold text-gray-900">{property.name}</div>
-            <div className="text-sm text-gray-500">{property.address}</div>
-            <div className="flex items-center justify-between mt-2 text-sm">
-              <span className="text-gray-600">
-                ${(property.tiv / 1000000).toFixed(1)}M TIV
-              </span>
-              <span
-                className="font-medium"
-                style={{ color }}
-              >
-                {property.healthScore}
-              </span>
+    <div className={className} style={{ height: 400 }}>
+      <ResponsiveTreeMap
+        data={data}
+        identity="name"
+        value="value"
+        colors={(node) => node.data.color}
+        borderWidth={2}
+        borderColor="#ffffff"
+        labelSkipSize={40}
+        label={(node) => `${node.id}\n$${(node.value / 1000000).toFixed(1)}M`}
+        labelTextColor="#ffffff"
+        onClick={(node) => router.push(`/properties/${node.data.id}`)}
+        tooltip={({ node }) => (
+          <div className="bg-white rounded-lg shadow-lg p-3">
+            <div className="font-semibold">{node.id}</div>
+            <div className="text-sm text-gray-600">TIV: ${(node.value / 1000000).toFixed(1)}M</div>
+            <div className="text-sm" style={{ color: node.color }}>
+              Health: {node.data.healthScore}
             </div>
           </div>
-        </Html>
-      )}
-    </group>
+        )}
+      />
+    </div>
   );
 }
+```
 
-function Ground() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-      <planeGeometry args={[20, 20]} />
-      <meshStandardMaterial color="#E5E7EB" />
-    </mesh>
-  );
+### PortfolioBubbleChart
+
+A bubble chart showing multiple dimensions (premium vs health, sized by TIV):
+
+```tsx
+// components/features/portfolio/PortfolioBubbleChart.tsx
+'use client';
+
+import { ResponsiveScatterPlot } from '@nivo/scatterplot';
+import { useRouter } from 'next/navigation';
+
+interface Property {
+  id: string;
+  name: string;
+  tiv: number;
+  healthScore: number;
+  annualPremium: number;
 }
 
-function City({
-  properties,
-  onPropertyClick,
-}: {
+interface PortfolioBubbleChartProps {
   properties: Property[];
-  onPropertyClick?: (id: string) => void;
-}) {
-  // Arrange buildings in a grid
-  const cols = Math.ceil(Math.sqrt(properties.length));
-
-  return (
-    <group>
-      <Ground />
-
-      {properties.map((property, i) => {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const x = (col - cols / 2) * 1.5 + 0.75;
-        const z = (row - Math.ceil(properties.length / cols) / 2) * 1.5 + 0.75;
-
-        return (
-          <Building
-            key={property.id}
-            property={property}
-            position={[x, 0, z]}
-            onClick={() => onPropertyClick?.(property.id)}
-          />
-        );
-      })}
-    </group>
-  );
+  className?: string;
 }
 
-export function PropertyCity({
-  properties,
-  onPropertyClick,
-  className,
-}: PropertyCityProps) {
+export function PortfolioBubbleChart({ properties, className }: PortfolioBubbleChartProps) {
+  const router = useRouter();
+
+  const data = [{
+    id: 'properties',
+    data: properties.map((p) => ({
+      id: p.id,
+      x: p.annualPremium,
+      y: p.healthScore,
+      size: p.tiv / 1000000, // Size by TIV in millions
+      name: p.name,
+    })),
+  }];
+
   return (
-    <Scene
-      className={className}
-      camera={{ position: [5, 5, 5], fov: 50 }}
-      bloom
-      controls
-    >
-      <City properties={properties} onPropertyClick={onPropertyClick} />
-    </Scene>
+    <div className={className} style={{ height: 400 }}>
+      <ResponsiveScatterPlot
+        data={data}
+        xScale={{ type: 'linear', min: 0, max: 'auto' }}
+        yScale={{ type: 'linear', min: 0, max: 100 }}
+        nodeSize={(node) => node.data.size * 3}
+        colors={{ scheme: 'category10' }}
+        axisBottom={{
+          legend: 'Annual Premium ($)',
+          legendPosition: 'middle',
+          legendOffset: 46,
+        }}
+        axisLeft={{
+          legend: 'Health Score',
+          legendPosition: 'middle',
+          legendOffset: -60,
+        }}
+        onClick={(node) => router.push(`/properties/${node.data.id}`)}
+        tooltip={({ node }) => (
+          <div className="bg-white rounded-lg shadow-lg p-3">
+            <div className="font-semibold">{node.data.name}</div>
+            <div className="text-sm text-gray-600">Premium: ${node.data.x.toLocaleString()}</div>
+            <div className="text-sm text-gray-600">Health: {node.data.y}</div>
+            <div className="text-sm text-gray-600">TIV: ${node.data.size.toFixed(1)}M</div>
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+```
+
+### PortfolioMap
+
+An interactive map using geocoded addresses (no photos required):
+
+```tsx
+// components/features/portfolio/PortfolioMap.tsx
+'use client';
+
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { useRouter } from 'next/navigation';
+import 'leaflet/dist/leaflet.css';
+
+interface Property {
+  id: string;
+  name: string;
+  tiv: number;
+  healthScore: number;
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
+interface PortfolioMapProps {
+  properties: Property[];
+  className?: string;
+}
+
+function getScoreColor(score: number): string {
+  if (score >= 90) return '#10B981';
+  if (score >= 80) return '#14B8A6';
+  if (score >= 70) return '#F59E0B';
+  if (score >= 60) return '#F97316';
+  return '#EF4444';
+}
+
+export function PortfolioMap({ properties, className }: PortfolioMapProps) {
+  const router = useRouter();
+
+  // Calculate center from properties
+  const center = properties.length > 0
+    ? {
+        lat: properties.reduce((sum, p) => sum + p.latitude, 0) / properties.length,
+        lng: properties.reduce((sum, p) => sum + p.longitude, 0) / properties.length,
+      }
+    : { lat: 40.7128, lng: -74.006 }; // Default to NYC
+
+  return (
+    <div className={className} style={{ height: 400 }}>
+      <MapContainer center={[center.lat, center.lng]} zoom={10} style={{ height: '100%', width: '100%' }}>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {properties.map((property) => (
+          <CircleMarker
+            key={property.id}
+            center={[property.latitude, property.longitude]}
+            radius={Math.sqrt(property.tiv / 1000000) * 5} // Size by TIV
+            color={getScoreColor(property.healthScore)}
+            fillColor={getScoreColor(property.healthScore)}
+            fillOpacity={0.7}
+            eventHandlers={{
+              click: () => router.push(`/properties/${property.id}`),
+            }}
+          >
+            <Popup>
+              <div>
+                <div className="font-semibold">{property.name}</div>
+                <div className="text-sm text-gray-600">{property.address}</div>
+                <div className="text-sm">TIV: ${(property.tiv / 1000000).toFixed(1)}M</div>
+                <div className="text-sm" style={{ color: getScoreColor(property.healthScore) }}>
+                  Health: {property.healthScore}
+                </div>
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+    </div>
   );
 }
 ```
@@ -1072,10 +1111,10 @@ export const HealthScoreGlobe = dynamic(
   }
 );
 
-export const PropertyCity = dynamic(
-  () => import('./PropertyCity').then((mod) => mod.PropertyCity),
-  { ssr: false }
-);
+// Note: PropertyCity removed - use 2D portfolio visualizations instead:
+// - PortfolioTreemap (components/features/portfolio/PortfolioTreemap.tsx)
+// - PortfolioBubbleChart (components/features/portfolio/PortfolioBubbleChart.tsx)
+// - PortfolioMap (components/features/portfolio/PortfolioMap.tsx)
 
 export const CoverageShield = dynamic(
   () => import('./CoverageShield').then((mod) => mod.CoverageShield),

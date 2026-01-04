@@ -613,6 +613,42 @@ pnpm db:migrate
 pnpm dev
 ```
 
+### Running Frontend & Backend
+
+**Frontend (Next.js):**
+```bash
+cd frontend
+npm install
+npm run dev
+# Frontend runs at http://localhost:3000
+```
+
+**Backend (FastAPI):**
+```bash
+cd backend
+
+# Create virtual environment (first time)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the backend server
+uvicorn app.main:app --reload --port 8000
+# Backend runs at http://localhost:8000
+# API docs at http://localhost:8000/docs
+```
+
+**Run Both (from project root):**
+```bash
+# Terminal 1 - Backend
+cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+```
+
 ### Environment Variables
 
 ```bash
