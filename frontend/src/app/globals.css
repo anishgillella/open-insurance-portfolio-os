@@ -1,0 +1,447 @@
+@import "tailwindcss";
+
+/* ============================================
+   OPEN INSURANCE DESIGN SYSTEM
+   Steve Jobs-Level Experience
+   ============================================ */
+
+:root {
+  /* ============ COLORS ============ */
+
+  /* Primary - Deep Ocean Blue (Trust, Stability) */
+  --color-primary-50: #E6F4FF;
+  --color-primary-100: #BAE0FF;
+  --color-primary-200: #91CAFF;
+  --color-primary-300: #69B4FF;
+  --color-primary-400: #4096FF;
+  --color-primary-500: #1677FF;
+  --color-primary-600: #0958D9;
+  --color-primary-700: #003EB3;
+  --color-primary-800: #002C8C;
+  --color-primary-900: #001D66;
+
+  /* Critical - Coral Red */
+  --color-critical-50: #FFF1F0;
+  --color-critical-100: #FFCCC7;
+  --color-critical-200: #FFA39E;
+  --color-critical-300: #FF7875;
+  --color-critical-400: #FF4D4F;
+  --color-critical-500: #F5222D;
+  --color-critical-600: #CF1322;
+  --color-critical-700: #A8071A;
+
+  /* Warning - Amber */
+  --color-warning-50: #FFFBE6;
+  --color-warning-100: #FFF1B8;
+  --color-warning-200: #FFE58F;
+  --color-warning-300: #FFD666;
+  --color-warning-400: #FFC53D;
+  --color-warning-500: #FAAD14;
+  --color-warning-600: #D48806;
+  --color-warning-700: #AD6800;
+
+  /* Success - Emerald */
+  --color-success-50: #F6FFED;
+  --color-success-100: #D9F7BE;
+  --color-success-200: #B7EB8F;
+  --color-success-300: #95DE64;
+  --color-success-400: #73D13D;
+  --color-success-500: #52C41A;
+  --color-success-600: #389E0D;
+  --color-success-700: #237804;
+
+  /* Info - Blue */
+  --color-info-50: #E6F4FF;
+  --color-info-100: #BAE0FF;
+  --color-info-200: #91CAFF;
+  --color-info-300: #69B4FF;
+  --color-info-400: #4096FF;
+  --color-info-500: #1677FF;
+  --color-info-600: #0958D9;
+  --color-info-700: #003EB3;
+
+  /* Surfaces */
+  --color-background: #F5F7FA;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-sunken: #EEF2F6;
+
+  /* Text */
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #9CA3AF;
+
+  /* Borders */
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-default: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+
+  /* ============ TYPOGRAPHY ============ */
+  --font-sans: 'Inter var', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* ============ SPACING ============ */
+  --spacing-page: 32px;
+  --spacing-card: 24px;
+  --sidebar-width: 280px;
+  --sidebar-collapsed: 72px;
+  --header-height: 72px;
+
+  /* ============ ANIMATIONS ============ */
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+  --easing-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --easing-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ============ SHADOWS ============ */
+  --shadow-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-elevation-2: 0 2px 4px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 32px rgba(0, 0, 0, 0.1);
+  --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow-primary: 0 0 24px rgba(22, 119, 255, 0.35);
+  --shadow-glow-success: 0 0 24px rgba(82, 196, 26, 0.35);
+  --shadow-glow-warning: 0 0 24px rgba(250, 173, 20, 0.35);
+  --shadow-glow-critical: 0 0 24px rgba(255, 77, 79, 0.35);
+
+  /* ============ RADII ============ */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+}
+
+/* ============ DARK MODE ============ */
+.dark {
+  /* Primary - Brighter for dark mode */
+  --color-primary-50: #001D66;
+  --color-primary-100: #002C8C;
+  --color-primary-200: #003EB3;
+  --color-primary-300: #0958D9;
+  --color-primary-400: #1677FF;
+  --color-primary-500: #4096FF;
+  --color-primary-600: #69B4FF;
+  --color-primary-700: #91CAFF;
+  --color-primary-800: #BAE0FF;
+  --color-primary-900: #E6F4FF;
+
+  /* Critical - Brighter for dark */
+  --color-critical-50: #2A0608;
+  --color-critical-100: #5C0A0E;
+  --color-critical-200: #A8071A;
+  --color-critical-300: #CF1322;
+  --color-critical-400: #F5222D;
+  --color-critical-500: #FF4D4F;
+  --color-critical-600: #FF7875;
+  --color-critical-700: #FFA39E;
+
+  /* Warning - Brighter for dark */
+  --color-warning-50: #2B1D00;
+  --color-warning-100: #5C3D00;
+  --color-warning-200: #AD6800;
+  --color-warning-300: #D48806;
+  --color-warning-400: #FAAD14;
+  --color-warning-500: #FFC53D;
+  --color-warning-600: #FFD666;
+  --color-warning-700: #FFE58F;
+
+  /* Success - Brighter for dark */
+  --color-success-50: #0A2410;
+  --color-success-100: #135200;
+  --color-success-200: #237804;
+  --color-success-300: #389E0D;
+  --color-success-400: #52C41A;
+  --color-success-500: #73D13D;
+  --color-success-600: #95DE64;
+  --color-success-700: #B7EB8F;
+
+  /* Info - Same as primary for dark */
+  --color-info-50: #001D66;
+  --color-info-100: #002C8C;
+  --color-info-200: #003EB3;
+  --color-info-300: #0958D9;
+  --color-info-400: #1677FF;
+  --color-info-500: #4096FF;
+  --color-info-600: #69B4FF;
+  --color-info-700: #91CAFF;
+
+  /* Dark Surfaces */
+  --color-background: #0A0A0F;
+  --color-surface: #141419;
+  --color-surface-elevated: #1C1C24;
+  --color-surface-sunken: #0D0D12;
+
+  /* Dark Text */
+  --color-text-primary: #F5F5F7;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #71717A;
+
+  /* Dark Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Dark Shadows - more subtle with colored glows */
+  --shadow-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-elevation-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4);
+  --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.5), 0 16px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glow-primary: 0 0 24px rgba(64, 150, 255, 0.4);
+  --shadow-glow-success: 0 0 24px rgba(115, 209, 61, 0.4);
+  --shadow-glow-warning: 0 0 24px rgba(255, 197, 61, 0.4);
+  --shadow-glow-critical: 0 0 24px rgba(255, 77, 79, 0.4);
+}
+
+/* ============ TAILWIND THEME EXTENSION ============ */
+@theme inline {
+  /* Colors */
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-200: var(--color-primary-200);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+
+  --color-critical-50: var(--color-critical-50);
+  --color-critical-100: var(--color-critical-100);
+  --color-critical-200: var(--color-critical-200);
+  --color-critical-300: var(--color-critical-300);
+  --color-critical-400: var(--color-critical-400);
+  --color-critical-500: var(--color-critical-500);
+  --color-critical-600: var(--color-critical-600);
+  --color-critical-700: var(--color-critical-700);
+
+  --color-warning-50: var(--color-warning-50);
+  --color-warning-100: var(--color-warning-100);
+  --color-warning-200: var(--color-warning-200);
+  --color-warning-300: var(--color-warning-300);
+  --color-warning-400: var(--color-warning-400);
+  --color-warning-500: var(--color-warning-500);
+  --color-warning-600: var(--color-warning-600);
+  --color-warning-700: var(--color-warning-700);
+
+  --color-success-50: var(--color-success-50);
+  --color-success-100: var(--color-success-100);
+  --color-success-200: var(--color-success-200);
+  --color-success-300: var(--color-success-300);
+  --color-success-400: var(--color-success-400);
+  --color-success-500: var(--color-success-500);
+  --color-success-600: var(--color-success-600);
+  --color-success-700: var(--color-success-700);
+
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-foreground: var(--color-text-primary);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* ============ BASE STYLES ============ */
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============ GLASS EFFECTS ============ */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+  background: rgba(20, 20, 25, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-strong {
+  background: rgba(20, 20, 25, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============ GRADIENT UTILITIES ============ */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, var(--color-success-400) 0%, var(--color-success-600) 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, var(--color-warning-400) 0%, var(--color-warning-600) 100%);
+}
+
+.gradient-critical {
+  background: linear-gradient(135deg, var(--color-critical-400) 0%, var(--color-critical-600) 100%);
+}
+
+/* Grade gradients for Health Score */
+.gradient-grade-a {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.gradient-grade-b {
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+}
+
+.gradient-grade-c {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.gradient-grade-d {
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+}
+
+.gradient-grade-f {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+/* ============ ANIMATION UTILITIES ============ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms var(--easing-out) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 500ms var(--easing-spring) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 200ms var(--easing-spring) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 300ms var(--easing-spring) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* ============ SCROLLBAR ============ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============ FOCUS STYLES ============ */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ============ REDUCED MOTION ============ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============ SELECTION ============ */
+::selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+.dark ::selection {
+  background: var(--color-primary-500);
+  color: white;
+}
