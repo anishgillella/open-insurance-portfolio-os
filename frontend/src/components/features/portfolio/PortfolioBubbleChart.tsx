@@ -30,15 +30,15 @@ export function PortfolioBubbleChart({
     {
       id: 'properties',
       data: properties.map((p) => ({
-        x: p.annualPremium,
-        y: p.healthScore,
+        x: p.total_premium,
+        y: p.health_score,
         propertyId: p.id,
       })),
     },
   ];
 
   // Calculate axis domains
-  const maxPremium = Math.max(...properties.map((p) => p.annualPremium)) * 1.1;
+  const maxPremium = Math.max(...properties.map((p) => p.total_premium)) * 1.1;
 
   return (
     <motion.div
@@ -60,7 +60,7 @@ export function PortfolioBubbleChart({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         colors={(node: any) => {
           const prop = propertyLookup.get(node.data?.propertyId);
-          return prop ? getScoreColor(prop.healthScore) : '#888888';
+          return prop ? getScoreColor(prop.health_score) : '#888888';
         }}
         axisTop={null}
         axisRight={null}
@@ -108,28 +108,28 @@ export function PortfolioBubbleChart({
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">Premium:</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {formatCurrency(prop.annualPremium)}
+                    {formatCurrency(prop.total_premium)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[var(--color-text-muted)]">Health Score:</span>
                   <span
                     className="font-bold text-lg"
-                    style={{ color: getScoreColor(prop.healthScore) }}
+                    style={{ color: getScoreColor(prop.health_score) }}
                   >
-                    {prop.healthScore}
+                    {prop.health_score}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">TIV:</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {formatCurrency(prop.totalInsuredValue)}
+                    {formatCurrency(prop.total_insured_value)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">Location:</span>
                   <span className="text-[var(--color-text-secondary)]">
-                    {prop.city}
+                    {prop.address.city}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -137,14 +137,14 @@ export function PortfolioBubbleChart({
                   <span
                     className={cn(
                       'font-medium',
-                      prop.daysUntilExpiration <= 30
+                      (prop.days_until_expiration || 999) <= 30
                         ? 'text-[var(--color-critical-500)]'
-                        : prop.daysUntilExpiration <= 60
+                        : (prop.days_until_expiration || 999) <= 60
                         ? 'text-[var(--color-warning-500)]'
                         : 'text-[var(--color-text-primary)]'
                     )}
                   >
-                    {prop.daysUntilExpiration} days
+                    {prop.days_until_expiration || 'N/A'} days
                   </span>
                 </div>
               </div>

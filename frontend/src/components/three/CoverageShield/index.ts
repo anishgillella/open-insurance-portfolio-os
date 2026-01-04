@@ -1,0 +1,1 @@
+export { CoverageShield } from './CoverageShield';

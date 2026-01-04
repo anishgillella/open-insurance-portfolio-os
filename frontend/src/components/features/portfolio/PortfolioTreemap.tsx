@@ -24,11 +24,11 @@ export function PortfolioTreemap({
     children: properties.map((p) => ({
       id: p.id,
       name: p.name,
-      value: p.totalInsuredValue,
-      healthScore: p.healthScore,
-      premium: p.annualPremium,
-      city: p.city,
-      color: getScoreColor(p.healthScore),
+      value: p.total_insured_value,
+      healthScore: p.health_score,
+      premium: p.total_premium,
+      city: p.address.city,
+      color: getScoreColor(p.health_score),
     })),
   };
 
