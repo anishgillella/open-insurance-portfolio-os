@@ -57,6 +57,9 @@ class InsuranceProgram(BaseModel):
     coverage_gaps: Mapped[list["CoverageGap"]] = relationship(  # noqa: F821
         "CoverageGap", back_populates="program", lazy="selectin"
     )
+    renewal_forecasts: Mapped[list["RenewalForecast"]] = relationship(  # noqa: F821
+        "RenewalForecast", back_populates="program", lazy="selectin"
+    )
 
     # Unique constraint
     __table_args__ = ({"extend_existing": True},)

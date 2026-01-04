@@ -97,6 +97,21 @@ class Property(BaseModel):
     coverage_conflicts: Mapped[list["CoverageConflict"]] = relationship(  # noqa: F821
         "CoverageConflict", back_populates="property", lazy="selectin"
     )
+    renewal_forecasts: Mapped[list["RenewalForecast"]] = relationship(  # noqa: F821
+        "RenewalForecast", back_populates="property", lazy="selectin"
+    )
+    renewal_alerts: Mapped[list["RenewalAlert"]] = relationship(  # noqa: F821
+        "RenewalAlert", back_populates="property", lazy="selectin"
+    )
+    renewal_alert_config: Mapped["RenewalAlertConfig | None"] = relationship(  # noqa: F821
+        "RenewalAlertConfig", back_populates="property", uselist=False
+    )
+    market_contexts: Mapped[list["MarketContext"]] = relationship(  # noqa: F821
+        "MarketContext", back_populates="property", lazy="selectin"
+    )
+    renewal_readiness: Mapped[list["RenewalReadiness"]] = relationship(  # noqa: F821
+        "RenewalReadiness", back_populates="property", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Property(id={self.id}, name={self.name})>"

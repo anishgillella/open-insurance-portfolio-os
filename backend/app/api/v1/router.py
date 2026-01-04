@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     health_score,
     policies,
     properties,
+    renewals,
 )
 
 api_router = APIRouter()
@@ -30,3 +31,4 @@ api_router.include_router(compliance.router, prefix="/compliance", tags=["compli
 api_router.include_router(completeness.router, prefix="/completeness", tags=["completeness"])
 api_router.include_router(health_score.router, prefix="/health-score", tags=["health-score"])
 api_router.include_router(conflicts.router, prefix="/conflicts", tags=["conflicts"])
+api_router.include_router(renewals.router, prefix="/renewals", tags=["renewals"])
