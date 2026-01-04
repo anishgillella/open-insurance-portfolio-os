@@ -9,4 +9,12 @@ export const GradientMeshBg = dynamic(
   }
 );
 
+export const HealthScoreGlobe = dynamic(
+  () => import('./HealthScoreGlobe').then((mod) => mod.HealthScoreGlobe),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
 export { Scene } from './shared/Scene';

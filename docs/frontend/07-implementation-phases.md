@@ -209,57 +209,71 @@ GET /v1/dashboard/alerts
 
 **Goal:** Enable deep dives into individual properties with the flagship Health Score feature.
 
+> **Note:** This phase focuses on data-driven visualizations. No property photos are required - all visualizations use insurance data (TIV, health scores, coverage, etc.) rather than imagery.
+
 ### 3.1 Components to Build
 
-**Properties List:**
-- `PropertyGrid` - Responsive card grid
-- `PropertyCard` - Card with key metrics
-- `PropertyFilters` - Search + filter bar
+**Properties List (Enhancement):**
+- `PropertyFilters` - Enhanced search + filter bar with saved filters
+- `PropertySortControls` - Sort by health, TIV, expiration, etc.
+- `PropertyViewToggle` - Grid/List/Map view switcher
 
-**Property Detail:**
-- `PropertyHeader` - Glass hero with stats
-- `PropertyTabs` - Tab navigation
-- `InsuranceSummary` - Policy cards
-- `BuildingsList` - Expandable building cards
+**Property Detail (Expanded):**
+- `PropertyHeader` - Glass hero with key metrics (no photos - use data icons)
+- `PropertyTabs` - Tab navigation for sub-pages
+- `InsuranceSummary` - Policy cards with coverage visualization
+- `BuildingsList` - Expandable building cards with data metrics
+- `CoverageComparison` - Chart comparing current vs recommended coverage
 
 **Health Score (THE showpiece):**
-- `HealthScoreHero` - Full 3D globe experience
-- `ComponentBreakdown` - Animated progress bars
-- `RecommendationList` - Prioritized actions
-- `ScoreHistory` - Trend chart
+- `HealthScoreHero` - Full 3D globe experience (data visualization, no photos needed)
+- `ComponentBreakdown` - Animated progress bars with drill-down
+- `RecommendationList` - Prioritized actions with impact scores
+- `ScoreHistory` - Trend chart with annotations for key events
+
+**Portfolio Visualization (Replaces PropertyCity):**
+- `PortfolioTreemap` - 2D treemap showing properties sized by TIV, colored by health
+- `PortfolioMap` - Interactive map with pins/bubbles (uses geocoded addresses, not photos)
+- `PortfolioBubbleChart` - Bubble chart (x: premium, y: health, size: TIV)
 
 ### 3.2 Files to Create
 
 ```
 app/
 └── properties/
-    ├── page.tsx              # Properties list
+    ├── page.tsx              # Properties list (enhanced)
     ├── loading.tsx
     └── [id]/
         ├── page.tsx          # Property overview
         ├── layout.tsx        # Tab navigation
         ├── loading.tsx
         ├── health-score/
-        │   └── page.tsx
+        │   └── page.tsx      # Full health score experience
         └── policies/
             └── page.tsx
 
 components/
 └── features/
     ├── properties/
-    │   ├── PropertyGrid.tsx
-    │   ├── PropertyCard.tsx
-    │   ├── PropertyFilters.tsx
-    │   ├── PropertyHeader.tsx
+    │   ├── PropertyFilters.tsx      # Enhanced filters
+    │   ├── PropertySortControls.tsx # Sorting options
+    │   ├── PropertyViewToggle.tsx   # Grid/List/Map toggle
+    │   ├── PropertyHeader.tsx       # Data-driven header (no photos)
     │   ├── PropertyTabs.tsx
     │   ├── InsuranceSummary.tsx
     │   ├── BuildingsList.tsx
+    │   ├── CoverageComparison.tsx   # Coverage gap visualization
     │   └── index.ts
     ├── health-score/
-    │   ├── HealthScoreHero.tsx
-    │   ├── ComponentBreakdown.tsx
-    │   ├── RecommendationList.tsx
-    │   ├── ScoreHistory.tsx
+    │   ├── HealthScoreHero.tsx      # 3D globe (data viz)
+    │   ├── ComponentBreakdown.tsx   # Detailed breakdown
+    │   ├── RecommendationList.tsx   # Actionable items
+    │   ├── ScoreHistory.tsx         # Trend over time
+    │   └── index.ts
+    ├── portfolio/
+    │   ├── PortfolioTreemap.tsx     # Treemap visualization
+    │   ├── PortfolioMap.tsx         # Map with pins (geocoded)
+    │   ├── PortfolioBubbleChart.tsx # Multi-dimension chart
     │   └── index.ts
     └── policies/
         ├── PolicyCard.tsx
@@ -286,21 +300,26 @@ POST /v1/health-score/properties/{id}/recalculate
 
 ### 3.4 Deliverables
 
-- [ ] Properties list with search/filter
-- [ ] Property detail with all sections
-- [ ] Health Score page with 3D globe
-- [ ] Component breakdown with animations
-- [ ] Recommendation list with point values
-- [ ] Score history chart
+- [ ] Enhanced property list with advanced filters and sorting
+- [ ] Property view toggle (Grid/List/Map)
+- [ ] Property detail with data-driven header (icons, not photos)
+- [ ] Health Score page with 3D globe visualization
+- [ ] Component breakdown with drill-down animations
+- [ ] Recommendation list with impact scores and actions
+- [ ] Score history chart with event annotations
+- [ ] Portfolio visualizations (Treemap, Map, Bubble Chart)
+- [ ] Coverage comparison charts
 - [ ] Policy cards and coverage tables
-- [ ] Buildings accordion
+- [ ] Buildings accordion with data metrics
 
 ### 3.5 Success Criteria
 
 - Properties list loads and filters quickly
-- Health Score globe renders smoothly
+- Health Score globe renders smoothly (data-driven, no photos needed)
 - Score recalculation works and updates UI
 - Navigation between tabs is seamless
+- Portfolio visualizations are interactive and informative
+- All visualizations work without property imagery
 
 ---
 

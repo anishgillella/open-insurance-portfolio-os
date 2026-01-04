@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Clock,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getGrade } from '@/lib/utils';
 import { Button, Badge, Card } from '@/components/primitives';
 import { PropertyCard } from '@/components/features/properties';
 import { mockProperties, mockDashboardSummary } from '@/lib/mock-data';
@@ -50,7 +50,7 @@ export default function PropertiesPage() {
 
     // Grade filter
     if (filterGrade !== 'all') {
-      result = result.filter((p) => p.healthGrade === filterGrade);
+      result = result.filter((p) => getGrade(p.healthScore) === filterGrade);
     }
 
     // Expiration filter
@@ -143,7 +143,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Expiring in 30d</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {mockDashboardSummary.expiringWithin30Days}
+              {mockDashboardSummary.expiringIn30Days}
             </p>
           </div>
         </Card>

@@ -69,8 +69,12 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
 }
 
 export function ThemeToggleSwitch({ className }: { className?: string }) {
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
+
+  const toggleTheme = () => {
+    setTheme(isDark ? 'light' : 'dark');
+  };
 
   return (
     <motion.button
