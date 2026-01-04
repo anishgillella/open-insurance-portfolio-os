@@ -23,10 +23,14 @@ from app.models.insurance_program import InsuranceProgram
 from app.models.insured_entity import InsuredEntity
 from app.models.lender import Lender
 from app.models.lender_requirement import LenderRequirement
+from app.models.market_context import MarketContext
 from app.models.message import Message
 from app.models.organization import Organization
 from app.models.policy import Policy
 from app.models.property import Property
+from app.models.renewal_alert import RenewalAlert, RenewalAlertConfig
+from app.models.renewal_forecast import RenewalForecast
+from app.models.renewal_readiness import RenewalReadiness
 from app.models.valuation import Valuation
 
 __all__ = [
@@ -50,9 +54,14 @@ __all__ = [
     "InsuredEntity",
     "Lender",
     "LenderRequirement",
+    "MarketContext",
     "Message",
     "Organization",
     "Policy",
     "Property",
+    "RenewalAlert",
+    "RenewalAlertConfig",
+    "RenewalForecast",
+    "RenewalReadiness",
     "Valuation",
 ]

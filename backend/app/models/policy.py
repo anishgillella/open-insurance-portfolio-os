@@ -95,6 +95,12 @@ class Policy(BaseModel):
     conversations: Mapped[list["Conversation"]] = relationship(  # noqa: F821
         "Conversation", back_populates="policy", lazy="selectin"
     )
+    renewal_forecasts: Mapped[list["RenewalForecast"]] = relationship(  # noqa: F821
+        "RenewalForecast", back_populates="policy", lazy="selectin"
+    )
+    renewal_alerts: Mapped[list["RenewalAlert"]] = relationship(  # noqa: F821
+        "RenewalAlert", back_populates="policy", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Policy(id={self.id}, policy_type={self.policy_type})>"
