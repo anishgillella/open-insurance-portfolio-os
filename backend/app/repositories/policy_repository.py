@@ -1,14 +1,18 @@
 """Repository for Policy and Coverage operations."""
 
 import logging
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Union
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.coverage import Coverage
+from app.models.insurance_program import InsuranceProgram
 from app.models.policy import Policy
+from app.models.property import Property
 from app.repositories.base import BaseRepository
 from app.schemas.document import COIPolicyReference, CoverageExtraction, PolicyExtraction
 
@@ -114,6 +118,236 @@ class PolicyRepository(BaseRepository[Policy]):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_by_property(
+        self,
+        property_id: str,
+        limit: int = 100,
+    ) -> list[Policy]:
+        """Get all policies for a property via insurance programs.
+
+        Args:
+            property_id: Property ID.
+            limit: Maximum records.
+
+        Returns:
+            List of policies.
+        """
+        stmt = (
+            select(Policy)
+            .join(InsuranceProgram, Policy.program_id == InsuranceProgram.id)
+            .options(selectinload(Policy.coverages))
+            .where(
+                InsuranceProgram.property_id == property_id,
+                Policy.deleted_at.is_(None),
+            )
+            .order_by(Policy.expiration_date.desc().nullslast())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique().all())
+
+    async def get_with_details(self, policy_id: str) -> Policy | None:
+        """Get policy with all related data for detail view.
+
+        Args:
+            policy_id: Policy ID.
+
+        Returns:
+            Policy with eager-loaded relationships or None.
+        """
+        stmt = (
+            select(Policy)
+            .options(
+                selectinload(Policy.coverages),
+                selectinload(Policy.endorsements),
+                selectinload(Policy.document),
+                selectinload(Policy.carrier),
+                selectinload(Policy.named_insured),
+                selectinload(Policy.program).selectinload(InsuranceProgram.property),
+            )
+            .where(
+                Policy.id == policy_id,
+                Policy.deleted_at.is_(None),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_all_with_property(
+        self,
+        organization_id: str | None = None,
+        policy_type: str | None = None,
+        sort_by: str = "expiration_date",
+        sort_order: str = "asc",
+        limit: int = 100,
+    ) -> list[Policy]:
+        """Get all policies with property info for list view.
+
+        Args:
+            organization_id: Optional organization filter.
+            policy_type: Optional policy type filter.
+            sort_by: Sort field.
+            sort_order: Sort direction.
+            limit: Maximum records.
+
+        Returns:
+            List of policies with property info.
+        """
+        stmt = (
+            select(Policy)
+            .join(InsuranceProgram, Policy.program_id == InsuranceProgram.id)
+            .join(Property, InsuranceProgram.property_id == Property.id)
+            .options(
+                selectinload(Policy.coverages),
+                selectinload(Policy.program).selectinload(InsuranceProgram.property),
+            )
+            .where(
+                Policy.deleted_at.is_(None),
+                Property.deleted_at.is_(None),
+            )
+        )
+
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+        if policy_type:
+            stmt = stmt.where(Policy.policy_type == policy_type)
+
+        # Apply sorting
+        sort_column = getattr(Policy, sort_by, Policy.expiration_date)
+        if sort_order == "desc":
+            stmt = stmt.order_by(sort_column.desc().nullslast())
+        else:
+            stmt = stmt.order_by(sort_column.asc().nullsfirst())
+
+        stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique().all())
+
+    async def get_expiring_policies(
+        self,
+        days_ahead: int = 90,
+        organization_id: str | None = None,
+        limit: int = 50,
+    ) -> list[Policy]:
+        """Get policies expiring within a certain number of days.
+
+        Args:
+            days_ahead: Number of days to look ahead.
+            organization_id: Optional organization filter.
+            limit: Maximum records.
+
+        Returns:
+            List of expiring policies ordered by expiration date.
+        """
+        today = date.today()
+        end_date = today + timedelta(days=days_ahead)
+
+        stmt = (
+            select(Policy)
+            .join(InsuranceProgram, Policy.program_id == InsuranceProgram.id)
+            .join(Property, InsuranceProgram.property_id == Property.id)
+            .options(
+                selectinload(Policy.program).selectinload(InsuranceProgram.property),
+            )
+            .where(
+                Policy.deleted_at.is_(None),
+                Property.deleted_at.is_(None),
+                Policy.expiration_date.isnot(None),
+                Policy.expiration_date >= today,
+                Policy.expiration_date <= end_date,
+            )
+            .order_by(Policy.expiration_date.asc())
+        )
+
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+
+        stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique().all())
+
+    async def get_expiration_counts(
+        self, organization_id: str | None = None
+    ) -> dict[str, int]:
+        """Get count of policies expiring in 30/60/90 day windows.
+
+        Args:
+            organization_id: Optional organization filter.
+
+        Returns:
+            Dictionary with expiration counts.
+        """
+        today = date.today()
+
+        base_stmt = (
+            select(func.count(Policy.id))
+            .join(InsuranceProgram, Policy.program_id == InsuranceProgram.id)
+            .join(Property, InsuranceProgram.property_id == Property.id)
+            .where(
+                Policy.deleted_at.is_(None),
+                Property.deleted_at.is_(None),
+                Policy.expiration_date.isnot(None),
+                Policy.expiration_date >= today,
+            )
+        )
+
+        if organization_id:
+            base_stmt = base_stmt.where(Property.organization_id == organization_id)
+
+        # 30 days
+        stmt_30 = base_stmt.where(
+            Policy.expiration_date <= today + timedelta(days=30)
+        )
+        result_30 = await self.session.execute(stmt_30)
+        count_30 = result_30.scalar() or 0
+
+        # 60 days (31-60)
+        stmt_60 = base_stmt.where(
+            Policy.expiration_date > today + timedelta(days=30),
+            Policy.expiration_date <= today + timedelta(days=60),
+        )
+        result_60 = await self.session.execute(stmt_60)
+        count_60 = result_60.scalar() or 0
+
+        # 90 days (61-90)
+        stmt_90 = base_stmt.where(
+            Policy.expiration_date > today + timedelta(days=60),
+            Policy.expiration_date <= today + timedelta(days=90),
+        )
+        result_90 = await self.session.execute(stmt_90)
+        count_90 = result_90.scalar() or 0
+
+        return {
+            "expiring_30_days": count_30,
+            "expiring_60_days": count_60,
+            "expiring_90_days": count_90,
+        }
+
+    async def count_all(self, organization_id: str | None = None) -> int:
+        """Count all policies.
+
+        Args:
+            organization_id: Optional organization filter.
+
+        Returns:
+            Total count of policies.
+        """
+        stmt = (
+            select(func.count(Policy.id))
+            .join(InsuranceProgram, Policy.program_id == InsuranceProgram.id)
+            .join(Property, InsuranceProgram.property_id == Property.id)
+            .where(
+                Policy.deleted_at.is_(None),
+                Property.deleted_at.is_(None),
+            )
+        )
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+        result = await self.session.execute(stmt)
+        return result.scalar() or 0
 
 
 class CoverageRepository(BaseRepository[Coverage]):

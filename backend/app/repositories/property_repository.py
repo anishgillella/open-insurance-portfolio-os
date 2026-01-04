@@ -1,11 +1,19 @@
 """Repository for Property operations."""
 
 import logging
-from datetime import datetime
+from datetime import date
+from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.building import Building
+from app.models.coverage_gap import CoverageGap
+from app.models.document import Document
+from app.models.insurance_program import InsuranceProgram
+from app.models.policy import Policy
 from app.models.property import Property
 from app.repositories.base import BaseRepository
 
@@ -93,3 +101,200 @@ class PropertyRepository(BaseRepository[Property]):
             offset=offset,
             organization_id=organization_id,
         )
+
+    async def list_with_summary(
+        self,
+        organization_id: str | None = None,
+        state: str | None = None,
+        search: str | None = None,
+        sort_by: str = "name",
+        sort_order: str = "asc",
+        limit: int = 100,
+    ) -> list[Property]:
+        """Get properties with related data for list view.
+
+        Args:
+            organization_id: Optional organization filter.
+            state: Optional state filter.
+            search: Optional search term.
+            sort_by: Sort field.
+            sort_order: Sort direction.
+            limit: Maximum records.
+
+        Returns:
+            List of properties with eager-loaded relationships.
+        """
+        stmt = (
+            select(Property)
+            .options(
+                selectinload(Property.buildings),
+                selectinload(Property.insurance_programs).selectinload(
+                    InsuranceProgram.policies
+                ),
+                selectinload(Property.coverage_gaps),
+                selectinload(Property.documents),
+            )
+            .where(Property.deleted_at.is_(None))
+        )
+
+        # Apply filters
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+        if state:
+            stmt = stmt.where(Property.state == state)
+        if search:
+            search_term = f"%{search}%"
+            stmt = stmt.where(
+                (Property.name.ilike(search_term))
+                | (Property.address.ilike(search_term))
+                | (Property.city.ilike(search_term))
+            )
+
+        # Apply sorting
+        sort_column = getattr(Property, sort_by, Property.name)
+        if sort_order == "desc":
+            stmt = stmt.order_by(sort_column.desc())
+        else:
+            stmt = stmt.order_by(sort_column.asc())
+
+        stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique().all())
+
+    async def get_with_details(self, property_id: str) -> Property | None:
+        """Get property with all related data for detail view.
+
+        Args:
+            property_id: Property ID.
+
+        Returns:
+            Property with eager-loaded relationships or None.
+        """
+        stmt = (
+            select(Property)
+            .options(
+                selectinload(Property.buildings),
+                selectinload(Property.insurance_programs).selectinload(
+                    InsuranceProgram.policies
+                ),
+                selectinload(Property.coverage_gaps),
+                selectinload(Property.documents),
+                selectinload(Property.lender_requirements),
+            )
+            .where(
+                Property.id == property_id,
+                Property.deleted_at.is_(None),
+            )
+        )
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def count_all(self, organization_id: str | None = None) -> int:
+        """Count all properties.
+
+        Args:
+            organization_id: Optional organization filter.
+
+        Returns:
+            Total count of properties.
+        """
+        stmt = select(func.count(Property.id)).where(Property.deleted_at.is_(None))
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+        result = await self.session.execute(stmt)
+        return result.scalar() or 0
+
+    async def get_portfolio_stats(
+        self, organization_id: str | None = None
+    ) -> dict[str, Any]:
+        """Get aggregated portfolio statistics.
+
+        Args:
+            organization_id: Optional organization filter.
+
+        Returns:
+            Dictionary with portfolio stats.
+        """
+        # Base query for properties
+        property_stmt = select(
+            func.count(Property.id).label("total_properties"),
+            func.coalesce(func.sum(Property.units), 0).label("total_units"),
+        ).where(Property.deleted_at.is_(None))
+
+        if organization_id:
+            property_stmt = property_stmt.where(
+                Property.organization_id == organization_id
+            )
+
+        property_result = await self.session.execute(property_stmt)
+        property_stats = property_result.one()
+
+        # Count buildings
+        building_stmt = (
+            select(func.count(Building.id))
+            .join(Property, Building.property_id == Property.id)
+            .where(Property.deleted_at.is_(None))
+        )
+        if organization_id:
+            building_stmt = building_stmt.where(
+                Property.organization_id == organization_id
+            )
+        building_result = await self.session.execute(building_stmt)
+        total_buildings = building_result.scalar() or 0
+
+        # Get premium and TIV from insurance programs
+        program_stmt = (
+            select(
+                func.coalesce(func.sum(InsuranceProgram.total_premium), 0).label(
+                    "total_premium"
+                ),
+                func.coalesce(func.sum(InsuranceProgram.total_insured_value), 0).label(
+                    "total_tiv"
+                ),
+            )
+            .join(Property, InsuranceProgram.property_id == Property.id)
+            .where(
+                Property.deleted_at.is_(None),
+                InsuranceProgram.status == "active",
+            )
+        )
+        if organization_id:
+            program_stmt = program_stmt.where(
+                Property.organization_id == organization_id
+            )
+        program_result = await self.session.execute(program_stmt)
+        program_stats = program_result.one()
+
+        return {
+            "total_properties": property_stats.total_properties or 0,
+            "total_buildings": total_buildings,
+            "total_units": property_stats.total_units or 0,
+            "total_insured_value": Decimal(str(program_stats.total_tiv or 0)),
+            "total_annual_premium": Decimal(str(program_stats.total_premium or 0)),
+        }
+
+    async def get_documents_by_property(
+        self, property_id: str, limit: int = 100
+    ) -> list[Document]:
+        """Get documents for a property.
+
+        Args:
+            property_id: Property ID.
+            limit: Maximum records.
+
+        Returns:
+            List of documents.
+        """
+        stmt = (
+            select(Document)
+            .where(
+                Document.property_id == property_id,
+                Document.deleted_at.is_(None),
+            )
+            .order_by(Document.created_at.desc())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
