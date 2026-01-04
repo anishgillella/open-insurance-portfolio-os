@@ -61,8 +61,8 @@ DED: 50,000  |   |   |   |   |   |   |   |   |   |
 |  - Incr. Cost of Construction | X |  |  | If YES, LIMIT: 3,583,997 |   |   | DED: 50,000  |   |   |
 |  EARTH MOVEMENT (If Applicable) |  |  | X | If YES, LIMIT: |   |   | DED:  |   |   |
 |  FLOOD (If Applicable) |  |  | X | If YES, LIMIT: |   |   | DED:  |   |   |
-|  WIND / HAIL INCL | X YES | NO | Subject to Different Provisions: | X |  |  | If YES, LIMIT: | DED: | 2%  |
-|  NAMED STORM INCL | X YES | NO | Subject to Different Provisions: | X |  |  | If YES, LIMIT: | DED: | 2%  |
+|  WIND / HAIL INCL | X YES | NO | Subject to Different Provisions: | X |  |  | If YES, LIMIT: | DED: 2%  |   |
+|  NAMED STORM INCL | X YES | NO | Subject to Different Provisions: | X |  |  | If YES, LIMIT: | DED: 2%  |   |
 |  PERMISSION TO WAIVE SUBROGATION IN FAVOR OF MORTGAGE HOLDER PRIOR TO LOSS |   |   |  | X |  |  |  |  |   |
 
 CANCELLATION

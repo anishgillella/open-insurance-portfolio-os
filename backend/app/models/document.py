@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,18 @@ class Document(BaseModel):
     """Source document model."""
 
     __tablename__ = "documents"
+
+    # Unique constraint to prevent duplicate documents per organization
+    # Only applies to non-deleted documents (partial index)
+    __table_args__ = (
+        Index(
+            "ix_documents_unique_filename_org",
+            "file_name",
+            "organization_id",
+            unique=True,
+            postgresql_where="deleted_at IS NULL",
+        ),
+    )
 
     # Foreign Keys
     property_id: Mapped[str | None] = mapped_column(

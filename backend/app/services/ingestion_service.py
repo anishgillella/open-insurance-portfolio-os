@@ -5,16 +5,20 @@ This service orchestrates the complete document ingestion pipeline:
 2. OCR processing (Mistral)
 3. Classification (Gemini)
 4. Extraction (Gemini)
-5. Database record creation
-6. File storage (local + S3)
+5. Auto-create property and program if needed
+6. Database record creation (policies, certificates, financials, etc.)
+7. File storage (local + S3)
 
 Features:
 - Parallel processing of multiple files in a directory
 - Each file processed in its own async task for maximum throughput
+- Auto-creates property and insurance program from property_name
+- Populates all relational tables based on document type
 """
 
 import asyncio
 import logging
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +27,10 @@ from app.core.database import async_session_maker
 from app.repositories.certificate_repository import CertificateRepository
 from app.repositories.claim_repository import ClaimRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.financial_repository import FinancialRepository
 from app.repositories.policy_repository import CoverageRepository, PolicyRepository
+from app.repositories.program_repository import ProgramRepository
+from app.repositories.property_repository import PropertyRepository
 from app.schemas.document import (
     DocumentClassification,
     DocumentType,
@@ -73,9 +80,12 @@ class IngestionService:
 
         # Repositories
         self.document_repo = DocumentRepository(session)
+        self.property_repo = PropertyRepository(session)
+        self.program_repo = ProgramRepository(session)
         self.policy_repo = PolicyRepository(session)
         self.coverage_repo = CoverageRepository(session)
         self.certificate_repo = CertificateRepository(session)
+        self.financial_repo = FinancialRepository(session)
         self.claim_repo = ClaimRepository(session)
 
     async def ingest_file(
@@ -86,19 +96,25 @@ class IngestionService:
         property_id: str | None = None,
         program_id: str | None = None,
         force_reprocess: bool = True,
+        auto_create_entities: bool = True,
     ) -> IngestResponse:
         """Ingest a single document file.
 
         If a document with the same filename already exists for this organization,
         it will be reprocessed (updated) instead of creating a duplicate.
 
+        When auto_create_entities=True (default), automatically creates:
+        - Property record (if not provided)
+        - InsuranceProgram record (if not provided)
+
         Args:
             file_path: Path to the document file.
             organization_id: Organization ID.
-            property_name: Property name (used for folder organization in storage).
-            property_id: Optional property ID (for database relations).
-            program_id: Optional insurance program ID (for creating policies).
+            property_name: Property name (used for folder organization and auto-creation).
+            property_id: Optional property ID (auto-created if not provided).
+            program_id: Optional insurance program ID (auto-created if not provided).
             force_reprocess: If True, reprocess existing documents. If False, skip them.
+            auto_create_entities: If True, auto-create property and program.
 
         Returns:
             IngestResponse with results and any errors.
@@ -107,6 +123,37 @@ class IngestionService:
         errors: list[str] = []
 
         logger.info(f"Starting ingestion for: {path.name}")
+
+        # Auto-create property and program if needed
+        if auto_create_entities and not property_id:
+            try:
+                property_obj, prop_is_new = await self.property_repo.get_or_create(
+                    name=property_name,
+                    organization_id=organization_id,
+                )
+                property_id = property_obj.id
+                if prop_is_new:
+                    logger.info(f"Auto-created property: {property_name} (id: {property_id})")
+            except Exception as e:
+                error_msg = f"Failed to auto-create property: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        if auto_create_entities and property_id and not program_id:
+            try:
+                # Determine program year from current date
+                current_year = date.today().year
+                program_obj, prog_is_new = await self.program_repo.get_or_create(
+                    property_id=property_id,
+                    program_year=current_year,
+                )
+                program_id = program_obj.id
+                if prog_is_new:
+                    logger.info(f"Auto-created program: {current_year} (id: {program_id})")
+            except Exception as e:
+                error_msg = f"Failed to auto-create program: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
 
         # Validate file exists
         if not path.exists():
@@ -122,48 +169,28 @@ class IngestionService:
         file_type = path.suffix.lower().lstrip(".")
         mime_type = self._get_mime_type(path)
 
-        # Check for existing document (deduplication)
-        existing_document = await self.document_repo.find_by_filename_and_org(
+        # Use atomic upsert to handle race conditions in parallel processing
+        # This will either create a new document or update an existing one
+        document, is_new = await self.document_repo.upsert_from_file(
             file_name=path.name,
+            file_url=str(path.absolute()),
             organization_id=organization_id,
+            property_id=property_id,
+            file_size_bytes=file_size,
+            file_type=file_type,
+            mime_type=mime_type,
         )
 
-        if existing_document:
-            if not force_reprocess:
-                logger.info(f"Document already exists, skipping: {path.name} (id: {existing_document.id})")
-                return IngestResponse(
-                    document_id=existing_document.id,
-                    file_name=path.name,
-                    status="skipped",
-                    errors=["Document already exists. Use force_reprocess=True to reprocess."],
-                )
-
-            # Reprocess existing document
-            logger.info(f"Document exists, reprocessing: {path.name} (id: {existing_document.id})")
-            document = await self.document_repo.reset_for_reprocessing(
-                document_id=existing_document.id,
-                file_url=str(path.absolute()),
-                file_size_bytes=file_size,
-            )
-            if not document:
-                return IngestResponse(
-                    document_id=existing_document.id,
-                    file_name=path.name,
-                    status="failed",
-                    errors=["Failed to reset document for reprocessing"],
-                )
-        else:
-            # Create new document record
-            document = await self.document_repo.create_from_file(
+        if not is_new and not force_reprocess:
+            logger.info(f"Document already exists, skipping: {path.name} (id: {document.id})")
+            return IngestResponse(
+                document_id=document.id,
                 file_name=path.name,
-                file_url=str(path.absolute()),
-                organization_id=organization_id,
-                property_id=property_id,
-                file_size_bytes=file_size,
-                file_type=file_type,
-                mime_type=mime_type,
+                status="skipped",
+                errors=["Document already exists. Use force_reprocess=True to reprocess."],
             )
-            logger.info(f"Created new document record: {document.id}")
+
+        logger.info(f"{'Created new' if is_new else 'Reprocessing'} document: {document.id}")
 
         # Variables to store for later file storage
         ocr_markdown: str | None = None
@@ -263,7 +290,8 @@ class IngestionService:
                 document.id, ProcessingStatus.FAILED, error=str(e)
             )
 
-        # Step 4: Create database records from extraction (if we have a program)
+        # Step 4: Create database records from extraction
+        # Now always runs since we auto-create property and program
         if extraction_result and program_id:
             try:
                 await self._create_records_from_extraction(
@@ -276,6 +304,11 @@ class IngestionService:
                 error_msg = f"Record creation failed: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
+        elif extraction_result and not program_id:
+            logger.warning(
+                f"Skipping record creation for {path.name}: no program_id available. "
+                "Set auto_create_entities=True to auto-create."
+            )
 
         # Step 5: Store files (local + S3)
         storage_urls: dict[str, str] = {}
@@ -331,21 +364,28 @@ class IngestionService:
         extensions: set[str] | None = None,
         max_concurrent: int = 5,
         force_reprocess: bool = True,
+        auto_create_entities: bool = True,
     ) -> list[IngestResponse]:
         """Ingest all documents in a directory in PARALLEL.
 
         Each file is processed in its own async task for maximum throughput.
         Uses semaphore to limit concurrent API calls.
 
+        When auto_create_entities=True (default):
+        - Creates a single Property for the directory (uses directory name)
+        - Creates a single InsuranceProgram for the current year
+        - All documents in the directory share the same property and program
+
         Args:
             directory_path: Path to directory.
             organization_id: Organization ID.
             property_name: Property name for storage (defaults to directory name).
-            property_id: Optional property ID.
-            program_id: Optional insurance program ID.
+            property_id: Optional property ID (auto-created if not provided).
+            program_id: Optional insurance program ID (auto-created if not provided).
             extensions: File extensions to process (default: pdf, png, jpg, jpeg).
             max_concurrent: Maximum number of files to process concurrently (default: 5).
             force_reprocess: If True, reprocess existing documents. If False, skip them.
+            auto_create_entities: If True, auto-create property and program once for all files.
 
         Returns:
             List of IngestResponse for each file.
@@ -367,6 +407,33 @@ class IngestionService:
             f"Found {len(files)} files to ingest in {directory_path} "
             f"(property: {property_name}, parallel: {max_concurrent}, force_reprocess: {force_reprocess})"
         )
+
+        # Auto-create property and program ONCE for the entire directory
+        # This ensures all documents share the same property and program
+        if auto_create_entities and not property_id:
+            property_obj, prop_is_new = await self.property_repo.get_or_create(
+                name=property_name,
+                organization_id=organization_id,
+            )
+            property_id = property_obj.id
+            if prop_is_new:
+                logger.info(f"Auto-created property for directory: {property_name} (id: {property_id})")
+
+        if auto_create_entities and property_id and not program_id:
+            current_year = date.today().year
+            program_obj, prog_is_new = await self.program_repo.get_or_create(
+                property_id=property_id,
+                program_year=current_year,
+            )
+            program_id = program_obj.id
+            if prog_is_new:
+                logger.info(f"Auto-created program for directory: {current_year} (id: {program_id})")
+
+        # IMPORTANT: Commit property and program so parallel tasks can see them
+        # Each parallel task uses its own session, so we need to commit here
+        if auto_create_entities:
+            await self.session.commit()
+            logger.info("Committed property and program before parallel processing")
 
         # Semaphore to limit concurrent processing
         semaphore = asyncio.Semaphore(max_concurrent)
@@ -392,6 +459,8 @@ class IngestionService:
                             storage_service=self.storage_service,
                         )
 
+                        # Pass the shared property_id and program_id
+                        # Disable auto_create_entities since we already created them
                         result = await task_service.ingest_file(
                             str(file_path),
                             organization_id=organization_id,
@@ -399,6 +468,7 @@ class IngestionService:
                             property_id=property_id,
                             program_id=program_id,
                             force_reprocess=force_reprocess,
+                            auto_create_entities=False,  # Already created above
                         )
 
                         # Commit the task's session
@@ -438,15 +508,27 @@ class IngestionService:
         program_id: str,
         document_id: str,
         property_id: str | None = None,
-    ) -> None:
+    ) -> dict:
         """Create database records from extraction result.
+
+        Based on document type, creates appropriate records:
+        - Policy documents → policies + coverages tables
+        - COI/EOP documents → certificates + policies tables
+        - Invoice documents → financials table
+        - Loss Run documents → claims table
+        - SOV documents → valuations table (TODO)
 
         Args:
             extraction: Extraction result.
             program_id: Insurance program ID.
             document_id: Source document ID.
             property_id: Property ID for claims.
+
+        Returns:
+            Dictionary with created record IDs by type.
         """
+        created_records: dict = {}
+
         # Create policy and coverages if we extracted policy data
         if extraction.policy:
             policy = await self.policy_repo.create_from_extraction(
@@ -455,6 +537,7 @@ class IngestionService:
                 document_id=document_id,
             )
             logger.info(f"Created policy: {policy.id}")
+            created_records["policy_id"] = policy.id
 
             # Create coverages
             if extraction.policy.coverages:
@@ -464,6 +547,7 @@ class IngestionService:
                     document_id=document_id,
                 )
                 logger.info(f"Created {len(coverages)} coverages")
+                created_records["coverage_ids"] = [c.id for c in coverages]
 
         # Create certificate from COI/EOP extraction
         if extraction.coi:
@@ -479,9 +563,11 @@ class IngestionService:
                 certificate_type=cert_type,
             )
             logger.info(f"Created certificate: {certificate.id}")
+            created_records["certificate_id"] = certificate.id
 
             # Also create stub policies from COI references if they don't exist
             if extraction.coi.policies:
+                policy_ids = []
                 for pol_extraction in extraction.coi.policies:
                     if pol_extraction.policy_number:
                         existing = await self.policy_repo.get_by_policy_number(
@@ -494,6 +580,19 @@ class IngestionService:
                                 document_id=document_id,
                             )
                             logger.info(f"Created policy from COI: {policy.id}")
+                            policy_ids.append(policy.id)
+                if policy_ids:
+                    created_records["policy_ids_from_coi"] = policy_ids
+
+        # Create financial record from invoice extraction
+        if extraction.invoice:
+            financial = await self.financial_repo.create_from_extraction(
+                extraction.invoice,
+                program_id=program_id,
+                document_id=document_id,
+            )
+            logger.info(f"Created financial record: {financial.id}")
+            created_records["financial_id"] = financial.id
 
         # Create claims from loss run extraction
         if extraction.loss_run and extraction.loss_run.claims and property_id:
@@ -503,6 +602,14 @@ class IngestionService:
                 document_id=document_id,
             )
             logger.info(f"Created {len(claims)} claims from loss run")
+            created_records["claim_ids"] = [c.id for c in claims]
+
+        # TODO: Create valuations from SOV extraction
+        # if extraction.sov and extraction.sov.properties:
+        #     for sov_property in extraction.sov.properties:
+        #         valuation = await self.valuation_repo.create_from_extraction(...)
+
+        return created_records
 
     def _build_extraction_summary(self, extraction: ExtractionResult) -> dict:
         """Build a summary of extraction results.
