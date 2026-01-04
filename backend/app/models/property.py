@@ -91,6 +91,12 @@ class Property(BaseModel):
     conversations: Mapped[list["Conversation"]] = relationship(  # noqa: F821
         "Conversation", back_populates="property", lazy="selectin"
     )
+    health_scores: Mapped[list["HealthScore"]] = relationship(  # noqa: F821
+        "HealthScore", back_populates="property", lazy="selectin"
+    )
+    coverage_conflicts: Mapped[list["CoverageConflict"]] = relationship(  # noqa: F821
+        "CoverageConflict", back_populates="property", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Property(id={self.id}, name={self.name})>"

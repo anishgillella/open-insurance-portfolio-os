@@ -11,12 +11,14 @@ from app.models.certificate import Certificate
 from app.models.claim import Claim
 from app.models.conversation import Conversation
 from app.models.coverage import Coverage
+from app.models.coverage_conflict import CoverageConflict
 from app.models.coverage_gap import CoverageGap
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.models.endorsement import Endorsement
 from app.models.extracted_fact import ExtractedFact
 from app.models.financial import Financial
+from app.models.health_score import HealthScore
 from app.models.insurance_program import InsuranceProgram
 from app.models.insured_entity import InsuredEntity
 from app.models.lender import Lender
@@ -36,12 +38,14 @@ __all__ = [
     "Claim",
     "Conversation",
     "Coverage",
+    "CoverageConflict",
     "CoverageGap",
     "Document",
     "DocumentChunk",
     "Endorsement",
     "ExtractedFact",
     "Financial",
+    "HealthScore",
     "InsuranceProgram",
     "InsuredEntity",
     "Lender",

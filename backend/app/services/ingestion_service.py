@@ -784,6 +784,58 @@ class IngestionService:
                 f"{analyzed_count}/{len(gaps)} gaps analyzed"
             )
 
+            # Step 4: Calculate/update health score after gap detection
+            await self._update_health_score(property_id, trigger="ingestion")
+
+            # Step 5: Detect coverage conflicts
+            await self._detect_conflicts(property_id)
+
         except Exception as e:
             # LLM analysis errors are non-fatal - gaps are still detected
             logger.warning(f"LLM gap analysis failed for property {property_id}: {e}")
+
+    async def _update_health_score(self, property_id: str, trigger: str) -> None:
+        """Update health score after changes.
+
+        Calculates a new health score for the property using LLM analysis.
+        Non-fatal if it fails.
+
+        Args:
+            property_id: Property ID.
+            trigger: What triggered the recalculation.
+        """
+        from app.services.health_score_service import HealthScoreService, HealthScoreError
+
+        try:
+            logger.info(f"Updating health score for property {property_id} (trigger: {trigger})")
+            health_service = HealthScoreService(self.session)
+            result = await health_service.calculate_health_score(property_id, trigger=trigger)
+            logger.info(f"Health score updated for property {property_id}: {result.score} ({result.grade})")
+        except HealthScoreError as e:
+            logger.warning(f"Health score update failed for property {property_id}: {e}")
+        except Exception as e:
+            logger.warning(f"Health score update failed for property {property_id}: {e}")
+
+    async def _detect_conflicts(self, property_id: str) -> None:
+        """Detect coverage conflicts between policies.
+
+        Uses LLM to analyze policies for conflicts and overlaps.
+        Non-fatal if it fails.
+
+        Args:
+            property_id: Property ID.
+        """
+        from app.services.conflict_detection_service import ConflictDetectionService, ConflictDetectionError
+
+        try:
+            logger.info(f"Detecting conflicts for property {property_id}")
+            conflict_service = ConflictDetectionService(self.session)
+            result = await conflict_service.detect_conflicts(property_id, clear_existing=True)
+            logger.info(
+                f"Conflict detection complete for property {property_id}: "
+                f"{len(result.conflicts)} conflicts found"
+            )
+        except ConflictDetectionError as e:
+            logger.warning(f"Conflict detection failed for property {property_id}: {e}")
+        except Exception as e:
+            logger.warning(f"Conflict detection failed for property {property_id}: {e}")

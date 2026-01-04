@@ -285,6 +285,7 @@ async def resolve_gap(
     """Mark a gap as resolved.
 
     Resolved gaps are preserved during gap detection reruns.
+    This also triggers a health score recalculation for the property.
     """
     repo = GapRepository(db)
     gap = await repo.resolve_gap(gap_id, notes=request.notes)
@@ -296,6 +297,17 @@ async def resolve_gap(
         )
 
     await db.commit()
+
+    # Trigger health score recalculation after gap resolution
+    try:
+        from app.services.health_score_service import HealthScoreService
+
+        health_service = HealthScoreService(db)
+        await health_service.calculate_health_score(gap.property_id, trigger="gap_resolved")
+        await db.commit()
+        logger.info(f"Health score recalculated after gap {gap_id} resolution")
+    except Exception as e:
+        logger.warning(f"Failed to recalculate health score after gap resolution: {e}")
 
     return GapActionResponse(
         id=gap.id,
