@@ -31,6 +31,11 @@ from app.models.lender_requirement import LenderRequirement
 from app.models.policy import Policy
 from app.models.property import Property
 from app.repositories.gap_repository import GapRepository
+from app.services.lender_requirements_service import (
+    LenderRequirementsService,
+    LenderRequirementsError,
+    get_lender_requirements_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +105,7 @@ class ComplianceService:
         """
         self.session = session
         self.gap_repo = GapRepository(session)
+        self.lender_req_service = get_lender_requirements_service(session)
 
     async def check_compliance_for_property(
         self,
@@ -226,6 +232,144 @@ class ComplianceService:
             },
         ]
 
+    async def check_compliance_with_live_requirements(
+        self,
+        property_id: str,
+        lender_name: str,
+        loan_type: str | None = None,
+        create_gaps: bool = True,
+    ) -> ComplianceResult:
+        """Check compliance using live lender requirements from Parallel AI.
+
+        This method:
+        1. Fetches real-time lender requirements via Parallel AI web research
+        2. Builds a LenderRequirement from the research
+        3. Checks property insurance against those requirements
+
+        Args:
+            property_id: Property ID.
+            lender_name: Name of the lender (e.g., "Wells Fargo", "Fannie Mae").
+            loan_type: Optional loan type for context.
+            create_gaps: If True, create CoverageGap records for issues.
+
+        Returns:
+            ComplianceResult with compliance status and issues.
+        """
+        logger.info(f"Checking live compliance for property {property_id} against lender {lender_name}")
+
+        # Load property with data
+        prop = await self._load_property_with_details(property_id)
+        if not prop:
+            raise ValueError(f"Property {property_id} not found")
+
+        # Fetch live lender requirements from Parallel AI
+        try:
+            live_requirements = await self.lender_req_service.get_requirements_for_compliance(
+                lender_name=lender_name,
+                loan_type=loan_type,
+            )
+        except LenderRequirementsError as e:
+            logger.error(f"Failed to fetch lender requirements: {e}")
+            raise ValueError(f"Failed to fetch requirements for {lender_name}: {e}")
+
+        if live_requirements.get("error"):
+            logger.warning(f"Lender requirements unavailable: {live_requirements.get('error')}")
+            raise ValueError(f"Lender requirements unavailable: {live_requirements.get('error')}")
+
+        # Build a LenderRequirement object from the live research
+        mock_req = self._build_requirement_from_live_data(
+            property_id=property_id,
+            lender_name=lender_name,
+            live_data=live_requirements,
+        )
+
+        # Check compliance against the live requirements
+        compliance_result = await self._check_against_requirement(
+            prop,
+            mock_req,
+            template_name=f"{lender_name} (Live Research)",
+        )
+
+        # Create gaps for issues if requested
+        if create_gaps and compliance_result.issues:
+            await self._create_compliance_gaps(prop, mock_req, compliance_result.issues)
+            await self.session.flush()
+
+        logger.info(
+            f"Live compliance check for {property_id} against {lender_name}: "
+            f"status={compliance_result.status}, issues={len(compliance_result.issues)}"
+        )
+
+        return compliance_result
+
+    def _build_requirement_from_live_data(
+        self,
+        property_id: str,
+        lender_name: str,
+        live_data: dict,
+    ) -> LenderRequirement:
+        """Build a LenderRequirement object from live Parallel AI research.
+
+        Args:
+            property_id: Property ID.
+            lender_name: Lender name.
+            live_data: Live requirements data from Parallel AI.
+
+        Returns:
+            LenderRequirement object populated with live data.
+        """
+        coverage_reqs = live_data.get("coverage_requirements", {})
+        deductible_reqs = live_data.get("deductible_requirements", {})
+        carrier_reqs = live_data.get("carrier_requirements", {})
+
+        # Extract property coverage minimum
+        property_cov = coverage_reqs.get("property", {})
+        min_property_limit = None
+        if property_cov.get("minimum_limit"):
+            min_property_limit = Decimal(str(property_cov["minimum_limit"]))
+
+        # Extract GL coverage minimum
+        gl_cov = coverage_reqs.get("general_liability", {})
+        min_gl_limit = None
+        if gl_cov.get("minimum_limit"):
+            min_gl_limit = Decimal(str(gl_cov["minimum_limit"]))
+
+        # Extract umbrella coverage minimum
+        umbrella_cov = coverage_reqs.get("umbrella", {})
+        min_umbrella_limit = None
+        if umbrella_cov.get("minimum_limit"):
+            min_umbrella_limit = Decimal(str(umbrella_cov["minimum_limit"]))
+
+        # Extract deductible requirements
+        max_ded_pct = deductible_reqs.get("max_percentage_of_tiv")
+        if max_ded_pct:
+            max_ded_pct = max_ded_pct / 100.0  # Convert to decimal (5% -> 0.05)
+
+        max_ded_flat = None
+        if deductible_reqs.get("max_flat_amount"):
+            max_ded_flat = Decimal(str(deductible_reqs["max_flat_amount"]))
+
+        # Check if flood is required
+        flood_cov = coverage_reqs.get("flood", {})
+        requires_flood = flood_cov.get("required", False)
+
+        # Build the LenderRequirement object
+        req = LenderRequirement(
+            property_id=property_id,
+            min_property_limit=min_property_limit,
+            min_gl_limit=min_gl_limit,
+            min_umbrella_limit=min_umbrella_limit,
+            max_deductible_pct=max_ded_pct,
+            max_deductible_amount=max_ded_flat,
+            requires_flood=requires_flood,
+            requires_earthquake=False,  # TODO: Extract from live data if available
+        )
+
+        # Store the lender name in a way that can be accessed
+        req._live_lender_name = lender_name
+
+        return req
+
     async def _load_property_with_details(self, property_id: str) -> Property | None:
         """Load property with insurance data."""
         stmt = (
@@ -309,7 +453,10 @@ class ComplianceService:
             if issue:
                 issues.append(issue)
 
-        lender_name = req.lender.name if req.lender else template_name or "Lender"
+        # Get lender name - check for live lender name first, then relationship, then template
+        lender_name = getattr(req, "_live_lender_name", None) or (
+            req.lender.name if req.lender else template_name or "Lender"
+        )
 
         return ComplianceResult(
             property_id=prop.id,

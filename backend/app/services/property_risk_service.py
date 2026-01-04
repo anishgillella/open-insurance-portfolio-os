@@ -261,7 +261,7 @@ class PropertyRiskService:
                 address=prop.address or "",
                 city=prop.city or "",
                 state=prop.state or "",
-                zip_code=prop.zip_code or "",
+                zip_code=prop.zip or "",
             )
         except ParallelClientError as e:
             raise PropertyRiskError(f"Parallel AI research failed: {e}")
@@ -396,8 +396,8 @@ class PropertyRiskService:
             parts.append(prop.city)
         if prop.state:
             parts.append(prop.state)
-        if prop.zip_code:
-            parts.append(prop.zip_code)
+        if prop.zip:
+            parts.append(prop.zip)
 
         return ", ".join(parts) if parts else None
 

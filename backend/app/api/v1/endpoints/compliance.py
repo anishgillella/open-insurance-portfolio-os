@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.core.dependencies import AsyncSessionDep
 from app.models.lender_requirement import LenderRequirement
 from app.repositories.property_repository import PropertyRepository
+from pydantic import BaseModel
 from app.schemas.gap import (
     ComplianceCheckRequest,
     ComplianceCheckResult,
@@ -22,6 +23,13 @@ from app.schemas.gap import (
     PropertyComplianceResponse,
 )
 from app.services.compliance_service import ComplianceService
+
+
+class LiveComplianceCheckRequest(BaseModel):
+    """Request for live compliance check using Parallel AI."""
+    lender_name: str
+    loan_type: str | None = None
+    create_gaps: bool = True
 
 router = APIRouter()
 
@@ -233,6 +241,73 @@ async def check_property_compliance(
         compliance_checks=compliance_checks,
         overall_status=overall_status,
         total_issues=total_issues,
+    )
+
+
+@router.post("/properties/{property_id}/check-live", response_model=ComplianceCheckResult)
+async def check_compliance_with_live_requirements(
+    property_id: str,
+    request: LiveComplianceCheckRequest,
+    db: AsyncSessionDep,
+) -> ComplianceCheckResult:
+    """Check compliance using LIVE lender requirements from Parallel AI.
+
+    This endpoint:
+    1. Fetches real-time lender requirements via Parallel AI web research
+    2. Checks property insurance against those live requirements
+    3. Optionally creates CoverageGap records for any issues found
+
+    This is useful for checking compliance against lenders not in the database,
+    or to get the most up-to-date requirements for known lenders.
+
+    Note: This operation may take 30-120 seconds due to web research.
+    """
+    # Verify property exists
+    prop_repo = PropertyRepository(db)
+    prop = await prop_repo.get_by_id(property_id)
+    if not prop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Property {property_id} not found",
+        )
+
+    service = ComplianceService(db)
+
+    try:
+        result = await service.check_compliance_with_live_requirements(
+            property_id=property_id,
+            lender_name=request.lender_name,
+            loan_type=request.loan_type,
+            create_gaps=request.create_gaps,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    # Build response
+    issues = [
+        ComplianceIssueSchema(
+            check_name=i.check_name,
+            severity=i.severity,
+            message=i.message,
+            current_value=i.current_value,
+            required_value=i.required_value,
+        )
+        for i in result.issues
+    ]
+
+    await db.commit()
+
+    return ComplianceCheckResult(
+        property_id=result.property_id,
+        lender_requirement_id=None,  # Live check, no DB requirement
+        template_name=result.template_name,
+        status=result.status,
+        is_compliant=result.is_compliant,
+        issues=issues,
+        checked_at=datetime.now(timezone.utc),
     )
 
 

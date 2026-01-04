@@ -117,6 +117,9 @@ class RecalculateRequest(BaseModel):
     """Request to recalculate health score."""
 
     force: bool = Field(False, description="Force recalculation even if recent score exists")
+    use_external_risk_data: bool = Field(
+        True, description="Fetch external risk data from Parallel AI"
+    )
 
 
 class RecalculateResponse(BaseModel):
@@ -130,3 +133,9 @@ class RecalculateResponse(BaseModel):
     trend_direction: str
     calculated_at: datetime
     latency_ms: int
+    external_risk_data: dict | None = Field(
+        None, description="External risk data from Parallel AI"
+    )
+    risk_enrichment_latency_ms: int | None = Field(
+        None, description="Latency of external risk data fetch in milliseconds"
+    )
