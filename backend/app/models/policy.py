@@ -92,6 +92,9 @@ class Policy(BaseModel):
     coverage_gaps: Mapped[list["CoverageGap"]] = relationship(  # noqa: F821
         "CoverageGap", back_populates="policy", lazy="selectin"
     )
+    conversations: Mapped[list["Conversation"]] = relationship(  # noqa: F821
+        "Conversation", back_populates="policy", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Policy(id={self.id}, policy_type={self.policy_type})>"
