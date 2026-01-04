@@ -2,6 +2,7 @@
 
 import logging
 from decimal import Decimal
+from typing import Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.coverage import Coverage
 from app.models.policy import Policy
 from app.repositories.base import BaseRepository
-from app.schemas.document import CoverageExtraction, PolicyExtraction
+from app.schemas.document import COIPolicyReference, CoverageExtraction, PolicyExtraction
 
 logger = logging.getLogger(__name__)
 
@@ -22,20 +23,39 @@ class PolicyRepository(BaseRepository[Policy]):
 
     async def create_from_extraction(
         self,
-        extraction: PolicyExtraction,
+        extraction: Union[PolicyExtraction, COIPolicyReference],
         program_id: str,
         document_id: str | None = None,
     ) -> Policy:
         """Create a policy from extraction result.
 
+        Supports both full PolicyExtraction (from policy documents) and
+        COIPolicyReference (from certificates of insurance).
+
         Args:
-            extraction: Extracted policy data.
+            extraction: Extracted policy data (PolicyExtraction or COIPolicyReference).
             program_id: Insurance program ID.
             document_id: Source document ID.
 
         Returns:
             Created Policy instance.
         """
+        # Handle COIPolicyReference (from COI documents)
+        if isinstance(extraction, COIPolicyReference):
+            return await self.create(
+                program_id=program_id,
+                document_id=document_id,
+                policy_type=extraction.policy_type.value,
+                policy_number=extraction.policy_number,
+                carrier_name=extraction.carrier_name,
+                effective_date=extraction.effective_date,
+                expiration_date=extraction.expiration_date,
+                form_type=extraction.coverage_form,
+                extraction_confidence=extraction.confidence,
+                needs_review=extraction.confidence < 0.8,
+            )
+
+        # Handle full PolicyExtraction (from policy documents)
         return await self.create(
             program_id=program_id,
             document_id=document_id,

@@ -4,7 +4,10 @@ from app.repositories.base import BaseRepository
 from app.repositories.certificate_repository import CertificateRepository
 from app.repositories.claim_repository import ClaimRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.financial_repository import FinancialRepository
 from app.repositories.policy_repository import CoverageRepository, PolicyRepository
+from app.repositories.program_repository import ProgramRepository
+from app.repositories.property_repository import PropertyRepository
 
 __all__ = [
     "BaseRepository",
@@ -12,5 +15,8 @@ __all__ = [
     "ClaimRepository",
     "CoverageRepository",
     "DocumentRepository",
+    "FinancialRepository",
     "PolicyRepository",
+    "ProgramRepository",
+    "PropertyRepository",
 ]

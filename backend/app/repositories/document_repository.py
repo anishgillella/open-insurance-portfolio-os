@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document
@@ -285,3 +286,103 @@ class DocumentRepository(BaseRepository[Document]):
             update_data["file_size_bytes"] = file_size_bytes
 
         return await self.update(document_id, **update_data)
+
+    async def upsert_from_file(
+        self,
+        file_name: str,
+        file_url: str,
+        organization_id: str,
+        property_id: str | None = None,
+        file_size_bytes: int | None = None,
+        file_type: str | None = None,
+        mime_type: str | None = None,
+    ) -> tuple[Document, bool]:
+        """Create or update a document record (atomic upsert).
+
+        Uses PostgreSQL ON CONFLICT to handle race conditions when
+        multiple processes try to create the same document simultaneously.
+
+        Args:
+            file_name: Original file name.
+            file_url: File URL or local path.
+            organization_id: Organization ID.
+            property_id: Optional property ID.
+            file_size_bytes: File size in bytes.
+            file_type: File extension.
+            mime_type: MIME type.
+
+        Returns:
+            Tuple of (Document instance, is_new: bool).
+            is_new is True if created, False if updated existing.
+        """
+        from uuid import uuid4
+
+        new_id = str(uuid4())
+
+        # Prepare insert values
+        insert_values = {
+            "id": new_id,
+            "file_name": file_name,
+            "file_url": file_url,
+            "organization_id": organization_id,
+            "property_id": property_id,
+            "file_size_bytes": file_size_bytes,
+            "file_type": file_type,
+            "mime_type": mime_type,
+            "upload_status": ProcessingStatus.COMPLETED.value,
+            "ocr_status": ProcessingStatus.PENDING.value,
+            "extraction_status": ProcessingStatus.PENDING.value,
+        }
+
+        # Prepare update values for ON CONFLICT (reset for reprocessing)
+        update_on_conflict = {
+            "file_url": file_url,
+            "file_size_bytes": file_size_bytes,
+            "ocr_status": ProcessingStatus.PENDING.value,
+            "extraction_status": ProcessingStatus.PENDING.value,
+            "ocr_started_at": None,
+            "ocr_completed_at": None,
+            "extraction_started_at": None,
+            "extraction_completed_at": None,
+            "ocr_markdown": None,
+            "ocr_error": None,
+            "extraction_json": None,
+            "extraction_error": None,
+            "extraction_confidence": None,
+            "document_type": None,
+            "document_subtype": None,
+            "carrier": None,
+            "policy_number": None,
+            "effective_date": None,
+            "expiration_date": None,
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+        # Use PostgreSQL INSERT ... ON CONFLICT DO UPDATE
+        stmt = (
+            insert(Document)
+            .values(**insert_values)
+            .on_conflict_do_update(
+                index_elements=["file_name", "organization_id"],
+                index_where=Document.deleted_at.is_(None),
+                set_=update_on_conflict,
+            )
+            .returning(Document.id, Document.created_at, Document.updated_at)
+        )
+
+        result = await self.session.execute(stmt)
+        row = result.fetchone()
+        await self.session.flush()
+
+        # Fetch the full document
+        document = await self.get_by_id(row[0])
+
+        # Determine if it was created or updated
+        # If created_at == updated_at (approximately), it's new
+        is_new = row[1] == row[2] if row[1] and row[2] else True
+
+        logger.info(
+            f"{'Created' if is_new else 'Updated'} document: {file_name} (id: {document.id})"
+        )
+
+        return document, is_new

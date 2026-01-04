@@ -38,8 +38,8 @@ REVISION NUMBER:
 |   |   |  |  |   |   |   | PRODUCTS - COMP/OP AGG | $ | 1,000,000  |   |
 |   |   |  |  |   |   |   |  | $ |  |   |
 |  GEN'L AGGREGATE LIMIT APPLIES PER: |   |   |   |  |  |  |  |  |  |   |
-|  X POLICY |   | PROJ | X LOC |  |  |  |  |  |  |   |
-|  X OTHER |   | No/$0 SIR/deductible |   |  |  |  |  |  |  |   |
+|  X POLICY |   | PROJECT | X LOC |  |  |  |  |  |  |   |
+|  X OTHER: No/$0 SIR/deductible |   |   |   |  |  |  |  |  |  |   |
 |  A | AUTOMOBILE LIABILITY |   |   | X X CMP 4999288 | 7/2/2025 | 7/2/2026 | COMBINED SINGLE LIMIT (Ea accident) | $ | 1,000,000  |   |
 |   |  ANY AUTO |   |  |   |   |   | BODILY INJURY (Per person) | $ |  |   |
 |   |  OWNED AUTOS ONLY |   | SCHEDULED AUTOS |   |   |   | BODILY INJURY (Per accident) | $ |  |   |
@@ -50,13 +50,13 @@ REVISION NUMBER:
 |   |  EXCESS LIAB |   | CLAIMS-MADE |   |   |   | AGGREGATE | $ | 10,000,000  |   |
 |   |  DED |   | X RETENTION $ 0 |   |   |   |  |  |  |   |
 |   |  |   |   |   |   |   |   |   |   |   |
-|   | WORKERS COMPENSATION AND EMPLOYERS' LIABILITY |   |   | N/A |  |  | PER STATUTE OTHER |  |  |   |
+|   | WORKERS COMPENSATION AND EMPLOYERS' LIABILITY |   |   | N/A |  |  | PER STATUTE OTH-ER |  |  |   |
 |   |  ANY PROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER EXCLUDED? (Mandatory in NH) |  |  |   | E.L. EACH ACCIDENT | $ |  |   |   |   |
 |   |   |   |   |   |   |  | E.L. DISEASE - EA EMPLOYEE | $ |  |   |
 |   |   |   |   |   |   |  | E.L. DISEASE - POLICY LIMIT | $ |  |   |
 |   | If yes, describe under DESCRIPTION OF OPERATIONS below |   |   |  |  |  |  |  |  |   |
 |  |   |   |   |   |   |   |   |   |   |   |
-|  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required)Property location: 6225 Saint Joe Road, Fort Wayne, IN 46835.Named Insureds:Grand At Fort Wayne Apartments LLCABR Grand At Fort Wayne Investor, LLCABR Capital Partners, LLC  |   |   |   |   |   |   |   |   |   |   |
+|  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required) Property location: 6225 Saint Joe Road, Fort Wayne, IN 46835. Named Insureds: Grand At Fort Wayne Apartments LLC ABR Grand At Fort Wayne Investor, LLC ABR Capital Partners, LLC  |   |   |   |   |   |   |   |   |   |   |
 
 CERTIFICATE HOLDER
 CANCELLATION
