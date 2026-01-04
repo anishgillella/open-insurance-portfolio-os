@@ -48,8 +48,9 @@ class Settings(BaseSettings):
 
     # Pinecone
     pinecone_api_key: str = ""
-    pinecone_index_name: str = "insurance-docs"
-    pinecone_environment: str = ""
+    pinecone_index_name: str = "open-insurance"
+    pinecone_host: str = "https://open-insurance-s3rlryt.svc.aped-4627-b74a.pinecone.io"
+    pinecone_dimensions: int = 1024
 
     # AI Services
     mistral_api_key: str = ""

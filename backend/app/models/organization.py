@@ -39,6 +39,9 @@ class Organization(BaseModel):
     documents: Mapped[list["Document"]] = relationship(  # noqa: F821
         "Document", back_populates="organization", lazy="selectin"
     )
+    conversations: Mapped[list["Conversation"]] = relationship(  # noqa: F821
+        "Conversation", back_populates="organization", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name={self.name})>"

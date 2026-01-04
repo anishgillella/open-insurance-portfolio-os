@@ -88,6 +88,9 @@ class Property(BaseModel):
     coverage_gaps: Mapped[list["CoverageGap"]] = relationship(  # noqa: F821
         "CoverageGap", back_populates="property", lazy="selectin"
     )
+    conversations: Mapped[list["Conversation"]] = relationship(  # noqa: F821
+        "Conversation", back_populates="property", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Property(id={self.id}, name={self.name})>"

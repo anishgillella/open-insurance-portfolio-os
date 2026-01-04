@@ -9,6 +9,7 @@ from app.models.building import Building
 from app.models.carrier import Carrier
 from app.models.certificate import Certificate
 from app.models.claim import Claim
+from app.models.conversation import Conversation
 from app.models.coverage import Coverage
 from app.models.coverage_gap import CoverageGap
 from app.models.document import Document
@@ -20,6 +21,7 @@ from app.models.insurance_program import InsuranceProgram
 from app.models.insured_entity import InsuredEntity
 from app.models.lender import Lender
 from app.models.lender_requirement import LenderRequirement
+from app.models.message import Message
 from app.models.organization import Organization
 from app.models.policy import Policy
 from app.models.property import Property
@@ -32,6 +34,7 @@ __all__ = [
     "Carrier",
     "Certificate",
     "Claim",
+    "Conversation",
     "Coverage",
     "CoverageGap",
     "Document",
@@ -43,6 +46,7 @@ __all__ = [
     "InsuredEntity",
     "Lender",
     "LenderRequirement",
+    "Message",
     "Organization",
     "Policy",
     "Property",
