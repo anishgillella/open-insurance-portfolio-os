@@ -30,6 +30,11 @@ from app.models.insurance_program import InsuranceProgram
 from app.models.policy import Policy
 from app.models.property import Property
 from app.models.renewal_forecast import RenewalForecast
+from app.services.market_intelligence_service import (
+    MarketIntelligenceService,
+    MarketIntelligenceError,
+    get_market_intelligence_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +108,10 @@ class ForecastResult:
     model_used: str
     latency_ms: int
 
+    # Live market intelligence (from Parallel AI) - optional fields at end
+    live_market_data: dict[str, Any] | None = None
+    market_intel_latency_ms: int | None = None
+
 
 # LLM Prompts
 FORECAST_SYSTEM_PROMPT = """You are an expert commercial real estate insurance analyst specializing in premium forecasting and renewal intelligence.
@@ -170,11 +179,15 @@ LOSS HISTORY (Claims):
 PREMIUM HISTORY:
 {premium_history}
 
+LIVE MARKET INTELLIGENCE (from real-time web research):
+{market_intelligence}
+
 Current Premium: ${current_premium:,.2f}
 Expiration Date: {expiration_date}
 Days Until Renewal: {days_until_renewal}
 
-Based on this data, predict the renewal premium and provide factor-by-factor analysis."""
+Based on this data AND the live market intelligence, predict the renewal premium and provide factor-by-factor analysis.
+Pay special attention to the market trends and carrier appetite data from the live research."""
 
 
 class RenewalForecastService:
@@ -190,6 +203,7 @@ class RenewalForecastService:
         self.session = session
         self.api_key = api_key or settings.openrouter_api_key
         self.model = MODEL
+        self.market_intel_service = get_market_intelligence_service(session)
 
         if not self.api_key:
             logger.warning("OpenRouter API key not configured for renewal forecasting")
@@ -199,6 +213,7 @@ class RenewalForecastService:
         property_id: str,
         force: bool = False,
         include_market_context: bool = True,
+        use_live_market_intel: bool = True,
     ) -> ForecastResult:
         """Generate a renewal forecast for a property.
 
@@ -206,6 +221,7 @@ class RenewalForecastService:
             property_id: Property ID to forecast.
             force: Force regeneration even if recent forecast exists.
             include_market_context: Include market context analysis.
+            use_live_market_intel: Fetch live market intelligence from Parallel AI.
 
         Returns:
             ForecastResult with predictions and analysis.
@@ -238,6 +254,34 @@ class RenewalForecastService:
             prop, program, current_premium
         )
 
+        # Fetch live market intelligence from Parallel AI
+        live_market_data: dict[str, Any] | None = None
+        market_intel_latency: int | None = None
+        market_intelligence_text = "Live market data not available."
+
+        if use_live_market_intel:
+            try:
+                logger.info(f"Fetching live market intelligence for property {property_id}")
+                market_intel_start = time.time()
+                live_market_data = await self.market_intel_service.get_market_intelligence_for_renewal(
+                    property_id
+                )
+                market_intel_latency = int((time.time() - market_intel_start) * 1000)
+
+                if live_market_data and not live_market_data.get("error"):
+                    market_intelligence_text = self._format_market_intelligence(live_market_data)
+                    logger.info(
+                        f"Live market intel fetched for {property_id}: "
+                        f"rate trend {live_market_data.get('rate_direction', 'N/A')}, "
+                        f"latency {market_intel_latency}ms"
+                    )
+                else:
+                    logger.warning(f"Market intelligence unavailable: {live_market_data.get('error', 'Unknown error')}")
+            except MarketIntelligenceError as e:
+                logger.warning(f"Failed to fetch market intelligence: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error fetching market intelligence: {e}")
+
         # Build context for LLM
         property_context = self._build_property_context(prop)
         buildings_context = self._build_buildings_context(prop)
@@ -259,6 +303,7 @@ class RenewalForecastService:
             policies_context=policies_context,
             claims_context=claims_context,
             premium_history=premium_history,
+            market_intelligence=market_intelligence_text,
             current_premium=float(current_premium or 0),
             expiration_date=expiration_date or "Unknown",
             days_until_renewal=days_until,
@@ -294,9 +339,11 @@ class RenewalForecastService:
             reasoning=llm_result.get("reasoning", ""),
             market_context=llm_result.get("market_context", ""),
             negotiation_points=llm_result.get("negotiation_points", []),
+            live_market_data=live_market_data,
             forecast_date=datetime.now(timezone.utc),
             model_used=self.model,
             latency_ms=latency_ms,
+            market_intel_latency_ms=market_intel_latency,
         )
 
         # Persist to database
@@ -598,6 +645,58 @@ class RenewalForecastService:
                 lines.append(f"\nYear-over-year change: {change:+.1f}%")
 
         return "\n".join(lines)
+
+    def _format_market_intelligence(self, market_data: dict[str, Any]) -> str:
+        """Format live market intelligence for the LLM prompt.
+
+        Args:
+            market_data: Market intelligence data from Parallel AI.
+
+        Returns:
+            Formatted string for inclusion in the prompt.
+        """
+        lines = []
+
+        # Rate trends
+        rate_trend = market_data.get("rate_trend_range") or market_data.get("rate_trend_pct")
+        direction = market_data.get("rate_direction", "stable")
+        if rate_trend:
+            lines.append(f"Current Rate Trend: {rate_trend} ({direction})")
+        else:
+            lines.append(f"Market Direction: {direction}")
+
+        # Key factors
+        key_factors = market_data.get("key_factors", [])
+        if key_factors:
+            lines.append("\nKey Market Factors:")
+            for factor in key_factors[:5]:
+                lines.append(f"  - {factor}")
+
+        # Carrier appetite
+        carrier_appetite = market_data.get("carrier_appetite", {})
+        if carrier_appetite:
+            lines.append("\nCarrier Appetite:")
+            for carrier, appetite in list(carrier_appetite.items())[:5]:
+                lines.append(f"  - {carrier}: {appetite}")
+
+        # 6-month forecast
+        forecast = market_data.get("forecast_6mo")
+        if forecast:
+            lines.append(f"\n6-Month Forecast: {forecast}")
+
+        # Regulatory changes
+        regulatory = market_data.get("regulatory_changes", [])
+        if regulatory:
+            lines.append("\nRecent Regulatory Changes:")
+            for change in regulatory[:3]:
+                lines.append(f"  - {change}")
+
+        # Research date
+        research_date = market_data.get("research_date")
+        if research_date:
+            lines.append(f"\n(Market data as of: {research_date})")
+
+        return "\n".join(lines) if lines else "No live market data available."
 
     def _calculate_renewal_year(self, expiration_date: date | None) -> int:
         """Calculate the renewal year."""

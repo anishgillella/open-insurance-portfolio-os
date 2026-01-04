@@ -36,6 +36,12 @@ from app.models.policy import Policy
 from app.models.property import Property
 from app.repositories.health_score_repository import HealthScoreRepository
 from app.services.completeness_service import CompletenessService
+from app.services.property_risk_service import (
+    PropertyRiskService,
+    PropertyRiskError,
+    PropertyRiskResult,
+    get_property_risk_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +84,10 @@ class HealthScoreResult:
     model_used: str
     latency_ms: int
 
+    # External risk data (from Parallel AI)
+    external_risk_data: dict | None = None
+    risk_enrichment_latency_ms: int | None = None
+
 
 @dataclass
 class PortfolioHealthScoreResult:
@@ -113,6 +123,9 @@ DOCUMENTS:
 
 EXISTING GAPS:
 {gaps_context}
+
+EXTERNAL RISK DATA (from live web research):
+{external_risk_context}
 
 Evaluate each of the 6 components and provide your analysis. Each component has a maximum score:
 1. COVERAGE ADEQUACY (25 points max): Is building coverage sufficient for replacement cost? Is business income adequate? Are liability limits appropriate?
@@ -200,17 +213,20 @@ class HealthScoreService:
         self.model = MODEL
         self.health_repo = HealthScoreRepository(session)
         self.completeness_service = CompletenessService(session, api_key)
+        self.property_risk_service = get_property_risk_service(session)
 
     async def calculate_health_score(
         self,
         property_id: str,
         trigger: str = "manual",
+        use_external_risk_data: bool = True,
     ) -> HealthScoreResult:
         """Calculate comprehensive health score for a property using LLM.
 
         Args:
             property_id: Property ID.
             trigger: What triggered the calculation (manual, ingestion, gap_resolved).
+            use_external_risk_data: Fetch external risk data from Parallel AI.
 
         Returns:
             HealthScoreResult with full analysis.
@@ -222,6 +238,34 @@ class HealthScoreService:
         prop = await self._load_property_with_full_context(property_id)
         if not prop:
             raise HealthScoreError(f"Property {property_id} not found")
+
+        # Fetch external risk data from Parallel AI
+        external_risk_data: dict | None = None
+        risk_enrichment_latency: int | None = None
+        external_risk_context = "External risk data not available."
+
+        if use_external_risk_data:
+            try:
+                logger.info(f"Fetching external risk data for property {property_id}")
+                risk_start = time.time()
+                risk_result = await self.property_risk_service.enrich_property_risk(
+                    property_id=property_id,
+                    include_raw_research=False,
+                )
+                risk_enrichment_latency = int((time.time() - risk_start) * 1000)
+
+                external_risk_data = self._risk_result_to_dict(risk_result)
+                external_risk_context = self._format_external_risk_context(risk_result)
+                logger.info(
+                    f"External risk data fetched for {property_id}: "
+                    f"flood={risk_result.flood_risk.zone}, "
+                    f"overall_score={risk_result.overall_risk_score}, "
+                    f"latency {risk_enrichment_latency}ms"
+                )
+            except PropertyRiskError as e:
+                logger.warning(f"Failed to fetch external risk data: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error fetching external risk data: {e}")
 
         # Build context for LLM
         property_context = self._build_property_context(prop)
@@ -239,6 +283,7 @@ class HealthScoreService:
             lender_context=lender_context,
             documents_context=documents_context,
             gaps_context=gaps_context,
+            external_risk_context=external_risk_context,
         )
 
         # Call LLM
@@ -310,6 +355,8 @@ class HealthScoreService:
             calculated_at=health_score.calculated_at,
             model_used=self.model,
             latency_ms=latency_ms,
+            external_risk_data=external_risk_data,
+            risk_enrichment_latency_ms=risk_enrichment_latency,
         )
 
     async def get_latest_score(self, property_id: str) -> HealthScoreResult | None:
@@ -668,6 +715,130 @@ class HealthScoreService:
                 lines.append(f"    Current: {gap.current_value} -> Recommended: {gap.recommended_value}")
 
         return "\n".join(lines)
+
+    def _format_external_risk_context(self, risk_result: PropertyRiskResult) -> str:
+        """Format external risk data for the LLM prompt.
+
+        Args:
+            risk_result: Property risk enrichment result from Parallel AI.
+
+        Returns:
+            Formatted string for inclusion in the prompt.
+        """
+        lines = []
+
+        # Flood risk
+        flood = risk_result.flood_risk
+        if flood.zone:
+            lines.append(f"Flood Zone: {flood.zone} ({flood.zone_description or 'N/A'})")
+            lines.append(f"Flood Risk Level: {flood.risk_level}")
+        else:
+            lines.append("Flood Zone: Not determined")
+
+        # Fire protection
+        fire = risk_result.fire_protection
+        if fire.protection_class:
+            lines.append(f"\nFire Protection Class: {fire.protection_class}")
+            if fire.fire_station_distance_miles:
+                lines.append(f"Fire Station Distance: {fire.fire_station_distance_miles} miles")
+            if fire.hydrant_distance_feet:
+                lines.append(f"Hydrant Distance: {fire.hydrant_distance_feet} feet")
+
+        # Weather/CAT risks
+        weather = risk_result.weather_risk
+        lines.append("\nWeather/CAT Exposure:")
+        lines.append(f"  Hurricane Risk: {weather.hurricane_risk}")
+        lines.append(f"  Tornado Risk: {weather.tornado_risk}")
+        lines.append(f"  Hail Risk: {weather.hail_risk}")
+        lines.append(f"  Wildfire Risk: {weather.wildfire_risk}")
+        lines.append(f"  Earthquake Risk: {weather.earthquake_risk}")
+
+        if weather.historical_events:
+            lines.append("  Historical Events:")
+            for event in weather.historical_events[:3]:
+                lines.append(f"    - {event}")
+
+        # Crime risk
+        crime = risk_result.crime_risk
+        if crime.crime_index is not None or crime.crime_grade:
+            lines.append(f"\nCrime Risk: {crime.risk_level}")
+            if crime.crime_index:
+                lines.append(f"  Crime Index: {crime.crime_index}/100")
+            if crime.crime_grade:
+                lines.append(f"  Crime Grade: {crime.crime_grade}")
+
+        # Environmental risk
+        env = risk_result.environmental_risk
+        if env.hazards or env.superfund_nearby or env.industrial_nearby:
+            lines.append(f"\nEnvironmental Risk: {env.risk_level}")
+            if env.superfund_nearby:
+                lines.append("  ⚠️ Superfund site nearby")
+            if env.industrial_nearby:
+                lines.append("  ⚠️ Industrial facilities nearby")
+            if env.hazards:
+                lines.append("  Hazards: " + ", ".join(env.hazards[:3]))
+
+        # Overall score and implications
+        if risk_result.overall_risk_score is not None:
+            lines.append(f"\nOverall Risk Score: {risk_result.overall_risk_score}/100")
+
+        if risk_result.risk_summary:
+            lines.append(f"\nRisk Summary: {risk_result.risk_summary}")
+
+        if risk_result.insurance_implications:
+            lines.append("\nInsurance Implications:")
+            for implication in risk_result.insurance_implications[:5]:
+                lines.append(f"  - {implication}")
+
+        return "\n".join(lines) if lines else "No external risk data available."
+
+    def _risk_result_to_dict(self, risk_result: PropertyRiskResult) -> dict:
+        """Convert PropertyRiskResult to a dictionary for storage.
+
+        Args:
+            risk_result: Property risk enrichment result.
+
+        Returns:
+            Dictionary representation of the risk data.
+        """
+        return {
+            "address": risk_result.address,
+            "enrichment_date": risk_result.enrichment_date.isoformat(),
+            "flood_risk": {
+                "zone": risk_result.flood_risk.zone,
+                "zone_description": risk_result.flood_risk.zone_description,
+                "risk_level": risk_result.flood_risk.risk_level,
+            },
+            "fire_protection": {
+                "protection_class": risk_result.fire_protection.protection_class,
+                "fire_station_distance_miles": risk_result.fire_protection.fire_station_distance_miles,
+                "hydrant_distance_feet": risk_result.fire_protection.hydrant_distance_feet,
+            },
+            "weather_risk": {
+                "hurricane_risk": risk_result.weather_risk.hurricane_risk,
+                "tornado_risk": risk_result.weather_risk.tornado_risk,
+                "hail_risk": risk_result.weather_risk.hail_risk,
+                "wildfire_risk": risk_result.weather_risk.wildfire_risk,
+                "earthquake_risk": risk_result.weather_risk.earthquake_risk,
+                "historical_events": risk_result.weather_risk.historical_events,
+            },
+            "crime_risk": {
+                "crime_index": risk_result.crime_risk.crime_index,
+                "crime_grade": risk_result.crime_risk.crime_grade,
+                "risk_level": risk_result.crime_risk.risk_level,
+            },
+            "environmental_risk": {
+                "hazards": risk_result.environmental_risk.hazards,
+                "superfund_nearby": risk_result.environmental_risk.superfund_nearby,
+                "industrial_nearby": risk_result.environmental_risk.industrial_nearby,
+                "risk_level": risk_result.environmental_risk.risk_level,
+            },
+            "overall_risk_score": risk_result.overall_risk_score,
+            "risk_summary": risk_result.risk_summary,
+            "insurance_implications": risk_result.insurance_implications,
+            "sources": risk_result.sources,
+            "latency_ms": risk_result.total_latency_ms,
+        }
 
     async def _call_llm(self, user_message: str) -> str:
         """Call the LLM API."""

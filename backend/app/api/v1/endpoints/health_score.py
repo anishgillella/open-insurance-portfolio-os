@@ -202,6 +202,11 @@ async def recalculate_health_score(
     """Manually trigger health score recalculation.
 
     Forces a new health score calculation using current data.
+    When use_external_risk_data=True (default), fetches live property
+    risk data from Parallel AI including flood zones, fire protection,
+    weather exposure, crime statistics, and environmental hazards.
+
+    Note: External risk data fetch may take 30-120 seconds.
 
     Args:
         property_id: Property ID.
@@ -216,8 +221,17 @@ async def recalculate_health_score(
     previous = await service.get_latest_score(property_id)
     previous_score = previous.score if previous else None
 
+    # Determine if we should use external risk data
+    use_external_risk = True
+    if request and hasattr(request, 'use_external_risk_data'):
+        use_external_risk = request.use_external_risk_data
+
     try:
-        result = await service.calculate_health_score(property_id, trigger="manual")
+        result = await service.calculate_health_score(
+            property_id,
+            trigger="manual",
+            use_external_risk_data=use_external_risk,
+        )
     except HealthScoreError as e:
         if "not found" in str(e).lower():
             raise HTTPException(
@@ -240,4 +254,6 @@ async def recalculate_health_score(
         trend_direction=result.trend_direction,
         calculated_at=result.calculated_at,
         latency_ms=result.latency_ms,
+        external_risk_data=result.external_risk_data,
+        risk_enrichment_latency_ms=result.risk_enrichment_latency_ms,
     )
