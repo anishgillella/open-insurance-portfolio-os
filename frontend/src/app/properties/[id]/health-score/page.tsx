@@ -37,14 +37,14 @@ export default function HealthScorePage({ params }: PageProps) {
     );
   }
 
-  const grade = getGrade(property.healthScore);
+  const grade = getGrade(property.health_score);
   const gradeColor = getGradeColor(grade);
 
   // Filter recommendations for this property
   const propertyRecommendations = mockRecommendations.filter(
-    (r) => !r.propertyId || r.propertyId === property.id
+    (r) => !r.action_url || r.action_url.includes(property.id)
   );
-  const totalPotentialPoints = propertyRecommendations.reduce((sum, r) => sum + r.points, 0);
+  const totalPotentialPoints = propertyRecommendations.reduce((sum, r) => sum + r.potential_improvement, 0);
 
   const handleRecalculate = async () => {
     setIsRecalculating(true);
@@ -106,12 +106,12 @@ export default function HealthScorePage({ params }: PageProps) {
             <div className="flex justify-center">
               {use3D ? (
                 <HealthScoreGlobe
-                  score={property.healthScore}
+                  score={property.health_score}
                   components={mockHealthComponents}
                   size={350}
                 />
               ) : (
-                <ScoreRing score={property.healthScore} size={250} />
+                <ScoreRing score={property.health_score} size={250} />
               )}
             </div>
 
@@ -120,7 +120,7 @@ export default function HealthScorePage({ params }: PageProps) {
               <div>
                 <p className="text-sm text-[var(--color-text-muted)] mb-1">Current Score</p>
                 <p className="text-5xl font-bold text-[var(--color-text-primary)]">
-                  {property.healthScore}
+                  {property.health_score}
                 </p>
                 <p className="text-lg font-semibold" style={{ color: gradeColor }}>
                   Grade {grade}
@@ -139,7 +139,7 @@ export default function HealthScorePage({ params }: PageProps) {
 
               <div className="pt-2">
                 <Badge variant="primary">
-                  TIV: {formatCurrency(property.totalInsuredValue)}
+                  TIV: {formatCurrency(property.total_insured_value)}
                 </Badge>
               </div>
             </div>

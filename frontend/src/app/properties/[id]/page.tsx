@@ -45,11 +45,11 @@ export default function PropertyDetailPage({ params }: PageProps) {
     );
   }
 
-  const grade = getGrade(property.healthScore);
+  const grade = getGrade(property.health_score);
   const gradeColor = getGradeColor(grade);
-  const propertyAlerts = mockAlerts.filter((a) => a.propertyId === property.id);
-  const isExpiringSoon = property.daysUntilExpiration <= 30;
-  const isCritical = property.daysUntilExpiration <= 14;
+  const propertyAlerts = mockAlerts.filter((a) => a.property_id === property.id);
+  const isExpiringSoon = (property.days_until_expiration || 999) <= 30;
+  const isCritical = (property.days_until_expiration || 999) <= 14;
 
   return (
     <motion.div
@@ -89,15 +89,15 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </h1>
                 <p className="text-[var(--color-text-secondary)] flex items-center gap-2 mt-1">
                   <MapPin className="h-4 w-4" />
-                  {property.address}, {property.city}, {property.state} {property.zip}
+                  {property.address.street}, {property.address.city}, {property.address.state} {property.address.zip}
                 </p>
                 <div className="flex items-center gap-3 mt-3">
-                  <Badge variant="secondary">{property.propertyType}</Badge>
+                  <Badge variant="secondary">{property.property_type}</Badge>
                   <span className="text-sm text-[var(--color-text-muted)]">
-                    {property.buildingCount} buildings, {property.unitCount} units
+                    {property.total_buildings} buildings, {property.total_units} units
                   </span>
                   <span className="text-sm text-[var(--color-text-muted)]">
-                    Built {property.yearBuilt}
+                    Built {property.year_built}
                   </span>
                 </div>
               </div>
@@ -108,14 +108,14 @@ export default function PropertyDetailPage({ params }: PageProps) {
               <div className="text-center">
                 <p className="text-sm text-[var(--color-text-muted)]">Health Score</p>
                 <p className="text-3xl font-bold text-[var(--color-text-primary)]">
-                  {property.healthScore}
+                  {property.health_score}
                 </p>
               </div>
               <div className="h-12 w-px bg-[var(--color-border-subtle)]" />
               <div className="text-center">
                 <p className="text-sm text-[var(--color-text-muted)]">TIV</p>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.totalInsuredValue)}
+                  {formatCurrency(property.total_insured_value)}
                 </p>
               </div>
               <div className="h-12 w-px bg-[var(--color-border-subtle)]" />
@@ -131,7 +131,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                       : 'text-[var(--color-text-primary)]'
                   )}
                 >
-                  {property.daysUntilExpiration} days
+                  {property.days_until_expiration || 'N/A'} days
                 </p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex justify-center mb-6">
-              <ScoreRing score={property.healthScore} size={140} />
+              <ScoreRing score={property.health_score} size={140} />
             </div>
 
             <div className="space-y-3">
@@ -231,15 +231,15 @@ export default function PropertyDetailPage({ params }: PageProps) {
           <Card padding="lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Coverage</h2>
-              <Link href={`/properties/${property.id}/coverage`}>
+              <Link href={`/gaps?property=${property.id}`}>
                 <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
-                  View all
+                  View gaps
                 </Button>
               </Link>
             </div>
 
             <div className="space-y-4">
-              {property.coverageTypes.map((coverage) => (
+              {['Property', 'General Liability', 'Umbrella'].map((coverage) => (
                 <div
                   key={coverage}
                   className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-sunken)]"
@@ -257,21 +257,23 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </div>
               ))}
 
-              {property.hasGaps && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/20">
-                  <div className="p-2 rounded-lg bg-[var(--color-critical-100)] dark:bg-[var(--color-critical-500)]/20">
-                    <AlertTriangle className="h-4 w-4 text-[var(--color-critical-500)]" />
+              {(property.gaps_count.critical > 0 || property.gaps_count.warning > 0) && (
+                <Link href={`/gaps?property=${property.id}`}>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/20 cursor-pointer hover:border-[var(--color-critical-300)] transition-colors">
+                    <div className="p-2 rounded-lg bg-[var(--color-critical-100)] dark:bg-[var(--color-critical-500)]/20">
+                      <AlertTriangle className="h-4 w-4 text-[var(--color-critical-500)]" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)] text-sm">
+                        {property.gaps_count.critical + property.gaps_count.warning} Coverage Gaps Detected
+                      </p>
+                      <p className="text-xs text-[var(--color-critical-500)]">
+                        Review and address gaps
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--color-critical-500)]" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)] text-sm">
-                      {property.gapCount} Coverage Gaps Detected
-                    </p>
-                    <p className="text-xs text-[var(--color-critical-500)]">
-                      Review and address gaps
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-[var(--color-critical-500)]" />
-                </div>
+                </Link>
               )}
             </div>
           </Card>
@@ -289,7 +291,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                   <p className="text-sm text-[var(--color-text-muted)]">Total Insured Value</p>
                 </div>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.totalInsuredValue)}
+                  {formatCurrency(property.total_insured_value)}
                 </p>
               </div>
 
@@ -299,17 +301,17 @@ export default function PropertyDetailPage({ params }: PageProps) {
                   <p className="text-sm text-[var(--color-text-muted)]">Annual Premium</p>
                 </div>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.annualPremium)}
+                  {formatCurrency(property.total_premium)}
                 </p>
               </div>
 
               <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)]">
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <p className="text-sm text-[var(--color-text-muted)]">Square Feet</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Total Units</p>
                 </div>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {property.squareFeet.toLocaleString()}
+                  {property.total_units.toLocaleString()}
                 </p>
               </div>
 
@@ -319,7 +321,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                   <p className="text-sm text-[var(--color-text-muted)]">Year Built</p>
                 </div>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {property.yearBuilt}
+                  {property.year_built}
                 </p>
               </div>
             </div>
@@ -341,13 +343,15 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
 
-              <Link href={`/properties/${property.id}/gaps`} className="block">
+              <Link href={`/gaps?property=${property.id}`} className="block">
                 <Button
-                  variant={property.hasGaps ? 'danger' : 'secondary'}
+                  variant={(property.gaps_count.critical > 0 || property.gaps_count.warning > 0) ? 'danger' : 'secondary'}
                   className="w-full justify-start"
                   leftIcon={<AlertTriangle className="h-4 w-4" />}
                 >
-                  {property.hasGaps ? `Address ${property.gapCount} Gaps` : 'View Gap Analysis'}
+                  {(property.gaps_count.critical + property.gaps_count.warning) > 0
+                    ? `Address ${property.gaps_count.critical + property.gaps_count.warning} Gaps`
+                    : 'View Gap Analysis'}
                 </Button>
               </Link>
 
@@ -373,7 +377,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
               </h2>
               <StatusBadge
                 severity={isCritical ? 'critical' : isExpiringSoon ? 'warning' : 'info'}
-                label={`${property.daysUntilExpiration}d`}
+                label={`${property.days_until_expiration || 'N/A'}d`}
                 pulse={isCritical}
               />
             </div>
@@ -383,7 +387,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-[var(--color-text-secondary)]">Days until expiration</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {property.daysUntilExpiration}
+                    {property.days_until_expiration || 'N/A'}
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-[var(--color-surface-sunken)] overflow-hidden">
@@ -397,7 +401,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                         : 'bg-[var(--color-success-500)]'
                     )}
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (property.daysUntilExpiration / 365) * 100)}%` }}
+                    animate={{ width: `${Math.min(100, ((property.days_until_expiration || 0) / 365) * 100)}%` }}
                     transition={{ duration: 1, delay: 0.5 }}
                   />
                 </div>
@@ -413,7 +417,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
 
           {/* Last Updated */}
           <div className="text-center text-sm text-[var(--color-text-muted)]">
-            Last updated: {property.lastUpdated}
+            Last updated: {property.updated_at}
           </div>
         </motion.div>
       </div>

@@ -43,20 +43,20 @@ export default function PropertiesPage() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
-          p.address.toLowerCase().includes(query) ||
-          p.city.toLowerCase().includes(query)
+          p.address.street.toLowerCase().includes(query) ||
+          p.address.city.toLowerCase().includes(query)
       );
     }
 
     // Grade filter
     if (filterGrade !== 'all') {
-      result = result.filter((p) => getGrade(p.healthScore) === filterGrade);
+      result = result.filter((p) => getGrade(p.health_score) === filterGrade);
     }
 
     // Expiration filter
     if (filterExpiration !== 'all') {
       const days = parseInt(filterExpiration);
-      result = result.filter((p) => p.daysUntilExpiration <= days);
+      result = result.filter((p) => (p.days_until_expiration || 999) <= days);
     }
 
     // Sort
@@ -67,16 +67,16 @@ export default function PropertiesPage() {
           comparison = a.name.localeCompare(b.name);
           break;
         case 'healthScore':
-          comparison = a.healthScore - b.healthScore;
+          comparison = a.health_score - b.health_score;
           break;
         case 'tiv':
-          comparison = a.totalInsuredValue - b.totalInsuredValue;
+          comparison = a.total_insured_value - b.total_insured_value;
           break;
         case 'premium':
-          comparison = a.annualPremium - b.annualPremium;
+          comparison = a.total_premium - b.total_premium;
           break;
         case 'expiration':
-          comparison = a.daysUntilExpiration - b.daysUntilExpiration;
+          comparison = (a.days_until_expiration || 999) - (b.days_until_expiration || 999);
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;

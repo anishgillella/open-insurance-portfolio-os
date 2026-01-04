@@ -6,9 +6,11 @@ export type GapType =
   | 'missing_coverage'
   | 'high_deductible'
   | 'expiring'
+  | 'expiration'
   | 'non_compliant'
   | 'outdated_valuation'
-  | 'missing_document';
+  | 'missing_document'
+  | 'missing_flood';
 
 export type HealthGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 

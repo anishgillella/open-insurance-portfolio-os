@@ -19,19 +19,14 @@ interface PropertyCardProps {
   view?: 'grid' | 'list';
 }
 
-const propertyTypeIcons: Record<Property['propertyType'], string> = {
-  multifamily: 'Multifamily',
-  office: 'Office',
-  retail: 'Retail',
-  industrial: 'Industrial',
-  'mixed-use': 'Mixed Use',
-};
-
 export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
-  const grade = getGrade(property.healthScore);
+  const grade = getGrade(property.health_score);
   const gradeColor = getGradeColor(grade);
-  const isExpiringSoon = property.daysUntilExpiration <= 30;
-  const isCritical = property.daysUntilExpiration <= 14;
+  const daysUntilExp = property.days_until_expiration || 999;
+  const isExpiringSoon = daysUntilExp <= 30;
+  const isCritical = daysUntilExp <= 14;
+  const hasGaps = property.gaps_count.critical > 0 || property.gaps_count.warning > 0;
+  const gapCount = property.gaps_count.critical + property.gaps_count.warning;
 
   if (view === 'list') {
     return (
@@ -62,19 +57,19 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               <h3 className="font-semibold text-[var(--color-text-primary)] truncate">
                 {property.name}
               </h3>
-              {property.hasGaps && (
+              {hasGaps && (
                 <Badge variant="critical" size="sm" dot>
-                  {property.gapCount} gaps
+                  {gapCount} gaps
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-4 mt-1 text-sm text-[var(--color-text-muted)]">
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
-                {property.city}, {property.state}
+                {property.address.city}, {property.address.state}
               </span>
-              <span>{propertyTypeIcons[property.propertyType]}</span>
-              <span>{property.unitCount} units</span>
+              <span>{property.property_type}</span>
+              <span>{property.total_units} units</span>
             </div>
           </div>
 
@@ -82,7 +77,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
           <div className="text-right">
             <p className="text-sm text-[var(--color-text-muted)]">TIV</p>
             <p className="font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.totalInsuredValue)}
+              {formatCurrency(property.total_insured_value)}
             </p>
           </div>
 
@@ -90,7 +85,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
           <div className="text-right">
             <p className="text-sm text-[var(--color-text-muted)]">Premium</p>
             <p className="font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.annualPremium)}
+              {formatCurrency(property.total_premium)}
             </p>
           </div>
 
@@ -107,7 +102,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
                   : 'text-[var(--color-text-primary)]'
               )}
             >
-              {property.daysUntilExpiration} days
+              {property.days_until_expiration || 'N/A'} days
             </p>
           </div>
 
@@ -139,7 +134,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
             )}
           >
             <Calendar className="h-3 w-3" />
-            {property.daysUntilExpiration}d
+            {property.days_until_expiration}d
           </div>
         )}
 
@@ -155,7 +150,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               </h3>
               <p className="text-sm text-[var(--color-text-muted)] flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                {property.city}, {property.state}
+                {property.address.city}, {property.address.state}
               </p>
             </div>
           </div>
@@ -174,10 +169,10 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
         {/* Property Type & Units */}
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary" size="sm">
-            {propertyTypeIcons[property.propertyType]}
+            {property.property_type}
           </Badge>
           <span className="text-sm text-[var(--color-text-muted)]">
-            {property.buildingCount} buildings, {property.unitCount} units
+            {property.total_buildings} buildings, {property.total_units} units
           </span>
         </div>
 
@@ -188,7 +183,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               Total Insured Value
             </p>
             <p className="text-lg font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.totalInsuredValue)}
+              {formatCurrency(property.total_insured_value)}
             </p>
           </div>
           <div>
@@ -196,7 +191,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               Annual Premium
             </p>
             <p className="text-lg font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.annualPremium)}
+              {formatCurrency(property.total_premium)}
             </p>
           </div>
         </div>
@@ -204,10 +199,10 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border-subtle)]">
           <div className="flex items-center gap-2">
-            {property.hasGaps ? (
+            {hasGaps ? (
               <div className="flex items-center gap-1.5 text-[var(--color-critical-500)]">
                 <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-medium">{property.gapCount} coverage gaps</span>
+                <span className="text-sm font-medium">{gapCount} coverage gaps</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-[var(--color-success-500)]">

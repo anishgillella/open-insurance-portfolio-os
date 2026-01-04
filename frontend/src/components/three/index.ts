@@ -17,4 +17,12 @@ export const HealthScoreGlobe = dynamic(
   }
 );
 
+export const CoverageShield = dynamic(
+  () => import('./CoverageShield').then((mod) => mod.CoverageShield),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
 export { Scene } from './shared/Scene';
