@@ -86,7 +86,7 @@ function ComponentRow({
       >
         <div className="px-4 pb-4 pt-2 border-t border-[var(--color-border-subtle)]">
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-            {component.description}
+            {component.details}
           </p>
 
           {hasIssues && (

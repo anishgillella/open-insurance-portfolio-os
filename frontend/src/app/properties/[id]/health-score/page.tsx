@@ -40,10 +40,8 @@ export default function HealthScorePage({ params }: PageProps) {
   const grade = getGrade(property.health_score);
   const gradeColor = getGradeColor(grade);
 
-  // Filter recommendations for this property
-  const propertyRecommendations = mockRecommendations.filter(
-    (r) => !r.action_url || r.action_url.includes(property.id)
-  );
+  // Filter recommendations for this property (just use all since mock data is generic)
+  const propertyRecommendations = mockRecommendations;
   const totalPotentialPoints = propertyRecommendations.reduce((sum, r) => sum + r.potential_improvement, 0);
 
   const handleRecalculate = async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -12,6 +12,8 @@ import {
   Building2,
   ChevronRight,
   Play,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/primitives';
 import { DataCard } from '@/components/patterns';
@@ -23,29 +25,95 @@ import {
 import { CoverageShield } from '@/components/three';
 import { staggerContainer, staggerItem, modalOverlay, modalContent } from '@/lib/motion/variants';
 import {
-  mockComplianceStatuses,
-  mockComplianceTemplates,
-  mockProperties,
-  mockCoverageTypes,
-} from '@/lib/mock-data';
-import type { ComplianceStatus } from '@/types/api';
+  complianceApi,
+  propertiesApi,
+  type ComplianceResult,
+  type ComplianceTemplate,
+  type Property,
+} from '@/lib/api';
+
+// Static coverage types for the shield visualization
+const coverageTypes = [
+  { name: 'Property', color: '#3b82f6', adequacy: 95 },
+  { name: 'General Liability', color: '#22c55e', adequacy: 88 },
+  { name: 'Umbrella', color: '#8b5cf6', adequacy: 75 },
+  { name: 'Workers Comp', color: '#f59e0b', adequacy: 100 },
+  { name: 'Flood', color: '#ef4444', adequacy: 0 },
+  { name: 'Earthquake', color: '#6b7280', adequacy: 0 },
+];
 
 function CompliancePageContent() {
   const searchParams = useSearchParams();
-  const propertyFilter = searchParams.get('property') || undefined;
+  const propertyFilter = searchParams.get('property_id') || searchParams.get('property') || undefined;
 
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('standard');
-  const [selectedProperty, setSelectedProperty] = useState<ComplianceStatus | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [selectedPropertyCompliance, setSelectedPropertyCompliance] = useState<ComplianceResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [templates, setTemplates] = useState<ComplianceTemplate[]>([]);
+  const [complianceResults, setComplianceResults] = useState<Map<string, ComplianceResult>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [propertiesData, templatesData] = await Promise.all([
+        propertiesApi.list(),
+        complianceApi.listTemplates(),
+      ]);
+      // Handle various API response formats
+      const propsArray = Array.isArray(propertiesData) ? propertiesData :
+        (propertiesData as { properties?: Property[]; items?: Property[] })?.properties ||
+        (propertiesData as { items?: Property[] })?.items || [];
+      const templatesArray = Array.isArray(templatesData) ? templatesData :
+        (templatesData as { templates?: ComplianceTemplate[]; items?: ComplianceTemplate[] })?.templates ||
+        (templatesData as { items?: ComplianceTemplate[] })?.items || [];
+      setProperties(propsArray);
+      setTemplates(templatesArray);
+      if (templatesArray.length > 0) {
+        setSelectedTemplate(templatesArray[0].id);
+      }
+
+      // Fetch compliance for each property
+      const results = new Map<string, ComplianceResult>();
+      const filteredProps = propertyFilter
+        ? propsArray.filter((p) => p.id === propertyFilter)
+        : propsArray;
+
+      await Promise.all(
+        filteredProps.map(async (property) => {
+          try {
+            const result = await complianceApi.getPropertyCompliance(property.id);
+            results.set(property.id, result);
+          } catch {
+            // Property may not have compliance data yet
+          }
+        })
+      );
+      setComplianceResults(results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load compliance data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [propertyFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   // Filter statuses by property if filter is provided
   const filteredStatuses = useMemo(() => {
+    const results = Array.from(complianceResults.values());
     if (propertyFilter) {
-      return mockComplianceStatuses.filter((s) => s.property_id === propertyFilter);
+      return results.filter((s) => s.property_id === propertyFilter);
     }
-    return mockComplianceStatuses;
-  }, [propertyFilter]);
+    return results;
+  }, [complianceResults, propertyFilter]);
 
   // Calculate summary stats
   const stats = useMemo(() => {
@@ -60,27 +128,71 @@ function CompliancePageContent() {
     return { compliant, nonCompliant, totalIssues, propertiesChecked };
   }, [filteredStatuses]);
 
-  const handlePropertyClick = useCallback((status: ComplianceStatus) => {
-    setSelectedProperty(status);
+  const handlePropertyClick = useCallback((result: ComplianceResult) => {
+    setSelectedPropertyCompliance(result);
     setIsModalOpen(true);
   }, []);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
-    setSelectedProperty(null);
+    setSelectedPropertyCompliance(null);
   }, []);
 
   const handleRunCheck = useCallback(async () => {
+    if (!selectedTemplate) return;
     setIsChecking(true);
-    // Simulate compliance check
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsChecking(false);
-  }, []);
+    try {
+      const filteredProps = propertyFilter
+        ? properties.filter((p) => p.id === propertyFilter)
+        : properties;
+
+      const newResults = new Map(complianceResults);
+      await Promise.all(
+        filteredProps.map(async (property) => {
+          try {
+            const result = await complianceApi.checkCompliance(property.id, selectedTemplate);
+            newResults.set(property.id, result);
+          } catch {
+            // Skip properties that fail
+          }
+        })
+      );
+      setComplianceResults(newResults);
+    } catch (err) {
+      console.error('Failed to run compliance check:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [properties, propertyFilter, selectedTemplate, complianceResults]);
 
   // Get property name for filter display
   const filteredPropertyName = propertyFilter
-    ? mockProperties.find((p) => p.id === propertyFilter)?.name
+    ? properties.find((p) => p.id === propertyFilter)?.name
     : null;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <AlertTriangle className="h-12 w-12 text-[var(--color-critical-500)] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+          Failed to load compliance data
+        </h3>
+        <p className="text-[var(--color-text-muted)] mb-4">{error}</p>
+        <Button variant="secondary" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -107,6 +219,9 @@ function CompliancePageContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Button
             variant="secondary"
             leftIcon={<Download className="h-4 w-4" />}
@@ -117,7 +232,7 @@ function CompliancePageContent() {
             variant="primary"
             leftIcon={isChecking ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             onClick={handleRunCheck}
-            disabled={isChecking}
+            disabled={isChecking || !selectedTemplate}
           >
             {isChecking ? 'Checking...' : 'Run Check'}
           </Button>
@@ -130,17 +245,11 @@ function CompliancePageContent() {
           label="Compliant"
           value={stats.compliant}
           icon={<CheckCircle className="h-5 w-5" />}
-          trend={{ value: stats.compliant, direction: 'up', period: 'properties' }}
         />
         <DataCard
           label="Non-Compliant"
           value={stats.nonCompliant}
           icon={<XCircle className="h-5 w-5" />}
-          trend={{
-            value: stats.nonCompliant,
-            direction: stats.nonCompliant > 0 ? 'down' : 'up',
-            period: 'properties',
-          }}
         />
         <DataCard
           label="Total Issues"
@@ -164,46 +273,51 @@ function CompliancePageContent() {
               Coverage Overview
             </h2>
             <div className="flex justify-center">
-              <CoverageShield coverages={mockCoverageTypes} size={300} />
+              <CoverageShield coverages={coverageTypes} size={300} />
             </div>
           </Card>
 
           {/* Template Selector (compact) */}
           <Card padding="lg">
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              Active Template
+              Compliance Template
             </h2>
             <div className="space-y-3">
-              {mockComplianceTemplates.map((template) => (
+              {templates.map((template) => (
                 <button
-                  key={template.name}
-                  onClick={() => setSelectedTemplate(template.name)}
+                  key={template.id}
+                  onClick={() => setSelectedTemplate(template.id)}
                   className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all border ${
-                    selectedTemplate === template.name
+                    selectedTemplate === template.id
                       ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]'
                       : 'border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)]'
                   }`}
                 >
                   <div
                     className={`w-3 h-3 rounded-full ${
-                      selectedTemplate === template.name
+                      selectedTemplate === template.id
                         ? 'bg-[var(--color-primary-500)]'
                         : 'bg-[var(--color-border-default)]'
                     }`}
                   />
                   <div className="flex-1 text-left">
                     <p className="font-medium text-[var(--color-text-primary)]">
-                      {template.display_name}
+                      {template.name}
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)]">
-                      {template.description}
+                      {template.lender_name}
                     </p>
                   </div>
-                  {selectedTemplate === template.name && (
+                  {selectedTemplate === template.id && (
                     <Badge variant="primary" size="sm">Active</Badge>
                   )}
                 </button>
               ))}
+              {templates.length === 0 && (
+                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+                  No compliance templates available
+                </p>
+              )}
             </div>
           </Card>
         </motion.div>
@@ -227,13 +341,15 @@ function CompliancePageContent() {
                   No compliance data
                 </h3>
                 <p className="text-[var(--color-text-secondary)]">
-                  Run a compliance check to see property status
+                  {properties.length === 0
+                    ? 'Upload documents to create properties first'
+                    : 'Run a compliance check to see property status'}
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredStatuses.map((status) => {
-                  const property = mockProperties.find((p) => p.id === status.property_id);
+                  const property = properties.find((p) => p.id === status.property_id);
                   return (
                     <div
                       key={status.property_id}
@@ -259,7 +375,7 @@ function CompliancePageContent() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold text-[var(--color-text-primary)]">
-                            {property?.name || 'Unknown Property'}
+                            {property?.name || status.property_name || 'Unknown Property'}
                           </h3>
                           <Badge
                             variant={status.is_compliant ? 'success' : 'critical'}
@@ -271,11 +387,11 @@ function CompliancePageContent() {
                         <div className="flex items-center gap-4 text-sm text-[var(--color-text-muted)]">
                           <span>{status.lender_name || 'No lender'}</span>
                           <span>•</span>
-                          <span>{status.template_used}</span>
+                          <span>{status.template_name}</span>
                           <span>•</span>
                           <span>
                             {status.checks.filter((c) => c.status === 'pass').length}/
-                            {status.checks.filter((c) => c.status !== 'not_required').length} passed
+                            {status.checks.filter((c) => c.status !== 'not_applicable').length} passed
                           </span>
                         </div>
                       </div>
@@ -299,7 +415,7 @@ function CompliancePageContent() {
 
       {/* Compliance Detail Modal */}
       <AnimatePresence>
-        {isModalOpen && selectedProperty && (
+        {isModalOpen && selectedPropertyCompliance && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
@@ -325,16 +441,17 @@ function CompliancePageContent() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
-                        {mockProperties.find((p) => p.id === selectedProperty.property_id)?.name}
+                        {properties.find((p) => p.id === selectedPropertyCompliance.property_id)?.name ||
+                          selectedPropertyCompliance.property_name}
                       </h2>
                       <Badge
-                        variant={selectedProperty.is_compliant ? 'success' : 'critical'}
+                        variant={selectedPropertyCompliance.is_compliant ? 'success' : 'critical'}
                       >
-                        {selectedProperty.is_compliant ? 'Compliant' : 'Non-Compliant'}
+                        {selectedPropertyCompliance.is_compliant ? 'Compliant' : 'Non-Compliant'}
                       </Badge>
                     </div>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      {selectedProperty.lender_name} • {selectedProperty.loan_number}
+                      {selectedPropertyCompliance.lender_name} • {selectedPropertyCompliance.template_name}
                     </p>
                   </div>
                   <button
@@ -348,7 +465,49 @@ function CompliancePageContent() {
 
               {/* Content */}
               <div className="overflow-y-auto p-6" style={{ maxHeight: 'calc(90vh - 120px)' }}>
-                <ComplianceChecklist status={selectedProperty} showHeader={false} />
+                <div className="space-y-4">
+                  {selectedPropertyCompliance.checks.map((check, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border ${
+                        check.status === 'pass'
+                          ? 'border-[var(--color-success-200)] bg-[var(--color-success-50)]'
+                          : check.status === 'fail'
+                          ? 'border-[var(--color-critical-200)] bg-[var(--color-critical-50)]'
+                          : 'border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {check.status === 'pass' ? (
+                          <CheckCircle className="h-5 w-5 text-[var(--color-success-500)] flex-shrink-0 mt-0.5" />
+                        ) : check.status === 'fail' ? (
+                          <XCircle className="h-5 w-5 text-[var(--color-critical-500)] flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium text-[var(--color-text-primary)]">
+                            {check.requirement}
+                          </p>
+                          {(check.current_value || check.required_value) && (
+                            <div className="mt-2 text-sm">
+                              {check.current_value && (
+                                <p className="text-[var(--color-text-muted)]">
+                                  Current: <span className="text-[var(--color-text-primary)]">{check.current_value}</span>
+                                </p>
+                              )}
+                              {check.required_value && (
+                                <p className="text-[var(--color-text-muted)]">
+                                  Required: <span className="text-[var(--color-text-primary)]">{check.required_value}</span>
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </div>
@@ -360,7 +519,13 @@ function CompliancePageContent() {
 
 export default function CompliancePage() {
   return (
-    <Suspense fallback={<div className="animate-pulse p-8">Loading compliance...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin" />
+        </div>
+      }
+    >
       <CompliancePageContent />
     </Suspense>
   );

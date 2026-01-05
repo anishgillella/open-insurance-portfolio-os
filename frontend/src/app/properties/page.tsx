@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import {
   LayoutGrid,
   List,
@@ -12,12 +13,14 @@ import {
   Building2,
   AlertTriangle,
   Clock,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn, getGrade } from '@/lib/utils';
 import { Button, Badge, Card } from '@/components/primitives';
 import { PropertyCard } from '@/components/features/properties';
-import { mockProperties, mockDashboardSummary } from '@/lib/mock-data';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
+import { propertiesApi, dashboardApi, type Property, type DashboardSummary } from '@/lib/api';
 
 type ViewMode = 'grid' | 'list';
 type SortOption = 'name' | 'healthScore' | 'tiv' | 'premium' | 'expiration';
@@ -34,8 +37,39 @@ export default function PropertiesPage() {
   const [filterExpiration, setFilterExpiration] = useState<FilterExpiration>('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [propertiesData, summaryData] = await Promise.all([
+        propertiesApi.list(),
+        dashboardApi.getSummary(),
+      ]);
+      // Handle various API response formats
+      setProperties(
+        Array.isArray(propertiesData) ? propertiesData :
+        (propertiesData as { properties?: Property[]; items?: Property[] })?.properties ||
+        (propertiesData as { items?: Property[] })?.items || []
+      );
+      setSummary(summaryData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load properties');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   const filteredAndSortedProperties = useMemo(() => {
-    let result = [...mockProperties];
+    let result = [...properties];
 
     // Search filter
     if (searchQuery) {
@@ -83,7 +117,7 @@ export default function PropertiesPage() {
     });
 
     return result;
-  }, [searchQuery, sortBy, sortDirection, filterGrade, filterExpiration]);
+  }, [properties, searchQuery, sortBy, sortDirection, filterGrade, filterExpiration]);
 
   const hasActiveFilters = filterGrade !== 'all' || filterExpiration !== 'all';
 
@@ -92,6 +126,30 @@ export default function PropertiesPage() {
     setFilterExpiration('all');
     setSearchQuery('');
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <AlertTriangle className="h-12 w-12 text-[var(--color-critical-500)] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+          Failed to load properties
+        </h3>
+        <p className="text-[var(--color-text-muted)] mb-4">{error}</p>
+        <Button variant="secondary" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -105,9 +163,12 @@ export default function PropertiesPage() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Properties</h1>
           <p className="text-[var(--color-text-secondary)] mt-1">
-            Manage your portfolio of {mockDashboardSummary.totalProperties} properties
+            Manage your portfolio of {properties.length} properties
           </p>
         </div>
+        <Button variant="ghost" size="sm" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </motion.div>
 
       {/* Summary Cards */}
@@ -119,7 +180,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Total Properties</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {mockDashboardSummary.totalProperties}
+              {summary?.total_properties || properties.length}
             </p>
           </div>
         </Card>
@@ -131,7 +192,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">With Gaps</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {mockDashboardSummary.propertiesWithGaps}
+              {summary?.properties_with_gaps || 0}
             </p>
           </div>
         </Card>
@@ -143,7 +204,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Expiring in 30d</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {mockDashboardSummary.expiringIn30Days}
+              {summary?.expiring_in_30_days || 0}
             </p>
           </div>
         </Card>
@@ -155,7 +216,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Total Gaps</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {mockDashboardSummary.totalGaps}
+              {summary?.total_gaps || 0}
             </p>
           </div>
         </Card>
@@ -212,7 +273,6 @@ export default function PropertiesPage() {
             variant="secondary"
             rightIcon={<ChevronDown className="h-4 w-4" />}
             onClick={() => {
-              // Toggle sort direction on same field, or reset to asc on new field
               if (sortBy === 'healthScore') {
                 setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               } else {
@@ -363,7 +423,7 @@ export default function PropertiesPage() {
       {/* Results Count */}
       <motion.div variants={staggerItem}>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Showing {filteredAndSortedProperties.length} of {mockProperties.length} properties
+          Showing {filteredAndSortedProperties.length} of {properties.length} properties
           {hasActiveFilters && (
             <button onClick={clearFilters} className="ml-2 text-[var(--color-primary-500)] hover:underline">
               Clear filters
@@ -405,14 +465,22 @@ export default function PropertiesPage() {
         >
           <Building2 className="h-12 w-12 text-[var(--color-text-muted)] mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-            No properties found
+            {properties.length === 0 ? 'No properties yet' : 'No properties found'}
           </h3>
           <p className="text-[var(--color-text-muted)] mb-4">
-            Try adjusting your search or filters
+            {properties.length === 0
+              ? 'Upload documents to create properties automatically'
+              : 'Try adjusting your search or filters'}
           </p>
-          <Button variant="secondary" onClick={clearFilters}>
-            Clear all filters
-          </Button>
+          {properties.length === 0 ? (
+            <Link href="/documents">
+              <Button variant="primary">Upload Documents</Button>
+            </Link>
+          ) : (
+            <Button variant="secondary" onClick={clearFilters}>
+              Clear all filters
+            </Button>
+          )}
         </motion.div>
       )}
     </motion.div>

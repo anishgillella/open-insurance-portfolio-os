@@ -397,3 +397,156 @@ export interface ChatRequest {
   document_type?: string;
   stream?: boolean;
 }
+
+// ============ RENEWAL ALERTS ============
+export type RenewalAlertStatus = 'pending' | 'acknowledged' | 'resolved' | 'expired';
+
+export interface RenewalAlert {
+  id: string;
+  property_id: string;
+  property_name: string;
+  policy_id: string;
+  policy_number: string;
+  threshold_days: number;
+  days_until_expiration: number;
+  expiration_date: string;
+  severity: Severity;
+  title: string;
+  message: string;
+  status: RenewalAlertStatus;
+  llm_priority_score: number;
+  llm_renewal_strategy: string;
+  llm_key_actions: string[];
+  created_at: string;
+  acknowledged_at?: string;
+  resolved_at?: string;
+}
+
+// ============ ALERT CONFIGURATION ============
+export interface AlertThreshold {
+  days: number;
+  severity: Severity;
+  notify_email: boolean;
+  notify_dashboard: boolean;
+}
+
+export interface AlertConfig {
+  property_id: string;
+  enabled: boolean;
+  thresholds: AlertThreshold[];
+  recipients: string[];
+  updated_at: string;
+}
+
+// ============ RENEWAL FORECASTS (Extended) ============
+export interface RenewalForecastExtended extends RenewalForecast {
+  id: string;
+  property_name: string;
+  current_expiration_date: string;
+  status: 'active' | 'superseded' | 'expired';
+  rule_based_estimate: number;
+  rule_based_change_pct: number;
+  negotiation_points: string[];
+  model_used: string;
+}
+
+// ============ RENEWAL TIMELINES (Extended) ============
+export interface RenewalTimelineSummary {
+  total_milestones: number;
+  completed: number;
+  in_progress: number;
+  upcoming: number;
+  overdue: number;
+}
+
+export interface RenewalTimelineExtended extends RenewalTimeline {
+  summary: RenewalTimelineSummary;
+}
+
+// ============ DOCUMENT READINESS ============
+export type DocumentStatus = 'found' | 'missing' | 'stale' | 'not_applicable';
+
+export interface DocumentReadinessItem {
+  type: string;
+  label: string;
+  status: DocumentStatus;
+  document_id?: string;
+  filename?: string;
+  age_days?: number;
+  verified: boolean;
+  issues?: string[];
+}
+
+export interface DocumentReadiness {
+  property_id: string;
+  property_name: string;
+  overall_score: number;
+  grade: HealthGrade;
+  documents: DocumentReadinessItem[];
+  last_assessed: string;
+}
+
+// ============ MARKET CONTEXT ============
+export type CompetitivePosition = 'strong' | 'moderate' | 'weak';
+
+export interface MarketContext extends MarketIntelligence {
+  id: string;
+  property_name: string;
+  competitive_position: CompetitivePosition;
+  recommended_actions: string[];
+}
+
+// ============ POLICY COMPARISON ============
+export interface PolicyCoverage {
+  type: string;
+  limit: number;
+  deductible: number;
+}
+
+export interface PolicySnapshot {
+  policy_number: string;
+  effective_date: string;
+  expiration_date: string;
+  premium: number;
+  carrier: string;
+  coverages: PolicyCoverage[];
+}
+
+export type ChangeType = 'increase' | 'decrease' | 'same' | 'new' | 'removed';
+export type ChangeImpact = 'positive' | 'negative' | 'neutral';
+
+export interface PolicyChange {
+  field: string;
+  prior_value: string;
+  current_value: string;
+  change_type: ChangeType;
+  impact: ChangeImpact;
+}
+
+export interface PolicyComparison {
+  property_id: string;
+  property_name: string;
+  current_policy: PolicySnapshot;
+  prior_policy: PolicySnapshot;
+  changes: PolicyChange[];
+  premium_change_pct: number;
+}
+
+// ============ PORTFOLIO RENEWAL SUMMARY ============
+export interface PortfolioRenewalSummary {
+  total_properties: number;
+  total_upcoming_renewals: number;
+  total_premium_at_risk: number;
+  by_urgency: {
+    critical: number;
+    warning: number;
+    info: number;
+  };
+  by_status: {
+    on_track: number;
+    needs_attention: number;
+    overdue: number;
+  };
+  avg_forecast_change_pct: number;
+  projected_total_premium: number;
+}

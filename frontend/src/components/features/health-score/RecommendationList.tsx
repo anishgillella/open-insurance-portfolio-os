@@ -73,7 +73,7 @@ function RecommendationCard({
             <div className="flex items-center gap-2 mb-1">
               <Badge variant={config.variant}>{recommendation.priority}</Badge>
               <span className="text-xs text-[var(--color-text-muted)]">
-                {recommendation.category}
+                {recommendation.action_type.replace('_', ' ')}
               </span>
             </div>
             <h3 className="font-medium text-[var(--color-text-primary)] mb-1">
@@ -87,7 +87,7 @@ function RecommendationCard({
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-1 text-[var(--color-success-600)] dark:text-[var(--color-success-400)]">
             <Sparkles className="h-4 w-4" />
-            <span className="font-semibold">+{recommendation.points} pts</span>
+            <span className="font-semibold">+{recommendation.potential_improvement} pts</span>
           </div>
           <ChevronRight className="h-5 w-5 text-[var(--color-text-muted)]" />
         </div>
@@ -95,10 +95,7 @@ function RecommendationCard({
     </motion.div>
   );
 
-  if (recommendation.actionUrl) {
-    return <Link href={recommendation.actionUrl}>{content}</Link>;
-  }
-
+  // Recommendations don't have URLs in the current model, just return content
   return content;
 }
 
@@ -108,7 +105,7 @@ export function RecommendationList({
   showAll = false,
 }: RecommendationListProps) {
   const displayRecommendations = showAll ? recommendations : recommendations.slice(0, 5);
-  const totalPoints = recommendations.reduce((sum, r) => sum + r.points, 0);
+  const totalPoints = recommendations.reduce((sum, r) => sum + r.potential_improvement, 0);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -140,7 +137,7 @@ export function RecommendationList({
       >
         {displayRecommendations.map((recommendation, index) => (
           <RecommendationCard
-            key={recommendation.id}
+            key={`rec-${index}-${recommendation.title}`}
             recommendation={recommendation}
             index={index}
           />
