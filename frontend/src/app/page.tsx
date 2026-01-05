@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -14,44 +14,21 @@ import {
   ArrowRight,
   LayoutGrid,
   BarChart3,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { DataCard, GlassCard, ScoreRing, GradientProgress, StatusBadge } from '@/components/patterns';
 import { Button, Card, Badge } from '@/components/primitives';
 import { PortfolioTreemap, PortfolioBubbleChart } from '@/components/features/portfolio';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
-import { mockProperties, mockDashboardSummary } from '@/lib/mock-data';
-
-// Mock data for demo
-const mockDashboardData = {
-  totalProperties: mockDashboardSummary.totalProperties,
-  totalInsuredValue: mockDashboardSummary.totalInsuredValue,
-  totalPremium: mockDashboardSummary.totalPremium,
-  healthScore: mockDashboardSummary.averageHealthScore,
-  expirations: [
-    { id: 'prop-1', name: 'Shoaff Park Apartments', days: 15, severity: 'critical' as const },
-    { id: 'prop-7', name: 'Eastwood Manor', days: 35, severity: 'warning' as const },
-    { id: 'prop-2', name: 'Buffalo Run', days: 45, severity: 'warning' as const },
-    { id: 'prop-3', name: 'Lake Sheri', days: 78, severity: 'info' as const },
-  ],
-  alerts: [
-    { id: '1', type: 'gap', severity: 'critical' as const, title: 'Underinsurance Gap', description: 'Shoaff Park - $2.1M below recommended', property: 'Shoaff Park' },
-    { id: '2', type: 'expiration', severity: 'warning' as const, title: 'Policy Expiring', description: 'Property policy expires in 15 days', property: 'Shoaff Park' },
-    { id: '3', type: 'gap', severity: 'warning' as const, title: 'Missing Flood Coverage', description: 'Property in FEMA Zone AE', property: 'Buffalo Run' },
-  ],
-  healthComponents: [
-    { name: 'Coverage Adequacy', score: 80, weight: 25 },
-    { name: 'Policy Currency', score: 90, weight: 20 },
-    { name: 'Deductible Risk', score: 67, weight: 15 },
-    { name: 'Coverage Breadth', score: 80, weight: 15 },
-    { name: 'Lender Compliance', score: 100, weight: 15 },
-    { name: 'Documentation', score: 70, weight: 10 },
-  ],
-  recommendations: [
-    { title: 'Reduce Shoaff Park deductible from 3% to 2%', points: 5, priority: 'high' as const },
-    { title: 'Upload missing EOP for Buffalo Run', points: 3, priority: 'medium' as const },
-    { title: 'Review flood coverage options', points: 2, priority: 'low' as const },
-  ],
-};
+import {
+  dashboardApi,
+  propertiesApi,
+  type DashboardSummary,
+  type ExpirationItem,
+  type DashboardAlert,
+  type Property,
+} from '@/lib/api';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -62,6 +39,82 @@ function getGreeting() {
 
 export default function Dashboard() {
   const [portfolioView, setPortfolioView] = useState<'treemap' | 'bubble'>('treemap');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [expirations, setExpirations] = useState<ExpirationItem[]>([]);
+  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [summaryData, expirationsData, alertsData, propertiesData] = await Promise.all([
+        dashboardApi.getSummary(),
+        dashboardApi.getExpirations(),
+        dashboardApi.getAlerts(),
+        propertiesApi.list(),
+      ]);
+      setSummary(summaryData);
+      // Handle various API response formats
+      setExpirations(
+        Array.isArray(expirationsData) ? expirationsData :
+        (expirationsData as { expirations?: ExpirationItem[]; items?: ExpirationItem[] })?.expirations ||
+        (expirationsData as { items?: ExpirationItem[] })?.items || []
+      );
+      setAlerts(
+        Array.isArray(alertsData) ? alertsData :
+        (alertsData as { alerts?: DashboardAlert[]; items?: DashboardAlert[] })?.alerts ||
+        (alertsData as { items?: DashboardAlert[] })?.items || []
+      );
+      setProperties(
+        Array.isArray(propertiesData) ? propertiesData :
+        (propertiesData as { properties?: Property[]; items?: Property[] })?.properties ||
+        (propertiesData as { items?: Property[] })?.items || []
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <AlertTriangle className="h-12 w-12 text-[var(--color-critical-500)] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+          Failed to load dashboard
+        </h3>
+        <p className="text-[var(--color-text-muted)] mb-4">{error}</p>
+        <Button variant="secondary" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Group expirations by urgency
+  const getExpirationSeverity = (days: number): 'critical' | 'warning' | 'info' => {
+    if (days <= 14) return 'critical';
+    if (days <= 30) return 'warning';
+    return 'info';
+  };
 
   return (
     <motion.div
@@ -71,13 +124,18 @@ export default function Dashboard() {
       className="space-y-8"
     >
       {/* Header */}
-      <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-          {getGreeting()}
-        </h1>
-        <p className="text-[var(--color-text-secondary)] mt-1">
-          Your portfolio at a glance
-        </p>
+      <motion.div variants={staggerItem} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+            {getGreeting()}
+          </h1>
+          <p className="text-[var(--color-text-secondary)] mt-1">
+            Your portfolio at a glance
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </motion.div>
 
       {/* Stats Grid */}
@@ -87,29 +145,25 @@ export default function Dashboard() {
       >
         <DataCard
           label="Properties"
-          value={mockDashboardData.totalProperties}
+          value={summary?.total_properties || 0}
           icon={<Building2 className="h-5 w-5" />}
-          trend={{ value: 2, direction: 'up', period: 'new this month' }}
         />
         <DataCard
           label="Total Insured Value"
-          value={mockDashboardData.totalInsuredValue}
+          value={summary?.total_insured_value || 0}
           prefix="$"
           icon={<DollarSign className="h-5 w-5" />}
-          trend={{ value: 8, direction: 'up', period: 'YoY' }}
         />
         <DataCard
           label="Annual Premium"
-          value={mockDashboardData.totalPremium}
+          value={summary?.total_premium || 0}
           prefix="$"
           icon={<CreditCard className="h-5 w-5" />}
-          trend={{ value: 12, direction: 'up', period: 'YoY' }}
         />
         <DataCard
           label="Health Score"
-          value={mockDashboardData.healthScore}
+          value={summary?.average_health_score || 0}
           icon={<Activity className="h-5 w-5" />}
-          trend={{ value: 5, direction: 'up', period: 'from last month' }}
         />
       </motion.div>
 
@@ -124,40 +178,55 @@ export default function Dashboard() {
               </h2>
               <Clock className="h-5 w-5 text-[var(--color-text-muted)]" />
             </div>
-            <div className="space-y-4">
-              {mockDashboardData.expirations.map((expiration) => (
-                <div
-                  key={expiration.id}
-                  className="flex items-center gap-4 p-3 rounded-lg bg-[var(--color-surface-sunken)]"
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      expiration.severity === 'critical'
-                        ? 'bg-[var(--color-critical-500)]'
-                        : expiration.severity === 'warning'
-                        ? 'bg-[var(--color-warning-500)]'
-                        : 'bg-[var(--color-info-500)]'
-                    }`}
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                      {expiration.name}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {expiration.days} days
-                    </p>
-                  </div>
-                  <StatusBadge
-                    severity={expiration.severity}
-                    label={`${expiration.days}d`}
-                    pulse={expiration.severity === 'critical'}
-                  />
-                </div>
-              ))}
-            </div>
-            <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              View all expirations
-            </Button>
+            {expirations.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="h-8 w-8 text-[var(--color-text-muted)] mx-auto mb-2" />
+                <p className="text-[var(--color-text-muted)]">No upcoming expirations</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {expirations.slice(0, 4).map((expiration) => {
+                  const severity = getExpirationSeverity(expiration.days_until_expiration);
+                  return (
+                    <Link
+                      key={expiration.policy_id}
+                      href={`/properties/${expiration.property_id}`}
+                      className="block"
+                    >
+                      <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface)] transition-colors">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            severity === 'critical'
+                              ? 'bg-[var(--color-critical-500)]'
+                              : severity === 'warning'
+                              ? 'bg-[var(--color-warning-500)]'
+                              : 'bg-[var(--color-info-500)]'
+                          }`}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-[var(--color-text-primary)] text-sm">
+                            {expiration.property_name}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {expiration.coverage_type}
+                          </p>
+                        </div>
+                        <StatusBadge
+                          severity={severity}
+                          label={`${expiration.days_until_expiration}d`}
+                          pulse={severity === 'critical'}
+                        />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            <Link href="/renewals">
+              <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                View all expirations
+              </Button>
+            </Link>
           </Card>
         </motion.div>
 
@@ -168,46 +237,62 @@ export default function Dashboard() {
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 Alerts
               </h2>
-              <Badge variant="critical" dot>3 Active</Badge>
+              {alerts.length > 0 && (
+                <Badge variant="critical" dot>{alerts.length} Active</Badge>
+              )}
             </div>
-            <div className="space-y-3">
-              {mockDashboardData.alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="p-3 rounded-lg border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`p-1.5 rounded-lg ${
-                        alert.severity === 'critical'
-                          ? 'bg-[var(--color-critical-50)] text-[var(--color-critical-500)]'
-                          : 'bg-[var(--color-warning-50)] text-[var(--color-warning-500)]'
-                      }`}
-                    >
-                      <AlertTriangle className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                          {alert.title}
-                        </p>
-                        <StatusBadge
-                          severity={alert.severity}
-                          label={alert.severity}
-                          pulse={alert.severity === 'critical'}
-                        />
+            {alerts.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="h-8 w-8 text-[var(--color-success-500)] mx-auto mb-2" />
+                <p className="text-[var(--color-text-muted)]">No active alerts</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {alerts.slice(0, 3).map((alert) => (
+                  <Link
+                    key={alert.id}
+                    href={alert.property_id ? `/properties/${alert.property_id}` : '/gaps'}
+                    className="block"
+                  >
+                    <div className="p-3 rounded-lg border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] transition-colors cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            alert.severity === 'critical'
+                              ? 'bg-[var(--color-critical-50)] text-[var(--color-critical-500)]'
+                              : alert.severity === 'warning'
+                              ? 'bg-[var(--color-warning-50)] text-[var(--color-warning-500)]'
+                              : 'bg-[var(--color-info-50)] text-[var(--color-info-500)]'
+                          }`}
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-[var(--color-text-primary)] text-sm">
+                              {alert.title}
+                            </p>
+                            <StatusBadge
+                              severity={alert.severity}
+                              label={alert.severity}
+                              pulse={alert.severity === 'critical'}
+                            />
+                          </div>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
+                            {alert.description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
-                        {alert.description}
-                      </p>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              View all alerts
-            </Button>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <Link href="/gaps">
+              <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                View all alerts
+              </Button>
+            </Link>
           </Card>
         </motion.div>
 
@@ -221,115 +306,100 @@ export default function Dashboard() {
               <Badge variant="primary">Score</Badge>
             </div>
             <div className="flex justify-center mb-6">
-              <ScoreRing score={mockDashboardData.healthScore} size={160} />
+              <ScoreRing score={summary?.average_health_score || 0} size={160} />
             </div>
-            <div className="space-y-3">
-              {mockDashboardData.healthComponents.slice(0, 4).map((component) => (
-                <div key={component.name}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[var(--color-text-secondary)]">
-                      {component.name}
-                    </span>
-                    <span className="font-medium text-[var(--color-text-primary)]">
-                      {component.score}%
-                    </span>
-                  </div>
-                  <GradientProgress value={component.score} size="sm" />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 rounded-lg bg-[var(--color-surface)]/50">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  {summary?.properties_with_gaps || 0}
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">Properties with Gaps</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-[var(--color-surface)]/50">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  {summary?.critical_gaps || 0}
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">Critical Gaps</p>
+              </div>
             </div>
-            <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
-              View full breakdown
-            </Button>
+            <Link href="/gaps">
+              <Button variant="ghost" className="w-full mt-4" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                View full breakdown
+              </Button>
+            </Link>
           </GlassCard>
         </motion.div>
       </div>
 
       {/* Portfolio Visualization */}
-      <motion.div variants={staggerItem}>
-        <Card padding="lg">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                Portfolio Overview
-              </h2>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Click any property to view details
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={portfolioView === 'treemap' ? 'primary' : 'ghost'}
-                size="sm"
-                leftIcon={<LayoutGrid className="h-4 w-4" />}
-                onClick={() => setPortfolioView('treemap')}
-              >
-                Treemap
-              </Button>
-              <Button
-                variant={portfolioView === 'bubble' ? 'primary' : 'ghost'}
-                size="sm"
-                leftIcon={<BarChart3 className="h-4 w-4" />}
-                onClick={() => setPortfolioView('bubble')}
-              >
-                Bubble
-              </Button>
-            </div>
-          </div>
-          {portfolioView === 'treemap' ? (
-            <PortfolioTreemap properties={mockProperties} height={350} />
-          ) : (
-            <PortfolioBubbleChart properties={mockProperties} height={350} />
-          )}
-          <div className="mt-4 flex justify-center">
-            <Link href="/properties">
-              <Button variant="ghost" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                View all properties
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Recommendations */}
-      <motion.div variants={staggerItem}>
-        <Card padding="lg">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-              Top Recommendations
-            </h2>
-            <CheckCircle className="h-5 w-5 text-[var(--color-success-500)]" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {mockDashboardData.recommendations.map((rec, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface)] hover:shadow-[var(--shadow-elevation-2)] transition-all cursor-pointer"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <Badge
-                    variant={
-                      rec.priority === 'high'
-                        ? 'critical'
-                        : rec.priority === 'medium'
-                        ? 'warning'
-                        : 'info'
-                    }
-                  >
-                    {rec.priority}
-                  </Badge>
-                  <span className="text-sm font-semibold text-[var(--color-success-600)]">
-                    +{rec.points} pts
-                  </span>
-                </div>
-                <p className="text-sm text-[var(--color-text-primary)]">
-                  {rec.title}
+      {properties.length > 0 && (
+        <motion.div variants={staggerItem}>
+          <Card padding="lg">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  Portfolio Overview
+                </h2>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  Click any property to view details
                 </p>
               </div>
-            ))}
-          </div>
-        </Card>
-      </motion.div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={portfolioView === 'treemap' ? 'primary' : 'ghost'}
+                  size="sm"
+                  leftIcon={<LayoutGrid className="h-4 w-4" />}
+                  onClick={() => setPortfolioView('treemap')}
+                >
+                  Treemap
+                </Button>
+                <Button
+                  variant={portfolioView === 'bubble' ? 'primary' : 'ghost'}
+                  size="sm"
+                  leftIcon={<BarChart3 className="h-4 w-4" />}
+                  onClick={() => setPortfolioView('bubble')}
+                >
+                  Bubble
+                </Button>
+              </div>
+            </div>
+            {portfolioView === 'treemap' ? (
+              <PortfolioTreemap properties={properties} height={350} />
+            ) : (
+              <PortfolioBubbleChart properties={properties} height={350} />
+            )}
+            <div className="mt-4 flex justify-center">
+              <Link href="/properties">
+                <Button variant="ghost" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                  View all properties
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Empty State if no data */}
+      {properties.length === 0 && (
+        <motion.div variants={staggerItem}>
+          <Card padding="lg">
+            <div className="text-center py-12">
+              <Building2 className="h-12 w-12 text-[var(--color-text-muted)] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+                No properties yet
+              </h3>
+              <p className="text-[var(--color-text-muted)] mb-4 max-w-md mx-auto">
+                Upload your insurance documents to get started. Properties will be automatically created from your folder structure.
+              </p>
+              <Link href="/documents">
+                <Button variant="primary">
+                  Upload Documents
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

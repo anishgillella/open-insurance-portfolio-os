@@ -47,11 +47,7 @@ function CustomTooltip({
       <p className="text-2xl font-bold" style={{ color }}>
         {score}
       </p>
-      {data.event && (
-        <p className="text-sm text-[var(--color-primary-500)] mt-1 max-w-[200px]">
-          {data.event}
-        </p>
-      )}
+      {/* Event info would go here if available in data model */}
     </div>
   );
 }
@@ -72,7 +68,6 @@ export function ScoreHistory({ history, className }: ScoreHistoryProps) {
   const totalChange = latestScore - firstScore;
 
   const color = getScoreColor(latestScore);
-  const eventsData = history.filter((point) => point.event);
 
   // Format data for recharts
   const formattedData = history.map((point) => ({
@@ -184,48 +179,12 @@ export function ScoreHistory({ history, className }: ScoreHistoryProps) {
                 strokeWidth: 2,
               }}
             />
-            {/* Mark events with dots */}
-            {eventsData.map((point, i) => (
-              <ReferenceDot
-                key={i}
-                x={new Date(point.date).toLocaleDateString('en-US', { month: 'short' })}
-                y={point.score}
-                r={6}
-                fill={color}
-                stroke="white"
-                strokeWidth={2}
-              />
-            ))}
+            {/* Events would be marked here if available in data model */}
           </LineChart>
         </ResponsiveContainer>
       </motion.div>
 
-      {/* Events Legend */}
-      {eventsData.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-[var(--color-text-secondary)]">Key Events:</p>
-          <div className="flex flex-wrap gap-2">
-            {eventsData.map((point, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 text-sm bg-[var(--color-surface-sunken)] px-3 py-1.5 rounded-full"
-              >
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-[var(--color-text-muted)]">
-                  {new Date(point.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}:
-                </span>
-                <span className="text-[var(--color-text-primary)]">{point.event}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Events Legend would appear here if events were tracked in data model */}
     </div>
   );
 }

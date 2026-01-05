@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -16,12 +16,21 @@ import {
   Clock,
   ChevronRight,
   ExternalLink,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Button, Card, Badge } from '@/components/primitives';
 import { GlassCard, ScoreRing, GradientProgress, StatusBadge } from '@/components/patterns';
-import { mockProperties, mockHealthComponents, mockAlerts } from '@/lib/mock-data';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
+import {
+  propertiesApi,
+  healthScoreApi,
+  gapsApi,
+  type PropertyDetail,
+  type HealthScoreResponse,
+  type Gap,
+} from '@/lib/api';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -29,25 +38,73 @@ interface PageProps {
 
 export default function PropertyDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const property = mockProperties.find((p) => p.id === id);
 
-  if (!property) {
+  const [property, setProperty] = useState<PropertyDetail | null>(null);
+  const [healthScore, setHealthScore] = useState<HealthScoreResponse | null>(null);
+  const [gaps, setGaps] = useState<Gap[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [propertyData, healthData, gapsData] = await Promise.all([
+        propertiesApi.get(id),
+        healthScoreApi.get(id).catch(() => null),
+        gapsApi.list(undefined, { property_id: id }).catch(() => []),
+      ]);
+      setProperty(propertyData);
+      setHealthScore(healthData);
+      // Handle various API response formats for gaps
+      setGaps(
+        Array.isArray(gapsData) ? gapsData :
+        (gapsData as { gaps?: Gap[]; items?: Gap[] })?.gaps ||
+        (gapsData as { items?: Gap[] })?.items || []
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load property');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !property) {
     return (
       <div className="text-center py-16">
         <Building2 className="h-12 w-12 text-[var(--color-text-muted)] mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-          Property not found
+          {error || 'Property not found'}
         </h3>
-        <Link href="/properties">
-          <Button variant="secondary">Back to properties</Button>
-        </Link>
+        <div className="flex items-center justify-center gap-4">
+          <Link href="/properties">
+            <Button variant="secondary">Back to properties</Button>
+          </Link>
+          <Button variant="ghost" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
   const grade = getGrade(property.health_score);
   const gradeColor = getGradeColor(grade);
-  const propertyAlerts = mockAlerts.filter((a) => a.property_id === property.id);
+  const criticalGaps = gaps.filter((g) => g.severity === 'critical');
+  const warningGaps = gaps.filter((g) => g.severity === 'warning');
   const isExpiringSoon = (property.days_until_expiration || 999) <= 30;
   const isCritical = (property.days_until_expiration || 999) <= 14;
 
@@ -59,7 +116,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
       className="space-y-6"
     >
       {/* Back Link */}
-      <motion.div variants={staggerItem}>
+      <motion.div variants={staggerItem} className="flex items-center justify-between">
         <Link
           href="/properties"
           className="inline-flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
@@ -67,6 +124,9 @@ export default function PropertyDetailPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" />
           Back to properties
         </Link>
+        <Button variant="ghost" size="sm" onClick={fetchData}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </motion.div>
 
       {/* Hero Header */}
@@ -141,7 +201,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Health Score & Alerts */}
+        {/* Left Column - Health Score & Gaps */}
         <motion.div variants={staggerItem} className="space-y-6">
           {/* Health Score */}
           <Card padding="lg">
@@ -160,42 +220,44 @@ export default function PropertyDetailPage({ params }: PageProps) {
               <ScoreRing score={property.health_score} size={140} />
             </div>
 
-            <div className="space-y-3">
-              {mockHealthComponents.slice(0, 4).map((component) => (
-                <div key={component.name}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[var(--color-text-secondary)]">{component.name}</span>
-                    <span className="font-medium text-[var(--color-text-primary)]">
-                      {component.score}%
-                    </span>
+            {healthScore?.components && (
+              <div className="space-y-3">
+                {healthScore.components.slice(0, 4).map((component) => (
+                  <div key={component.name}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[var(--color-text-secondary)]">{component.name}</span>
+                      <span className="font-medium text-[var(--color-text-primary)]">
+                        {component.percentage}%
+                      </span>
+                    </div>
+                    <GradientProgress value={component.percentage} size="sm" />
                   </div>
-                  <GradientProgress value={component.score} size="sm" />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
-          {/* Alerts */}
-          {propertyAlerts.length > 0 && (
+          {/* Gaps */}
+          {gaps.length > 0 && (
             <Card padding="lg">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Alerts</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Gaps</h2>
                 <Badge variant="critical" dot>
-                  {propertyAlerts.length}
+                  {gaps.length}
                 </Badge>
               </div>
 
               <div className="space-y-3">
-                {propertyAlerts.map((alert) => (
+                {gaps.slice(0, 3).map((gap) => (
                   <div
-                    key={alert.id}
+                    key={gap.id}
                     className="p-3 rounded-lg border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className={cn(
                           'p-1.5 rounded-lg',
-                          alert.severity === 'critical'
+                          gap.severity === 'critical'
                             ? 'bg-[var(--color-critical-50)] text-[var(--color-critical-500)]'
                             : 'bg-[var(--color-warning-50)] text-[var(--color-warning-500)]'
                         )}
@@ -205,22 +267,29 @@ export default function PropertyDetailPage({ params }: PageProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                            {alert.title}
+                            {gap.title}
                           </p>
                           <StatusBadge
-                            severity={alert.severity}
-                            label={alert.severity}
-                            pulse={alert.severity === 'critical'}
+                            severity={gap.severity}
+                            label={gap.severity}
+                            pulse={gap.severity === 'critical'}
                           />
                         </div>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          {alert.description}
+                          {gap.description}
                         </p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+              {gaps.length > 3 && (
+                <Link href={`/gaps?property_id=${property.id}`}>
+                  <Button variant="ghost" className="w-full mt-3">
+                    View all {gaps.length} gaps
+                  </Button>
+                </Link>
+              )}
             </Card>
           )}
         </motion.div>
@@ -231,7 +300,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
           <Card padding="lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Coverage</h2>
-              <Link href={`/gaps?property=${property.id}`}>
+              <Link href={`/gaps?property_id=${property.id}`}>
                 <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
                   View gaps
                 </Button>
@@ -239,9 +308,9 @@ export default function PropertyDetailPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-4">
-              {['Property', 'General Liability', 'Umbrella'].map((coverage) => (
+              {property.policies?.slice(0, 3).map((policy) => (
                 <div
-                  key={coverage}
+                  key={policy.id}
                   className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-sunken)]"
                 >
                   <div className="p-2 rounded-lg bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-500)]/20">
@@ -249,23 +318,30 @@ export default function PropertyDetailPage({ params }: PageProps) {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                      {coverage}
+                      {policy.policy_type}
                     </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">Active</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{policy.carrier}</p>
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-[var(--color-success-500)]" />
+                  <div
+                    className={cn(
+                      'w-2 h-2 rounded-full',
+                      policy.status === 'active'
+                        ? 'bg-[var(--color-success-500)]'
+                        : 'bg-[var(--color-warning-500)]'
+                    )}
+                  />
                 </div>
               ))}
 
-              {(property.gaps_count.critical > 0 || property.gaps_count.warning > 0) && (
-                <Link href={`/gaps?property=${property.id}`}>
+              {(criticalGaps.length > 0 || warningGaps.length > 0) && (
+                <Link href={`/gaps?property_id=${property.id}`}>
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/20 cursor-pointer hover:border-[var(--color-critical-300)] transition-colors">
                     <div className="p-2 rounded-lg bg-[var(--color-critical-100)] dark:bg-[var(--color-critical-500)]/20">
                       <AlertTriangle className="h-4 w-4 text-[var(--color-critical-500)]" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)] text-sm">
-                        {property.gaps_count.critical + property.gaps_count.warning} Coverage Gaps Detected
+                        {criticalGaps.length + warningGaps.length} Coverage Gaps Detected
                       </p>
                       <p className="text-xs text-[var(--color-critical-500)]">
                         Review and address gaps
@@ -343,14 +419,14 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
 
-              <Link href={`/gaps?property=${property.id}`} className="block">
+              <Link href={`/gaps?property_id=${property.id}`} className="block">
                 <Button
-                  variant={(property.gaps_count.critical > 0 || property.gaps_count.warning > 0) ? 'danger' : 'secondary'}
+                  variant={gaps.length > 0 ? 'danger' : 'secondary'}
                   className="w-full justify-start"
                   leftIcon={<AlertTriangle className="h-4 w-4" />}
                 >
-                  {(property.gaps_count.critical + property.gaps_count.warning) > 0
-                    ? `Address ${property.gaps_count.critical + property.gaps_count.warning} Gaps`
+                  {gaps.length > 0
+                    ? `Address ${gaps.length} Gaps`
                     : 'View Gap Analysis'}
                 </Button>
               </Link>
@@ -361,9 +437,9 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
 
-              <Link href={`/properties/${property.id}/documents`} className="block">
+              <Link href={`/documents?property_id=${property.id}`} className="block">
                 <Button variant="secondary" className="w-full justify-start" leftIcon={<FileText className="h-4 w-4" />}>
-                  View Documents
+                  View Documents ({property.documents?.length || 0})
                 </Button>
               </Link>
             </div>
@@ -417,7 +493,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
 
           {/* Last Updated */}
           <div className="text-center text-sm text-[var(--color-text-muted)]">
-            Last updated: {property.updated_at}
+            Last updated: {new Date(property.updated_at).toLocaleDateString()}
           </div>
         </motion.div>
       </div>
