@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.document import Document
+from app.models.property import Property
 from app.repositories.base import BaseRepository
 from app.schemas.document import DocumentClassification, ExtractionResult, ProcessingStatus
 
@@ -386,3 +388,65 @@ class DocumentRepository(BaseRepository[Document]):
         )
 
         return document, is_new
+
+    async def list_all(
+        self,
+        organization_id: str | None = None,
+        property_id: str | None = None,
+        limit: int = 500,
+    ) -> list[Document]:
+        """List all documents with optional filtering.
+
+        Args:
+            organization_id: Optional filter by organization.
+            property_id: Optional filter by property.
+            limit: Maximum number of records.
+
+        Returns:
+            List of documents.
+        """
+        stmt = select(self.model).where(self.model.deleted_at.is_(None))
+
+        if organization_id:
+            stmt = stmt.where(self.model.organization_id == organization_id)
+
+        if property_id:
+            stmt = stmt.where(self.model.property_id == property_id)
+
+        stmt = stmt.order_by(self.model.created_at.desc()).limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_all_with_property_names(
+        self,
+        organization_id: str | None = None,
+        property_id: str | None = None,
+        limit: int = 500,
+    ) -> list[tuple[Document, str | None]]:
+        """List all documents with property names via JOIN.
+
+        Args:
+            organization_id: Optional filter by organization.
+            property_id: Optional filter by property.
+            limit: Maximum number of records.
+
+        Returns:
+            List of tuples (Document, property_name).
+        """
+        stmt = (
+            select(Document, Property.name)
+            .outerjoin(Property, Document.property_id == Property.id)
+            .where(Document.deleted_at.is_(None))
+        )
+
+        if organization_id:
+            stmt = stmt.where(Document.organization_id == organization_id)
+
+        if property_id:
+            stmt = stmt.where(Document.property_id == property_id)
+
+        stmt = stmt.order_by(Document.created_at.desc()).limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.all())
