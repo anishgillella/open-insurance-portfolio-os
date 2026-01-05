@@ -6,17 +6,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(value: number): string {
-  if (value >= 1_000_000_000) {
-    return `$${(value / 1_000_000_000).toFixed(1)}B`;
+export function formatCurrency(value: number | undefined | null): string {
+  const num = typeof value === 'number' ? value : 0;
+  if (num >= 1_000_000_000) {
+    return `$${(num / 1_000_000_000).toFixed(1)}B`;
   }
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000_000) {
+    return `$${(num / 1_000_000).toFixed(1)}M`;
   }
-  if (value >= 1_000) {
-    return `$${(value / 1_000).toFixed(0)}K`;
+  if (num >= 1_000) {
+    return `$${(num / 1_000).toFixed(0)}K`;
   }
-  return `$${value.toFixed(0)}`;
+  return `$${num.toFixed(0)}`;
 }
 
 export function formatDate(dateString: string): string {

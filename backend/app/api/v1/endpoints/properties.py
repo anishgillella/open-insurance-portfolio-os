@@ -17,6 +17,8 @@ from app.schemas.property import (
     BuildingSchema,
     ComplianceSummarySchema,
     CompletenessSummarySchema,
+    DocumentChecklistItem,
+    GapsCountSchema,
     GapsSummarySchema,
     HealthScoreSchema,
     InsuranceSummarySchema,
@@ -28,6 +30,206 @@ from app.schemas.property import (
 )
 
 router = APIRouter()
+
+# Standard insurance document types with metadata
+STANDARD_DOCUMENT_TYPES = [
+    {
+        "document_type": "coi",
+        "display_name": "Certificate of Insurance (COI)",
+        "description": "Summary of coverage from carrier",
+        "is_required": True,
+        "fields_provided": [
+            "Carrier Name",
+            "Policy Number",
+            "Coverage Limits",
+            "Named Insured",
+            "Expiration Date",
+        ],
+    },
+    {
+        "document_type": "policy",
+        "display_name": "Policy Declaration Page",
+        "description": "Official policy terms and premium",
+        "is_required": True,
+        "fields_provided": [
+            "Premium Amount",
+            "Deductibles",
+            "Coverage Details",
+            "Policy Terms",
+            "Endorsements",
+        ],
+    },
+    {
+        "document_type": "sov",
+        "display_name": "Schedule of Values (SOV)",
+        "description": "Property values and building details",
+        "is_required": True,
+        "fields_provided": [
+            "Total Insured Value (TIV)",
+            "Building Values",
+            "Contents Values",
+            "Business Income",
+            "Building Details",
+        ],
+    },
+    {
+        "document_type": "eop",
+        "display_name": "Evidence of Property Insurance",
+        "description": "Proof of property coverage",
+        "is_required": True,
+        "fields_provided": [
+            "Property Coverage Limits",
+            "Deductibles",
+            "Covered Perils",
+            "Property Address",
+        ],
+    },
+    {
+        "document_type": "invoice",
+        "display_name": "Premium Invoice/Statement",
+        "description": "Payment and premium breakdown",
+        "is_required": False,
+        "fields_provided": [
+            "Total Premium",
+            "Premium Breakdown",
+            "Payment Terms",
+            "Taxes and Fees",
+        ],
+    },
+    {
+        "document_type": "loss_run",
+        "display_name": "Loss Run Report",
+        "description": "Claims history from carrier",
+        "is_required": False,
+        "fields_provided": [
+            "Claims History",
+            "Loss Amounts",
+            "Claim Dates",
+            "Loss Ratio",
+        ],
+    },
+    {
+        "document_type": "endorsement",
+        "display_name": "Policy Endorsements",
+        "description": "Modifications to policy terms",
+        "is_required": False,
+        "fields_provided": [
+            "Coverage Modifications",
+            "Additional Insureds",
+            "Special Conditions",
+        ],
+    },
+]
+
+
+def _build_document_completeness(documents) -> CompletenessSummarySchema:
+    """Build document completeness checklist from uploaded documents."""
+    # Get set of document types that have been uploaded
+    uploaded_types = {}
+    for doc in documents:
+        if doc.document_type and doc.deleted_at is None:
+            doc_type = doc.document_type.lower()
+            if doc_type not in uploaded_types:
+                uploaded_types[doc_type] = doc.file_name
+
+    # Build checklist
+    checklist = []
+    required_present = 0
+    required_total = 0
+    optional_present = 0
+    optional_total = 0
+
+    for doc_def in STANDARD_DOCUMENT_TYPES:
+        doc_type = doc_def["document_type"]
+        is_present = doc_type in uploaded_types
+        uploaded_file = uploaded_types.get(doc_type)
+
+        checklist.append(
+            DocumentChecklistItem(
+                document_type=doc_type,
+                display_name=doc_def["display_name"],
+                description=doc_def["description"],
+                is_required=doc_def["is_required"],
+                is_present=is_present,
+                fields_provided=doc_def["fields_provided"],
+                uploaded_file=uploaded_file,
+            )
+        )
+
+        if doc_def["is_required"]:
+            required_total += 1
+            if is_present:
+                required_present += 1
+        else:
+            optional_total += 1
+            if is_present:
+                optional_present += 1
+
+    # Calculate percentage based on required documents
+    percentage = (required_present / required_total * 100) if required_total > 0 else 0
+
+    return CompletenessSummarySchema(
+        percentage=percentage,
+        required_present=required_present,
+        required_total=required_total,
+        optional_present=optional_present,
+        optional_total=optional_total,
+        checklist=checklist,
+    )
+
+
+def _extract_financial_data_from_documents(documents) -> tuple[Decimal, Decimal]:
+    """Extract total premium and TIV from document extraction data.
+
+    Falls back to extraction_json when program/policy totals are not populated.
+    """
+    total_premium = Decimal("0")
+    total_tiv = Decimal("0")
+
+    for doc in documents:
+        if not doc.extraction_json:
+            continue
+
+        extraction = doc.extraction_json if isinstance(doc.extraction_json, dict) else {}
+
+        # Try invoice data first (most reliable for premiums)
+        invoice = extraction.get("invoice") or {}
+        if invoice.get("total_amount"):
+            try:
+                total_premium += Decimal(str(invoice["total_amount"]))
+            except (ValueError, TypeError):
+                pass
+
+        # Try SOV data for TIV
+        sov = extraction.get("sov") or {}
+        if sov.get("total_insured_value"):
+            try:
+                total_tiv += Decimal(str(sov["total_insured_value"]))
+            except (ValueError, TypeError):
+                pass
+
+        # Try COI data for TIV (property_limit is commonly used for TIV in certificates)
+        coi = extraction.get("coi") or {}
+        if total_tiv == 0 and coi.get("property_limit"):
+            try:
+                total_tiv = Decimal(str(coi["property_limit"]))
+            except (ValueError, TypeError):
+                pass
+
+        # Try policy data
+        policy = extraction.get("policy") or {}
+        if policy.get("premium") and not invoice.get("total_amount"):
+            try:
+                total_premium += Decimal(str(policy["premium"]))
+            except (ValueError, TypeError):
+                pass
+        if total_tiv == 0 and policy.get("total_insured_value"):
+            try:
+                total_tiv = Decimal(str(policy["total_insured_value"]))
+            except (ValueError, TypeError):
+                pass
+
+    return total_premium, total_tiv
 
 
 def _build_property_list_item(prop) -> PropertyListItem:
@@ -53,14 +255,44 @@ def _build_property_list_item(prop) -> PropertyListItem:
                     if next_expiration is None or policy.expiration_date < next_expiration:
                         next_expiration = policy.expiration_date
 
+    # If no totals from programs, try to extract from documents
+    if total_premium == 0 and total_tiv == 0 and hasattr(prop, 'documents'):
+        doc_premium, doc_tiv = _extract_financial_data_from_documents(prop.documents)
+        if doc_premium > 0:
+            total_premium = doc_premium
+        if doc_tiv > 0:
+            total_tiv = doc_tiv
+
     if next_expiration:
         days_until = (next_expiration - date.today()).days
 
-    # Count open gaps
-    open_gaps = sum(
-        1 for g in prop.coverage_gaps
-        if g.status == "open" and g.deleted_at is None
-    )
+    # Count gaps by severity
+    critical_gaps = 0
+    warning_gaps = 0
+    info_gaps = 0
+    for g in prop.coverage_gaps:
+        if g.status == "open" and g.deleted_at is None:
+            if g.severity == "critical":
+                critical_gaps += 1
+            elif g.severity == "warning":
+                warning_gaps += 1
+            else:
+                info_gaps += 1
+
+    # Calculate health score (placeholder - simple formula based on gaps)
+    health_score = max(0, 100 - (critical_gaps * 20) - (warning_gaps * 10) - (info_gaps * 5))
+
+    # Determine grade from score
+    if health_score >= 90:
+        health_grade = "A"
+    elif health_score >= 80:
+        health_grade = "B"
+    elif health_score >= 70:
+        health_grade = "C"
+    elif health_score >= 60:
+        health_grade = "D"
+    else:
+        health_grade = "F"
 
     return PropertyListItem(
         id=prop.id,
@@ -76,15 +308,23 @@ def _build_property_list_item(prop) -> PropertyListItem:
         property_type=prop.property_type,
         total_units=prop.units,
         total_buildings=len(prop.buildings),
+        year_built=prop.year_built,
         total_insured_value=total_tiv,
-        annual_premium=total_premium,
+        total_premium=total_premium,
+        health_score=health_score,
+        health_grade=health_grade,
+        gaps_count=GapsCountSchema(
+            critical=critical_gaps,
+            warning=warning_gaps,
+            info=info_gaps,
+        ),
         next_expiration=next_expiration,
         days_until_expiration=days_until,
-        open_gaps_count=open_gaps,
         compliance_status="no_requirements",  # Placeholder
-        health_score=None,  # Placeholder - will be calculated in Phase 4.3
-        completeness_pct=prop.completeness_pct,
+        completeness_percentage=prop.completeness_pct or 0,
         coverage_types=sorted(list(coverage_types)),
+        created_at=prop.created_at,
+        updated_at=prop.updated_at,
     )
 
 
@@ -127,6 +367,14 @@ def _build_property_detail(prop) -> PropertyDetail:
                     if next_expiration is None or policy.expiration_date < next_expiration:
                         next_expiration = policy.expiration_date
 
+    # If no totals from programs, try to extract from documents
+    if total_premium == 0 and total_tiv == 0 and hasattr(prop, 'documents'):
+        doc_premium, doc_tiv = _extract_financial_data_from_documents(prop.documents)
+        if doc_premium > 0:
+            total_premium = doc_premium
+        if doc_tiv > 0:
+            total_tiv = doc_tiv
+
     days_until = None
     if next_expiration:
         days_until = (next_expiration - date.today()).days
@@ -160,10 +408,38 @@ def _build_property_detail(prop) -> PropertyDetail:
         info=info,
     )
 
-    # Placeholder summaries (will be implemented in later phases)
-    health_score = HealthScoreSchema()
+    # Build document completeness checklist
+    completeness = _build_document_completeness(prop.documents) if hasattr(prop, 'documents') else CompletenessSummarySchema()
+
+    # Calculate health score based on gaps and document completeness
+    # Simple formula: start at 100, deduct for gaps and missing docs
+    base_score = 100
+    base_score -= critical * 20  # Critical gaps hurt most
+    base_score -= warning * 10   # Warning gaps
+    base_score -= info * 5       # Info gaps
+    # Deduct for missing required documents (up to 20 points)
+    if completeness.required_total > 0:
+        doc_penalty = int((1 - completeness.required_present / completeness.required_total) * 20)
+        base_score -= doc_penalty
+    health_score_value = max(0, min(100, base_score))
+
+    # Determine grade from score
+    if health_score_value >= 90:
+        health_grade = "A"
+    elif health_score_value >= 80:
+        health_grade = "B"
+    elif health_score_value >= 70:
+        health_grade = "C"
+    elif health_score_value >= 60:
+        health_grade = "D"
+    else:
+        health_grade = "F"
+
+    health_score = HealthScoreSchema(
+        score=health_score_value,
+        grade=health_grade,
+    )
     compliance_summary = ComplianceSummarySchema()
-    completeness = CompletenessSummarySchema(percentage=prop.completeness_pct)
 
     return PropertyDetail(
         id=prop.id,
@@ -181,6 +457,7 @@ def _build_property_detail(prop) -> PropertyDetail:
         year_built=prop.year_built,
         construction_type=prop.construction_type,
         total_units=prop.units,
+        total_buildings=len(prop.buildings) if prop.buildings else 0,
         total_sqft=prop.sq_ft,
         has_sprinklers=prop.has_sprinklers,
         protection_class=prop.protection_class,
