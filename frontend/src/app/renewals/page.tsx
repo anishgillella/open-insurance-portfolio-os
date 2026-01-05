@@ -26,7 +26,8 @@ import {
   renewalsApi,
   propertiesApi,
   dashboardApi,
-  type RenewalTimeline,
+  type RenewalTimelineItem,
+  type RenewalTimelineSummary,
   type RenewalAlert,
   type RenewalForecast,
   type Property,
@@ -38,7 +39,8 @@ export default function RenewalsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [properties, setProperties] = useState<Property[]>([]);
-  const [timelines, setTimelines] = useState<RenewalTimeline[]>([]);
+  const [timelines, setTimelines] = useState<RenewalTimelineItem[]>([]);
+  const [timelineSummary, setTimelineSummary] = useState<RenewalTimelineSummary | null>(null);
   const [alerts, setAlerts] = useState<RenewalAlert[]>([]);
   const [forecasts, setForecasts] = useState<Map<string, RenewalForecast>>(new Map());
 
@@ -48,21 +50,24 @@ export default function RenewalsPage() {
     try {
       const [propertiesData, timelinesData, alertsData] = await Promise.all([
         propertiesApi.list(),
-        renewalsApi.getTimeline(),
+        renewalsApi.getTimeline(undefined, 365), // Look ahead 365 days for renewals
         renewalsApi.getAlerts(),
       ]);
       // Handle various API response formats
       const propsArray = Array.isArray(propertiesData) ? propertiesData :
         (propertiesData as { properties?: Property[]; items?: Property[] })?.properties ||
         (propertiesData as { items?: Property[] })?.items || [];
-      const timelinesArray = Array.isArray(timelinesData) ? timelinesData :
-        (timelinesData as { timelines?: RenewalTimeline[]; items?: RenewalTimeline[] })?.timelines ||
-        (timelinesData as { items?: RenewalTimeline[] })?.items || [];
+
+      // Timeline response has { timeline: [...], summary: {...} } structure
+      const timelinesArray = timelinesData?.timeline || [];
+      const summaryData = timelinesData?.summary || null;
+
       const alertsArray = Array.isArray(alertsData) ? alertsData :
         (alertsData as { alerts?: RenewalAlert[]; items?: RenewalAlert[] })?.alerts ||
         (alertsData as { items?: RenewalAlert[] })?.items || [];
       setProperties(propsArray);
       setTimelines(timelinesArray);
+      setTimelineSummary(summaryData);
       setAlerts(alertsArray);
 
       // Fetch forecasts for each property with timeline
@@ -107,26 +112,27 @@ export default function RenewalsPage() {
     }
   }, []);
 
-  // Calculate summary stats
+  // Calculate summary stats - use backend summary when available, fallback to calculation
+  const forecastValues = Array.from(forecasts.values());
   const summary = {
-    total_upcoming_renewals: timelines.length,
-    total_premium_at_risk: timelines.reduce((sum, t) => {
-      const forecast = forecasts.get(t.property_id);
-      return sum + (forecast?.current_premium || 0);
+    total_upcoming_renewals: timelineSummary?.total_renewals ?? timelines.length,
+    total_premium_at_risk: timelineSummary?.total_premium_at_risk ?? timelines.reduce((sum, t) => {
+      return sum + (t.current_premium || 0);
     }, 0),
-    avg_forecast_change_pct: forecasts.size > 0
-      ? Array.from(forecasts.values()).reduce((sum, f) => sum + f.forecast.mid_change_percent, 0) / forecasts.size
+    avg_forecast_change_pct: forecastValues.length > 0
+      ? forecastValues.reduce((sum, f) => sum + (f.forecast?.mid_change_percent ?? 0), 0) / forecastValues.length
       : 0,
-    projected_total_premium: Array.from(forecasts.values()).reduce((sum, f) => sum + f.forecast.mid, 0),
+    projected_total_premium: forecastValues.reduce((sum, f) => sum + (f.forecast?.mid ?? 0), 0),
     by_urgency: {
-      critical: timelines.filter((t) => t.days_until_expiration <= 30).length,
-      warning: timelines.filter((t) => t.days_until_expiration > 30 && t.days_until_expiration <= 60).length,
-      info: timelines.filter((t) => t.days_until_expiration > 60).length,
+      critical: timelineSummary?.expiring_30_days ?? timelines.filter((t) => t.days_until_expiration <= 30).length,
+      warning: timelineSummary?.expiring_60_days ?? timelines.filter((t) => t.days_until_expiration > 30 && t.days_until_expiration <= 60).length,
+      info: timelineSummary?.expiring_90_days ?? timelines.filter((t) => t.days_until_expiration > 60).length,
     },
     by_status: {
-      on_track: timelines.filter((t) => t.summary.overdue === 0).length,
-      needs_attention: timelines.filter((t) => t.summary.overdue > 0 && t.days_until_expiration > 30).length,
-      overdue: timelines.filter((t) => t.summary.overdue > 0 && t.days_until_expiration <= 30).length,
+      // Use alert counts from timeline items to determine status
+      on_track: timelines.filter((t) => !t.has_active_alerts).length,
+      needs_attention: timelines.filter((t) => t.has_active_alerts && t.days_until_expiration > 30).length,
+      overdue: timelines.filter((t) => t.has_active_alerts && t.days_until_expiration <= 30).length,
     },
   };
 
@@ -352,7 +358,7 @@ export default function RenewalsPage() {
 
                   return (
                     <Link
-                      key={timeline.property_id}
+                      key={timeline.policy_id}
                       href={`/properties/${timeline.property_id}/renewals`}
                     >
                       <div
@@ -395,7 +401,7 @@ export default function RenewalsPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            {forecast && (
+                            {forecast?.forecast && (
                               <>
                                 <p className="text-sm text-[var(--color-text-muted)]">
                                   Forecast: {formatCurrency(forecast.forecast.mid)}
@@ -403,13 +409,13 @@ export default function RenewalsPage() {
                                 <p
                                   className={cn(
                                     'text-sm font-medium',
-                                    forecast.forecast.mid_change_percent >= 0
+                                    (forecast.forecast.mid_change_percent ?? 0) >= 0
                                       ? 'text-[var(--color-critical-500)]'
                                       : 'text-[var(--color-success-500)]'
                                   )}
                                 >
-                                  {forecast.forecast.mid_change_percent >= 0 ? '+' : ''}
-                                  {forecast.forecast.mid_change_percent.toFixed(1)}%
+                                  {(forecast.forecast.mid_change_percent ?? 0) >= 0 ? '+' : ''}
+                                  {(forecast.forecast.mid_change_percent ?? 0).toFixed(1)}%
                                 </p>
                               </>
                             )}
@@ -417,28 +423,31 @@ export default function RenewalsPage() {
                           <ChevronRight className="h-5 w-5 text-[var(--color-text-muted)]" />
                         </div>
 
-                        {/* Milestone Progress */}
-                        <div className="mt-3 flex items-center gap-2">
-                          <div className="flex-1 flex items-center gap-1">
-                            {timeline.milestones.map((milestone, idx) => (
-                              <div
-                                key={idx}
-                                className={cn(
-                                  'flex-1 h-1.5 rounded-full',
-                                  milestone.status === 'completed'
-                                    ? 'bg-[var(--color-success-500)]'
-                                    : milestone.status === 'in_progress'
-                                    ? 'bg-[var(--color-primary-500)]'
-                                    : milestone.status === 'overdue'
-                                    ? 'bg-[var(--color-critical-500)]'
-                                    : 'bg-[var(--color-border-subtle)]'
-                                )}
-                              />
-                            ))}
+                        {/* Policy Info & Status */}
+                        <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+                          <div className="flex items-center gap-3">
+                            <span>{timeline.policy_type}</span>
+                            {timeline.carrier_name && (
+                              <>
+                                <span>•</span>
+                                <span>{timeline.carrier_name}</span>
+                              </>
+                            )}
+                            {timeline.current_premium && (
+                              <>
+                                <span>•</span>
+                                <span>{formatCurrency(timeline.current_premium)}</span>
+                              </>
+                            )}
                           </div>
-                          <span className="text-xs text-[var(--color-text-muted)]">
-                            {timeline.summary.completed}/{timeline.summary.total_milestones}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {timeline.has_forecast && (
+                              <Badge variant="secondary" className="text-xs">Forecast Ready</Badge>
+                            )}
+                            {timeline.has_active_alerts && (
+                              <Badge variant="warning" className="text-xs">{timeline.alert_count} Alert{timeline.alert_count > 1 ? 's' : ''}</Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -540,29 +549,39 @@ export default function RenewalsPage() {
                           </p>
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <p className="text-sm text-[var(--color-text-primary)]">
-                            {formatCurrency(forecast.forecast.low)} - {formatCurrency(forecast.forecast.high)}
-                          </p>
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            Mid: {formatCurrency(forecast.forecast.mid)}
-                          </p>
+                          {forecast.forecast ? (
+                            <>
+                              <p className="text-sm text-[var(--color-text-primary)]">
+                                {formatCurrency(forecast.forecast.low)} - {formatCurrency(forecast.forecast.high)}
+                              </p>
+                              <p className="text-xs text-[var(--color-text-muted)]">
+                                Mid: {formatCurrency(forecast.forecast.mid)}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-[var(--color-text-muted)]">—</p>
+                          )}
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <p
-                            className={cn(
-                              'font-medium',
-                              forecast.forecast.mid_change_percent >= 0
-                                ? 'text-[var(--color-critical-500)]'
-                                : 'text-[var(--color-success-500)]'
-                            )}
-                          >
-                            {forecast.forecast.mid_change_percent >= 0 ? '+' : ''}
-                            {forecast.forecast.mid_change_percent.toFixed(1)}%
-                          </p>
+                          {forecast.forecast ? (
+                            <p
+                              className={cn(
+                                'font-medium',
+                                (forecast.forecast.mid_change_percent ?? 0) >= 0
+                                  ? 'text-[var(--color-critical-500)]'
+                                  : 'text-[var(--color-success-500)]'
+                              )}
+                            >
+                              {(forecast.forecast.mid_change_percent ?? 0) >= 0 ? '+' : ''}
+                              {(forecast.forecast.mid_change_percent ?? 0).toFixed(1)}%
+                            </p>
+                          ) : (
+                            <p className="text-[var(--color-text-muted)]">—</p>
+                          )}
                         </td>
                         <td className="py-4 px-4 text-center">
-                          <Badge variant={forecast.confidence >= 80 ? 'success' : 'secondary'}>
-                            {Math.round(forecast.confidence * 100)}%
+                          <Badge variant={(forecast.confidence ?? 0) >= 80 ? 'success' : 'secondary'}>
+                            {Math.round((forecast.confidence ?? 0) * 100)}%
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-right">

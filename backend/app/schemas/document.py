@@ -1291,6 +1291,8 @@ class DocumentResponse(BaseModel):
     extraction_status: str
     extraction_confidence: float | None
     needs_human_review: bool
+    property_id: str | None = None
+    property_name: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -32,6 +32,63 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+class DocumentListResponse(BaseModel):
+    """Response for document list."""
+
+    documents: list[DocumentResponse]
+    total: int
+
+
+@router.get("", response_model=DocumentListResponse)
+async def list_documents(
+    organization_id: str | None = None,
+    property_id: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> DocumentListResponse:
+    """List all documents.
+
+    Args:
+        organization_id: Optional filter by organization.
+        property_id: Optional filter by property.
+        db: Database session.
+
+    Returns:
+        List of documents.
+    """
+    repo = DocumentRepository(db)
+    documents_with_names = await repo.list_all_with_property_names(
+        organization_id=organization_id,
+        property_id=property_id,
+    )
+
+    return DocumentListResponse(
+        documents=[
+            DocumentResponse(
+                id=doc.id,
+                file_name=doc.file_name,
+                file_url=doc.file_url,
+                document_type=doc.document_type,
+                document_subtype=doc.document_subtype,
+                carrier=doc.carrier,
+                policy_number=doc.policy_number,
+                effective_date=doc.effective_date,
+                expiration_date=doc.expiration_date,
+                upload_status=doc.upload_status,
+                ocr_status=doc.ocr_status,
+                extraction_status=doc.extraction_status,
+                extraction_confidence=doc.extraction_confidence,
+                needs_human_review=doc.needs_human_review,
+                created_at=doc.created_at,
+                updated_at=doc.updated_at,
+                property_id=doc.property_id,
+                property_name=prop_name,
+            )
+            for doc, prop_name in documents_with_names
+        ],
+        total=len(documents_with_names),
+    )
+
+
 class ProcessRequest(BaseModel):
     """Request to process a document from a file path."""
 

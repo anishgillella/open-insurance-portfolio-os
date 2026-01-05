@@ -493,6 +493,40 @@ export interface RenewalMilestone {
   documents_ready: Record<string, boolean>;
 }
 
+// Timeline item from backend - matches TimelineItemSchema
+export interface RenewalTimelineItem {
+  property_id: string;
+  property_name: string;
+  policy_id: string;
+  policy_number: string | null;
+  policy_type: string;
+  carrier_name: string | null;
+  expiration_date: string;
+  days_until_expiration: number;
+  severity: 'info' | 'warning' | 'critical';
+  current_premium: number | null;
+  predicted_premium: number | null;
+  has_forecast: boolean;
+  has_active_alerts: boolean;
+  alert_count: number;
+}
+
+// Timeline summary from backend - matches TimelineSummarySchema
+export interface RenewalTimelineSummary {
+  total_renewals: number;
+  expiring_30_days: number;
+  expiring_60_days: number;
+  expiring_90_days: number;
+  total_premium_at_risk: number;
+}
+
+// Full timeline response from backend - matches RenewalTimelineResponse
+export interface RenewalTimelineResponse {
+  timeline: RenewalTimelineItem[];
+  summary: RenewalTimelineSummary;
+}
+
+// Legacy type kept for backwards compatibility
 export interface RenewalTimeline {
   property_id: string;
   property_name: string;
@@ -550,7 +584,7 @@ export const renewalsApi = {
     apiPost<RenewalForecast>(`/renewals/forecast/${propertyId}`),
 
   getTimeline: (orgId = DEFAULT_ORG_ID, daysAhead = 90) =>
-    apiGet<RenewalTimeline[]>('/renewals/timeline', { organization_id: orgId, days_ahead: String(daysAhead) }),
+    apiGet<RenewalTimelineResponse>('/renewals/timeline', { organization_id: orgId, days_ahead: String(daysAhead) }),
 
   getAlerts: (orgId = DEFAULT_ORG_ID, status?: string, severity?: string) =>
     apiGet<RenewalAlert[]>('/renewals/alerts', { organization_id: orgId, ...(status && { status }), ...(severity && { severity }) }),
@@ -636,9 +670,14 @@ export interface DirectoryUploadResponse {
   results: UploadResponse[];
 }
 
+export interface DocumentListResponse {
+  documents: Document[];
+  total: number;
+}
+
 export const documentsApi = {
   list: (orgId = DEFAULT_ORG_ID, propertyId?: string) =>
-    apiGet<Document[]>('/documents', { organization_id: orgId, ...(propertyId && { property_id: propertyId }) }),
+    apiGet<DocumentListResponse>('/documents', { organization_id: orgId, ...(propertyId && { property_id: propertyId }) }),
 
   get: (documentId: string) =>
     apiGet<Document>(`/documents/${documentId}`),

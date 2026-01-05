@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  FileText,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,9 +21,15 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-const navigation = [
+const navigation: Array<{
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  badge?: string | number;
+}> = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Properties', href: '/properties', icon: Building2 },
+  { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
