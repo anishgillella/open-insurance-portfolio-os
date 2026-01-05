@@ -21,8 +21,8 @@ import {
   ComplianceStatusCard,
   ComplianceChecklist,
   TemplateSelector,
+  CoverageOverview,
 } from '@/components/features/compliance';
-import { CoverageShield } from '@/components/three';
 import { staggerContainer, staggerItem, modalOverlay, modalContent } from '@/lib/motion/variants';
 import {
   complianceApi,
@@ -120,7 +120,7 @@ function CompliancePageContent() {
     const compliant = filteredStatuses.filter((s) => s.is_compliant).length;
     const nonCompliant = filteredStatuses.filter((s) => !s.is_compliant).length;
     const totalIssues = filteredStatuses.reduce(
-      (sum, s) => sum + s.checks.filter((c) => c.status === 'fail').length,
+      (sum, s) => sum + (s.checks || []).filter((c) => c.status === 'fail').length,
       0
     );
     const propertiesChecked = filteredStatuses.length;
@@ -267,14 +267,12 @@ function CompliancePageContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Templates & Shield */}
         <motion.div variants={staggerItem} className="lg:col-span-1 space-y-6">
-          {/* Coverage Shield */}
+          {/* Coverage Overview */}
           <Card padding="lg">
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
               Coverage Overview
             </h2>
-            <div className="flex justify-center">
-              <CoverageShield coverages={coverageTypes} size={300} />
-            </div>
+            <CoverageOverview coverages={coverageTypes} />
           </Card>
 
           {/* Template Selector (compact) */}
@@ -390,8 +388,8 @@ function CompliancePageContent() {
                           <span>{status.template_name}</span>
                           <span>•</span>
                           <span>
-                            {status.checks.filter((c) => c.status === 'pass').length}/
-                            {status.checks.filter((c) => c.status !== 'not_applicable').length} passed
+                            {(status.checks || []).filter((c) => c.status === 'pass').length}/
+                            {(status.checks || []).filter((c) => c.status !== 'not_applicable').length} passed
                           </span>
                         </div>
                       </div>
@@ -399,7 +397,7 @@ function CompliancePageContent() {
                       {/* Issues count if any */}
                       {!status.is_compliant && (
                         <Badge variant="critical">
-                          {status.checks.filter((c) => c.status === 'fail').length} issues
+                          {(status.checks || []).filter((c) => c.status === 'fail').length} issues
                         </Badge>
                       )}
 
@@ -466,7 +464,7 @@ function CompliancePageContent() {
               {/* Content */}
               <div className="overflow-y-auto p-6" style={{ maxHeight: 'calc(90vh - 120px)' }}>
                 <div className="space-y-4">
-                  {selectedPropertyCompliance.checks.map((check, index) => (
+                  {(selectedPropertyCompliance.checks || []).map((check, index) => (
                     <div
                       key={index}
                       className={`p-4 rounded-lg border ${

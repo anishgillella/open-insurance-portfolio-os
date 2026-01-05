@@ -4,7 +4,7 @@ import { ResponsiveTreeMap } from '@nivo/treemap';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn, getScoreColor, formatCurrency } from '@/lib/utils';
-import type { Property } from '@/lib/mock-data';
+import type { Property } from '@/lib/api';
 
 interface PortfolioTreemapProps {
   properties: Property[];
@@ -24,9 +24,9 @@ export function PortfolioTreemap({
     children: properties.map((p) => ({
       id: p.id,
       name: p.name,
-      value: p.total_insured_value,
+      value: Number(p.total_insured_value) || 0,
       healthScore: p.health_score,
-      premium: p.total_premium,
+      premium: Number(p.total_premium) || 0,
       city: p.address.city,
       color: getScoreColor(p.health_score),
     })),

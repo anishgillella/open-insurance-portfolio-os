@@ -22,6 +22,7 @@ from app.schemas.property import (
     GapsSummarySchema,
     HealthScoreSchema,
     InsuranceSummarySchema,
+    PolicySummaryItem,
     PropertyDetail,
     PropertyDocumentItem,
     PropertyDocumentsResponse,
@@ -441,6 +442,51 @@ def _build_property_detail(prop) -> PropertyDetail:
     )
     compliance_summary = ComplianceSummarySchema()
 
+    # Build policies list
+    today = date.today()
+    policies_list = []
+    for program in prop.insurance_programs:
+        if program.status == "active":
+            for policy in program.policies:
+                # Determine policy status
+                if policy.expiration_date:
+                    if policy.expiration_date < today:
+                        policy_status = "expired"
+                    else:
+                        policy_status = "active"
+                else:
+                    policy_status = "pending"
+
+                # Get the largest coverage limit from coverages
+                max_limit = None
+                if policy.coverages:
+                    for cov in policy.coverages:
+                        if cov.limit_amount and (max_limit is None or cov.limit_amount > max_limit):
+                            max_limit = cov.limit_amount
+
+                # Get first deductible from coverages
+                deductible = None
+                if policy.coverages:
+                    for cov in policy.coverages:
+                        if cov.deductible_amount:
+                            deductible = cov.deductible_amount
+                            break
+
+                policies_list.append(
+                    PolicySummaryItem(
+                        id=policy.id,
+                        policy_number=policy.policy_number,
+                        policy_type=policy.policy_type or "unknown",
+                        carrier=policy.carrier_name,
+                        effective_date=policy.effective_date,
+                        expiration_date=policy.expiration_date,
+                        premium=policy.premium,
+                        limit=max_limit,
+                        deductible=deductible,
+                        status=policy_status,
+                    )
+                )
+
     return PropertyDetail(
         id=prop.id,
         name=prop.name,
@@ -470,6 +516,7 @@ def _build_property_detail(prop) -> PropertyDetail:
         gaps_summary=gaps_summary,
         compliance_summary=compliance_summary,
         completeness=completeness,
+        policies=policies_list,
         created_at=prop.created_at,
         updated_at=prop.updated_at,
     )

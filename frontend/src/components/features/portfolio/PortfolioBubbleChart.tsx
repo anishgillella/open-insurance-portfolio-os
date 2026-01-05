@@ -4,7 +4,7 @@ import { ResponsiveScatterPlot } from '@nivo/scatterplot';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn, getScoreColor, formatCurrency } from '@/lib/utils';
-import type { Property } from '@/lib/mock-data';
+import type { Property } from '@/lib/api';
 
 interface PortfolioBubbleChartProps {
   properties: Property[];
@@ -30,7 +30,7 @@ export function PortfolioBubbleChart({
     {
       id: 'properties',
       data: properties.map((p) => ({
-        x: p.total_premium,
+        x: Number(p.total_premium) || 0,
         y: p.health_score,
         propertyId: p.id,
       })),
@@ -38,7 +38,7 @@ export function PortfolioBubbleChart({
   ];
 
   // Calculate axis domains
-  const maxPremium = Math.max(...properties.map((p) => p.total_premium)) * 1.1;
+  const maxPremium = Math.max(...properties.map((p) => Number(p.total_premium) || 0)) * 1.1;
 
   return (
     <motion.div
@@ -108,7 +108,7 @@ export function PortfolioBubbleChart({
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">Premium:</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {formatCurrency(prop.total_premium)}
+                    {formatCurrency(Number(prop.total_premium) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -123,7 +123,7 @@ export function PortfolioBubbleChart({
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">TIV:</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {formatCurrency(prop.total_insured_value)}
+                    {formatCurrency(Number(prop.total_insured_value) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">

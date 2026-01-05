@@ -145,24 +145,24 @@ export default function Dashboard() {
       >
         <DataCard
           label="Properties"
-          value={summary?.total_properties || 0}
+          value={summary?.portfolio_stats?.total_properties || 0}
           icon={<Building2 className="h-5 w-5" />}
         />
         <DataCard
           label="Total Insured Value"
-          value={summary?.total_insured_value || 0}
+          value={Number(summary?.portfolio_stats?.total_insured_value) || 0}
           prefix="$"
           icon={<DollarSign className="h-5 w-5" />}
         />
         <DataCard
           label="Annual Premium"
-          value={summary?.total_premium || 0}
+          value={Number(summary?.portfolio_stats?.total_annual_premium) || 0}
           prefix="$"
           icon={<CreditCard className="h-5 w-5" />}
         />
         <DataCard
           label="Health Score"
-          value={summary?.average_health_score || 0}
+          value={summary?.health_score?.portfolio_average || 0}
           icon={<Activity className="h-5 w-5" />}
         />
       </motion.div>
@@ -306,18 +306,18 @@ export default function Dashboard() {
               <Badge variant="primary">Score</Badge>
             </div>
             <div className="flex justify-center mb-6">
-              <ScoreRing score={summary?.average_health_score || 0} size={160} />
+              <ScoreRing score={summary?.health_score?.portfolio_average || 0} size={160} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 rounded-lg bg-[var(--color-surface)]/50">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                  {summary?.properties_with_gaps || 0}
+                  {summary?.gap_stats?.properties_with_gaps || 0}
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)]">Properties with Gaps</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-[var(--color-surface)]/50">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                  {summary?.critical_gaps || 0}
+                  {summary?.gap_stats?.critical_gaps || 0}
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)]">Critical Gaps</p>
               </div>

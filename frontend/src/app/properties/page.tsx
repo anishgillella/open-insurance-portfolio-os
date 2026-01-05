@@ -104,10 +104,10 @@ export default function PropertiesPage() {
           comparison = a.health_score - b.health_score;
           break;
         case 'tiv':
-          comparison = a.total_insured_value - b.total_insured_value;
+          comparison = (Number(a.total_insured_value) || 0) - (Number(b.total_insured_value) || 0);
           break;
         case 'premium':
-          comparison = a.total_premium - b.total_premium;
+          comparison = (Number(a.total_premium) || 0) - (Number(b.total_premium) || 0);
           break;
         case 'expiration':
           comparison = (a.days_until_expiration || 999) - (b.days_until_expiration || 999);
@@ -180,7 +180,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Total Properties</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {summary?.total_properties || properties.length}
+              {summary?.portfolio_stats?.total_properties || properties.length}
             </p>
           </div>
         </Card>
@@ -192,7 +192,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">With Gaps</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {summary?.properties_with_gaps || 0}
+              {summary?.gap_stats?.properties_with_gaps || 0}
             </p>
           </div>
         </Card>
@@ -204,7 +204,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Expiring in 30d</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {summary?.expiring_in_30_days || 0}
+              {summary?.expiration_stats?.expiring_30_days || 0}
             </p>
           </div>
         </Card>
@@ -216,7 +216,7 @@ export default function PropertiesPage() {
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Total Gaps</p>
             <p className="text-xl font-bold text-[var(--color-text-primary)]">
-              {summary?.total_gaps || 0}
+              {summary?.gap_stats?.total_open_gaps || 0}
             </p>
           </div>
         </Card>

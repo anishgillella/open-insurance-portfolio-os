@@ -540,7 +540,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                     ? 'success'
                     : property.completeness.percentage >= 50
                     ? 'warning'
-                    : 'danger'
+                    : 'critical'
                 }
               >
                 {property.completeness.percentage.toFixed(0)}%

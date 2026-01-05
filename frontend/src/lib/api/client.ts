@@ -84,15 +84,61 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
 
 // ============ DASHBOARD API ============
 
-export interface DashboardSummary {
+// Nested structures matching backend response
+export interface PortfolioStats {
   total_properties: number;
-  total_insured_value: number;
-  total_premium: number;
-  average_health_score: number;
-  properties_with_gaps: number;
-  expiring_in_30_days: number;
-  total_gaps: number;
+  total_buildings: number;
+  total_units: number;
+  total_insured_value: number | string;
+  total_annual_premium: number | string;
+}
+
+export interface ExpirationStats {
+  expiring_30_days: number;
+  expiring_60_days: number;
+  expiring_90_days: number;
+  next_expiration: {
+    property_name: string;
+    policy_type: string;
+    expiration_date: string;
+    days_until_expiration: number;
+  } | null;
+}
+
+export interface GapStats {
+  total_open_gaps: number;
   critical_gaps: number;
+  warning_gaps: number;
+  info_gaps: number;
+  properties_with_gaps: number;
+}
+
+export interface ComplianceStats {
+  compliant_properties: number;
+  non_compliant_properties: number;
+  properties_without_requirements: number;
+}
+
+export interface CompletenessStats {
+  average_completeness: number;
+  fully_complete_properties: number;
+  properties_missing_required_docs: number;
+}
+
+export interface HealthScoreStats {
+  portfolio_average: number;
+  trend: string;
+  trend_delta: number;
+}
+
+export interface DashboardSummary {
+  portfolio_stats: PortfolioStats;
+  expiration_stats: ExpirationStats;
+  gap_stats: GapStats;
+  compliance_stats: ComplianceStats;
+  completeness_stats: CompletenessStats;
+  health_score: HealthScoreStats;
+  generated_at: string;
 }
 
 export interface ExpirationItem {
@@ -252,14 +298,14 @@ export interface PropertyDetail {
 
 export interface Policy {
   id: string;
-  policy_number: string;
+  policy_number: string | null;
   policy_type: string;
-  carrier: string;
-  effective_date: string;
-  expiration_date: string;
-  premium: number;
-  limit: number;
-  deductible: number;
+  carrier: string | null;
+  effective_date: string | null;
+  expiration_date: string | null;
+  premium: number | null;
+  limit: number | null;
+  deductible: number | null;
   status: 'active' | 'expired' | 'pending';
 }
 
