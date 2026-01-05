@@ -41,6 +41,7 @@ class GapRepository(BaseRepository[CoverageGap]):
         """
         stmt = (
             select(CoverageGap)
+            .options(selectinload(CoverageGap.property))
             .where(
                 CoverageGap.property_id == property_id,
                 CoverageGap.deleted_at.is_(None),

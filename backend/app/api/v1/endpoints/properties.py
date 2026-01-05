@@ -669,6 +669,35 @@ async def get_property_policies(
     )
 
 
+@router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_property(
+    property_id: str,
+    db: AsyncSessionDep,
+) -> None:
+    """Delete a property and all related data.
+
+    Performs a soft delete (sets deleted_at timestamp) on the property
+    and cascades to related documents, gaps, policies, and programs.
+    """
+    repo = PropertyRepository(db)
+
+    # Verify property exists
+    prop = await repo.get_by_id(property_id)
+    if not prop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Property {property_id} not found",
+        )
+
+    # Soft delete the property (cascade will handle related records)
+    deleted = await repo.delete(property_id, soft=True)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete property",
+        )
+
+
 @router.get("/{property_id}/documents", response_model=PropertyDocumentsResponse)
 async def get_property_documents(
     property_id: str,

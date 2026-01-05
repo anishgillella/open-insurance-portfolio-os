@@ -41,9 +41,16 @@ class Settings(BaseSettings):
     )
 
     # Database pool settings
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
     db_pool_timeout: int = 30
+    db_echo_sql: bool = False  # Set to True to log all SQL queries
+
+    # Document processing concurrency
+    max_concurrent_files: int = 10  # Max parallel file processing
+    max_concurrent_chunks: int = 8  # Max parallel chunk extraction for large docs
+    extraction_chunk_size: int = 50000  # Chars per extraction chunk
+    extraction_chunk_overlap: int = 2000  # Overlap between chunks
 
     # AWS S3
     aws_access_key_id: str = ""
