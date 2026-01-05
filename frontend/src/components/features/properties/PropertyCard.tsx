@@ -20,13 +20,18 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
-  const grade = getGrade(property.health_score);
+  // Handle health_score being either a number or an object with a score property
+  const healthScoreValue = typeof property.health_score === 'object' && property.health_score !== null
+    ? (property.health_score as { score?: number }).score ?? 0
+    : (property.health_score ?? 0);
+  const grade = getGrade(healthScoreValue);
   const gradeColor = getGradeColor(grade);
   const daysUntilExp = property.days_until_expiration || 999;
   const isExpiringSoon = daysUntilExp <= 30;
   const isCritical = daysUntilExp <= 14;
-  const hasGaps = property.gaps_count.critical > 0 || property.gaps_count.warning > 0;
-  const gapCount = property.gaps_count.critical + property.gaps_count.warning;
+  const gapsCount = property.gaps_count || { critical: 0, warning: 0, info: 0 };
+  const hasGaps = gapsCount.critical > 0 || gapsCount.warning > 0;
+  const gapCount = gapsCount.critical + gapsCount.warning;
 
   if (view === 'list') {
     return (

@@ -18,6 +18,9 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Upload,
 } from 'lucide-react';
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Button, Card, Badge } from '@/components/primitives';
@@ -101,12 +104,19 @@ export default function PropertyDetailPage({ params }: PageProps) {
     );
   }
 
-  const grade = getGrade(property.health_score);
+  // Extract values from nested structures (PropertyDetail uses nested objects)
+  const healthScoreValue = property.health_score?.score ?? 0;
+  const grade = property.health_score?.grade ?? getGrade(healthScoreValue);
   const gradeColor = getGradeColor(grade);
   const criticalGaps = gaps.filter((g) => g.severity === 'critical');
   const warningGaps = gaps.filter((g) => g.severity === 'warning');
-  const isExpiringSoon = (property.days_until_expiration || 999) <= 30;
-  const isCritical = (property.days_until_expiration || 999) <= 14;
+  const daysUntilExpiration = property.insurance_summary?.days_until_expiration ?? 999;
+  const isExpiringSoon = daysUntilExpiration <= 30;
+  const isCritical = daysUntilExpiration <= 14;
+
+  // Extract insurance values (handle string or number from API)
+  const totalInsuredValue = Number(property.insurance_summary?.total_insured_value) || 0;
+  const totalPremium = Number(property.insurance_summary?.total_annual_premium) || 0;
 
   return (
     <motion.div
@@ -152,12 +162,12 @@ export default function PropertyDetailPage({ params }: PageProps) {
                   {property.address.street}, {property.address.city}, {property.address.state} {property.address.zip}
                 </p>
                 <div className="flex items-center gap-3 mt-3">
-                  <Badge variant="secondary">{property.property_type}</Badge>
+                  <Badge variant="secondary">{property.property_type ?? 'Unknown'}</Badge>
                   <span className="text-sm text-[var(--color-text-muted)]">
-                    {property.total_buildings} buildings, {property.total_units} units
+                    {property.total_buildings ?? 0} buildings, {property.total_units ?? 0} units
                   </span>
                   <span className="text-sm text-[var(--color-text-muted)]">
-                    Built {property.year_built}
+                    Built {property.year_built ?? 'N/A'}
                   </span>
                 </div>
               </div>
@@ -168,14 +178,14 @@ export default function PropertyDetailPage({ params }: PageProps) {
               <div className="text-center">
                 <p className="text-sm text-[var(--color-text-muted)]">Health Score</p>
                 <p className="text-3xl font-bold text-[var(--color-text-primary)]">
-                  {property.health_score}
+                  {healthScoreValue}
                 </p>
               </div>
               <div className="h-12 w-px bg-[var(--color-border-subtle)]" />
               <div className="text-center">
                 <p className="text-sm text-[var(--color-text-muted)]">TIV</p>
                 <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.total_insured_value)}
+                  {formatCurrency(totalInsuredValue)}
                 </p>
               </div>
               <div className="h-12 w-px bg-[var(--color-border-subtle)]" />
@@ -191,7 +201,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                       : 'text-[var(--color-text-primary)]'
                   )}
                 >
-                  {property.days_until_expiration || 'N/A'} days
+                  {daysUntilExpiration < 999 ? `${daysUntilExpiration} days` : 'N/A'}
                 </p>
               </div>
             </div>
@@ -199,212 +209,239 @@ export default function PropertyDetailPage({ params }: PageProps) {
         </GlassCard>
       </motion.div>
 
-      {/* Main Content Grid */}
+      {/* Main Content Grid - 2 Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Health Score & Gaps */}
-        <motion.div variants={staggerItem} className="space-y-6">
-          {/* Health Score */}
-          <Card padding="lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                Health Score
-              </h2>
-              <Link href={`/properties/${property.id}/health-score`}>
-                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
-                  Details
-                </Button>
-              </Link>
-            </div>
-
-            <div className="flex justify-center mb-6">
-              <ScoreRing score={property.health_score} size={140} />
-            </div>
-
-            {healthScore?.components && (
-              <div className="space-y-3">
-                {healthScore.components.slice(0, 4).map((component) => (
-                  <div key={component.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[var(--color-text-secondary)]">{component.name}</span>
-                      <span className="font-medium text-[var(--color-text-primary)]">
-                        {component.percentage}%
-                      </span>
-                    </div>
-                    <GradientProgress value={component.percentage} size="sm" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          {/* Gaps */}
-          {gaps.length > 0 && (
+        {/* Left Column - Takes 2/3 width */}
+        <motion.div variants={staggerItem} className="lg:col-span-2 space-y-6">
+          {/* Top Row: Health Score + Key Metrics side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Health Score */}
             <Card padding="lg">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Gaps</h2>
-                <Badge variant="critical" dot>
-                  {gaps.length}
-                </Badge>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  Health Score
+                </h2>
+                <Link href={`/properties/${property.id}/health-score`}>
+                  <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
+                    Details
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex justify-center mb-4">
+                <ScoreRing score={healthScoreValue} size={120} />
+              </div>
+
+              {healthScore?.components && Array.isArray(healthScore.components) && (
+                <div className="space-y-2">
+                  {healthScore.components.slice(0, 3).map((component) => (
+                    <div key={component.name}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-[var(--color-text-secondary)]">{component.name}</span>
+                        <span className="font-medium text-[var(--color-text-primary)]">
+                          {component.percentage}%
+                        </span>
+                      </div>
+                      <GradientProgress value={component.percentage} size="sm" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Key Metrics */}
+            <Card padding="lg">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+                Key Metrics
+              </h2>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="h-4 w-4 text-[var(--color-text-muted)]" />
+                    <p className="text-xs text-[var(--color-text-muted)]">Total Insured Value</p>
+                  </div>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                    {formatCurrency(totalInsuredValue)}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="h-4 w-4 text-[var(--color-text-muted)]" />
+                    <p className="text-xs text-[var(--color-text-muted)]">Annual Premium</p>
+                  </div>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                    {formatCurrency(totalPremium)}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
+                    <p className="text-xs text-[var(--color-text-muted)]">Total Units</p>
+                  </div>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                    {(property.total_units ?? 0).toLocaleString() || 'N/A'}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[var(--color-surface-sunken)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="h-4 w-4 text-[var(--color-text-muted)]" />
+                    <p className="text-xs text-[var(--color-text-muted)]">Year Built</p>
+                  </div>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                    {property.year_built ?? 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Bottom Row: Coverage + Gaps */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Coverage Overview */}
+            <Card padding="lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Coverage</h2>
+                <Link href={`/gaps?property_id=${property.id}`}>
+                  <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
+                    View gaps
+                  </Button>
+                </Link>
               </div>
 
               <div className="space-y-3">
-                {gaps.slice(0, 3).map((gap) => (
+                {property.policies?.slice(0, 3).map((policy) => (
                   <div
-                    key={gap.id}
-                    className="p-3 rounded-lg border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] transition-colors"
+                    key={policy.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-sunken)]"
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          'p-1.5 rounded-lg',
-                          gap.severity === 'critical'
-                            ? 'bg-[var(--color-critical-50)] text-[var(--color-critical-500)]'
-                            : 'bg-[var(--color-warning-50)] text-[var(--color-warning-500)]'
-                        )}
-                      >
-                        <AlertTriangle className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                            {gap.title}
-                          </p>
-                          <StatusBadge
-                            severity={gap.severity}
-                            label={gap.severity}
-                            pulse={gap.severity === 'critical'}
-                          />
-                        </div>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          {gap.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {gaps.length > 3 && (
-                <Link href={`/gaps?property_id=${property.id}`}>
-                  <Button variant="ghost" className="w-full mt-3">
-                    View all {gaps.length} gaps
-                  </Button>
-                </Link>
-              )}
-            </Card>
-          )}
-        </motion.div>
-
-        {/* Middle Column - Coverage & Policies */}
-        <motion.div variants={staggerItem} className="space-y-6">
-          {/* Coverage Overview */}
-          <Card padding="lg">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Coverage</h2>
-              <Link href={`/gaps?property_id=${property.id}`}>
-                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
-                  View gaps
-                </Button>
-              </Link>
-            </div>
-
-            <div className="space-y-4">
-              {property.policies?.slice(0, 3).map((policy) => (
-                <div
-                  key={policy.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-surface-sunken)]"
-                >
-                  <div className="p-2 rounded-lg bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-500)]/20">
-                    <Shield className="h-4 w-4 text-[var(--color-primary-500)]" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--color-text-primary)] text-sm">
-                      {policy.policy_type}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{policy.carrier}</p>
-                  </div>
-                  <div
-                    className={cn(
-                      'w-2 h-2 rounded-full',
-                      policy.status === 'active'
-                        ? 'bg-[var(--color-success-500)]'
-                        : 'bg-[var(--color-warning-500)]'
-                    )}
-                  />
-                </div>
-              ))}
-
-              {(criticalGaps.length > 0 || warningGaps.length > 0) && (
-                <Link href={`/gaps?property_id=${property.id}`}>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/20 cursor-pointer hover:border-[var(--color-critical-300)] transition-colors">
-                    <div className="p-2 rounded-lg bg-[var(--color-critical-100)] dark:bg-[var(--color-critical-500)]/20">
-                      <AlertTriangle className="h-4 w-4 text-[var(--color-critical-500)]" />
+                    <div className="p-2 rounded-lg bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-500)]/20">
+                      <Shield className="h-4 w-4 text-[var(--color-primary-500)]" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)] text-sm">
-                        {criticalGaps.length + warningGaps.length} Coverage Gaps Detected
+                      <p className="font-medium text-[var(--color-text-primary)] text-sm">
+                        {policy.policy_type}
                       </p>
-                      <p className="text-xs text-[var(--color-critical-500)]">
-                        Review and address gaps
-                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">{policy.carrier}</p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--color-critical-500)]" />
+                    <div
+                      className={cn(
+                        'w-2 h-2 rounded-full',
+                        policy.status === 'active'
+                          ? 'bg-[var(--color-success-500)]'
+                          : 'bg-[var(--color-warning-500)]'
+                      )}
+                    />
                   </div>
-                </Link>
-              )}
-            </div>
-          </Card>
+                ))}
 
-          {/* Key Metrics */}
-          <Card padding="lg">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              Key Metrics
-            </h2>
+                {(!property.policies || property.policies.length === 0) && (
+                  <div className="text-center py-6 text-[var(--color-text-muted)]">
+                    <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No policies found</p>
+                  </div>
+                )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <p className="text-sm text-[var(--color-text-muted)]">Total Insured Value</p>
-                </div>
-                <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.total_insured_value)}
-                </p>
+                {(criticalGaps.length > 0 || warningGaps.length > 0) && (
+                  <Link href={`/gaps?property_id=${property.id}`}>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/20 cursor-pointer hover:border-[var(--color-critical-300)] transition-colors">
+                      <div className="p-2 rounded-lg bg-[var(--color-critical-100)] dark:bg-[var(--color-critical-500)]/20">
+                        <AlertTriangle className="h-4 w-4 text-[var(--color-critical-500)]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)] text-sm">
+                          {criticalGaps.length + warningGaps.length} Coverage Gaps Detected
+                        </p>
+                        <p className="text-xs text-[var(--color-critical-500)]">
+                          Review and address gaps
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-[var(--color-critical-500)]" />
+                    </div>
+                  </Link>
+                )}
               </div>
+            </Card>
 
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <p className="text-sm text-[var(--color-text-muted)]">Annual Premium</p>
+            {/* Gaps or Document Completeness Preview */}
+            {gaps.length > 0 ? (
+              <Card padding="lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Gaps</h2>
+                  <Badge variant="critical" dot>
+                    {gaps.length}
+                  </Badge>
                 </div>
-                <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {formatCurrency(property.total_premium)}
-                </p>
-              </div>
 
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <p className="text-sm text-[var(--color-text-muted)]">Total Units</p>
+                <div className="space-y-3">
+                  {gaps.slice(0, 3).map((gap) => (
+                    <div
+                      key={gap.id}
+                      className="p-3 rounded-lg border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            'p-1.5 rounded-lg',
+                            gap.severity === 'critical'
+                              ? 'bg-[var(--color-critical-50)] text-[var(--color-critical-500)]'
+                              : 'bg-[var(--color-warning-50)] text-[var(--color-warning-500)]'
+                          )}
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-[var(--color-text-primary)] text-sm">
+                              {gap.title}
+                            </p>
+                            <StatusBadge
+                              severity={gap.severity}
+                              label={gap.severity}
+                              pulse={gap.severity === 'critical'}
+                            />
+                          </div>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-0.5 line-clamp-1">
+                            {gap.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {property.total_units.toLocaleString()}
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[var(--color-surface-sunken)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <p className="text-sm text-[var(--color-text-muted)]">Year Built</p>
+                {gaps.length > 3 && (
+                  <Link href={`/gaps?property_id=${property.id}`}>
+                    <Button variant="ghost" className="w-full mt-3">
+                      View all {gaps.length} gaps
+                    </Button>
+                  </Link>
+                )}
+              </Card>
+            ) : (
+              <Card padding="lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                    Coverage Status
+                  </h2>
+                  <Badge variant="success">No Gaps</Badge>
                 </div>
-                <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                  {property.year_built}
-                </p>
-              </div>
-            </div>
-          </Card>
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[var(--color-success-50)] dark:bg-[var(--color-success-500)]/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-8 w-8 text-[var(--color-success-500)]" />
+                  </div>
+                  <p className="text-[var(--color-text-secondary)]">
+                    All coverage requirements are met
+                  </p>
+                </div>
+              </Card>
+            )}
+          </div>
         </motion.div>
 
-        {/* Right Column - Quick Actions & Documents */}
+        {/* Right Column - Takes 1/3 width */}
         <motion.div variants={staggerItem} className="space-y-6">
           {/* Quick Actions */}
           <Card padding="lg">
@@ -453,7 +490,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
               </h2>
               <StatusBadge
                 severity={isCritical ? 'critical' : isExpiringSoon ? 'warning' : 'info'}
-                label={`${property.days_until_expiration || 'N/A'}d`}
+                label={daysUntilExpiration < 999 ? `${daysUntilExpiration}d` : 'N/A'}
                 pulse={isCritical}
               />
             </div>
@@ -463,7 +500,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-[var(--color-text-secondary)]">Days until expiration</span>
                   <span className="font-medium text-[var(--color-text-primary)]">
-                    {property.days_until_expiration || 'N/A'}
+                    {daysUntilExpiration < 999 ? daysUntilExpiration : 'N/A'}
                   </span>
                 </div>
                 <div className="h-2 rounded-full bg-[var(--color-surface-sunken)] overflow-hidden">
@@ -477,7 +514,7 @@ export default function PropertyDetailPage({ params }: PageProps) {
                         : 'bg-[var(--color-success-500)]'
                     )}
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, ((property.days_until_expiration || 0) / 365) * 100)}%` }}
+                    animate={{ width: `${Math.min(100, (daysUntilExpiration / 365) * 100)}%` }}
                     transition={{ duration: 1, delay: 0.5 }}
                   />
                 </div>
@@ -489,6 +526,107 @@ export default function PropertyDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
             </div>
+          </Card>
+
+          {/* Document Completeness */}
+          <Card padding="lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                Document Completeness
+              </h2>
+              <Badge
+                variant={
+                  property.completeness.percentage >= 75
+                    ? 'success'
+                    : property.completeness.percentage >= 50
+                    ? 'warning'
+                    : 'danger'
+                }
+              >
+                {property.completeness.percentage.toFixed(0)}%
+              </Badge>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-[var(--color-text-secondary)]">
+                  Required: {property.completeness.required_present}/{property.completeness.required_total}
+                </span>
+                <span className="text-[var(--color-text-secondary)]">
+                  Optional: {property.completeness.optional_present}/{property.completeness.optional_total}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-[var(--color-surface-sunken)] overflow-hidden">
+                <motion.div
+                  className={cn(
+                    'h-full rounded-full',
+                    property.completeness.percentage >= 75
+                      ? 'bg-[var(--color-success-500)]'
+                      : property.completeness.percentage >= 50
+                      ? 'bg-[var(--color-warning-500)]'
+                      : 'bg-[var(--color-critical-500)]'
+                  )}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${property.completeness.percentage}%` }}
+                  transition={{ duration: 1, delay: 0.3 }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[280px] overflow-y-auto">
+              {property.completeness.checklist?.map((item) => (
+                <div
+                  key={item.document_type}
+                  className={cn(
+                    'p-2.5 rounded-lg border',
+                    item.is_present
+                      ? 'bg-[var(--color-success-50)] border-[var(--color-success-200)] dark:bg-[var(--color-success-500)]/10 dark:border-[var(--color-success-500)]/30'
+                      : 'bg-[var(--color-surface-sunken)] border-[var(--color-border-subtle)]'
+                  )}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {item.is_present ? (
+                      <CheckCircle2 className="h-4 w-4 text-[var(--color-success-500)] flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-[var(--color-text-muted)] flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={cn(
+                          'font-medium text-sm',
+                          item.is_present
+                            ? 'text-[var(--color-success-700)] dark:text-[var(--color-success-400)]'
+                            : 'text-[var(--color-text-primary)]'
+                        )}>
+                          {item.display_name}
+                        </span>
+                        {item.is_required && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                            Required
+                          </Badge>
+                        )}
+                      </div>
+                      {item.is_present ? (
+                        <p className="text-xs text-[var(--color-success-600)] dark:text-[var(--color-success-400)] truncate mt-0.5">
+                          {item.uploaded_file}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5 line-clamp-1">
+                          Provides: {item.fields_provided.slice(0, 2).join(', ')}
+                          {item.fields_provided.length > 2 && '...'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Link href={`/documents?property_id=${property.id}`} className="block mt-4">
+              <Button variant="secondary" className="w-full" leftIcon={<Upload className="h-4 w-4" />}>
+                Upload Missing Documents
+              </Button>
+            </Link>
           </Card>
 
           {/* Last Updated */}

@@ -122,6 +122,25 @@ class ComplianceSummarySchema(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Document Checklist Item
+# ---------------------------------------------------------------------------
+
+
+class DocumentChecklistItem(BaseModel):
+    """Individual document type in the completeness checklist."""
+
+    document_type: str = Field(..., description="Document type code")
+    display_name: str = Field(..., description="Human-readable document name")
+    description: str = Field(..., description="What this document contains")
+    is_required: bool = Field(default=True, description="Whether this document is required")
+    is_present: bool = Field(default=False, description="Whether this document has been uploaded")
+    fields_provided: list[str] = Field(
+        default_factory=list, description="Data fields this document provides when uploaded"
+    )
+    uploaded_file: str | None = Field(default=None, description="Name of uploaded file if present")
+
+
+# ---------------------------------------------------------------------------
 # Completeness Summary
 # ---------------------------------------------------------------------------
 
@@ -138,11 +157,22 @@ class CompletenessSummarySchema(BaseModel):
         default=0, description="Optional documents present"
     )
     optional_total: int = Field(default=0, description="Total optional documents")
+    checklist: list[DocumentChecklistItem] = Field(
+        default_factory=list, description="Document checklist with status"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Property List Item
 # ---------------------------------------------------------------------------
+
+
+class GapsCountSchema(BaseModel):
+    """Gap counts by severity."""
+
+    critical: int = Field(default=0, description="Critical gaps")
+    warning: int = Field(default=0, description="Warning gaps")
+    info: int = Field(default=0, description="Info gaps")
 
 
 class PropertyListItem(BaseModel):
@@ -156,11 +186,17 @@ class PropertyListItem(BaseModel):
     property_type: str | None = Field(default=None, description="Property type")
     total_units: int | None = Field(default=None, description="Total units")
     total_buildings: int = Field(default=0, description="Number of buildings")
+    year_built: int | None = Field(default=None, description="Year built")
     total_insured_value: Decimal = Field(
         default=Decimal("0"), description="Total insured value"
     )
-    annual_premium: Decimal = Field(
+    total_premium: Decimal = Field(
         default=Decimal("0"), description="Total annual premium"
+    )
+    health_score: int = Field(default=0, description="Health score (0-100)")
+    health_grade: str = Field(default="F", description="Letter grade (A-F)")
+    gaps_count: GapsCountSchema = Field(
+        default_factory=GapsCountSchema, description="Gap counts by severity"
     )
     next_expiration: date | None = Field(
         default=None, description="Next policy expiration"
@@ -168,15 +204,15 @@ class PropertyListItem(BaseModel):
     days_until_expiration: int | None = Field(
         default=None, description="Days until next expiration"
     )
-    open_gaps_count: int = Field(default=0, description="Number of open gaps")
     compliance_status: str = Field(
         default="no_requirements", description="Compliance status"
     )
-    health_score: int | None = Field(default=None, description="Health score (0-100)")
-    completeness_pct: float = Field(default=0, description="Completeness percentage")
+    completeness_percentage: float = Field(default=0, description="Completeness percentage")
     coverage_types: list[str] = Field(
         default_factory=list, description="Types of coverage"
     )
+    created_at: datetime | None = Field(default=None, description="Creation timestamp")
+    updated_at: datetime | None = Field(default=None, description="Last update timestamp")
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +249,7 @@ class PropertyDetail(BaseModel):
         default=None, description="Construction type"
     )
     total_units: int | None = Field(default=None, description="Total units")
+    total_buildings: int = Field(default=0, description="Number of buildings")
     total_sqft: int | None = Field(default=None, description="Total square footage")
 
     # Protection

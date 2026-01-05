@@ -138,16 +138,17 @@ export interface PropertyAddress {
   zip: string;
 }
 
+// Property for list view (flat structure from /properties)
 export interface Property {
   id: string;
   name: string;
   address: PropertyAddress;
-  property_type: string;
-  total_units: number;
+  property_type: string | null;
+  total_units: number | null;
   total_buildings: number;
-  year_built: number;
-  total_insured_value: number;
-  total_premium: number;
+  year_built: number | null;
+  total_insured_value: number | string;
+  total_premium: number | string;
   health_score: number;
   health_grade: 'A' | 'B' | 'C' | 'D' | 'F';
   gaps_count: {
@@ -159,14 +160,94 @@ export interface Property {
   days_until_expiration: number | null;
   compliance_status: 'compliant' | 'non_compliant' | 'no_requirements';
   completeness_percentage: number;
+  coverage_types?: string[];
   created_at: string;
   updated_at: string;
 }
 
-export interface PropertyDetail extends Property {
-  policies: Policy[];
+// Insurance summary nested in PropertyDetail
+export interface InsuranceSummary {
+  total_insured_value: number | string;
+  total_annual_premium: number | string;
+  policy_count: number;
+  next_expiration: string | null;
+  days_until_expiration: number | null;
+  coverage_types: string[];
+}
+
+// Health score nested in PropertyDetail
+export interface HealthScoreDetail {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  components: {
+    coverage_adequacy: number;
+    policy_currency: number;
+    deductible_risk: number;
+    coverage_breadth: number;
+    lender_compliance: number;
+    documentation_quality: number;
+  };
+  trend: string;
+  calculated_at: string | null;
+}
+
+// Gaps summary nested in PropertyDetail
+export interface GapsSummary {
+  total_open: number;
+  critical: number;
+  warning: number;
+  info: number;
+}
+
+// Document checklist item for completeness tracking
+export interface DocumentChecklistItem {
+  document_type: string;
+  display_name: string;
+  description: string;
+  is_required: boolean;
+  is_present: boolean;
+  fields_provided: string[];
+  uploaded_file: string | null;
+}
+
+// Property detail from /properties/{id} (nested structure)
+export interface PropertyDetail {
+  id: string;
+  name: string;
+  external_id: string | null;
+  address: PropertyAddress;
+  property_type: string | null;
+  year_built: number | null;
+  construction_type: string | null;
+  total_units: number | null;
+  total_buildings: number;
+  total_sqft: number | null;
+  has_sprinklers: boolean | null;
+  protection_class: string | null;
+  flood_zone: string | null;
+  earthquake_zone: string | null;
+  wind_zone: string | null;
   buildings: Building[];
-  documents: DocumentSummary[];
+  insurance_summary: InsuranceSummary;
+  health_score: HealthScoreDetail;
+  gaps_summary: GapsSummary;
+  compliance_summary: {
+    status: string;
+    lender_name: string | null;
+    issues_count: number;
+  };
+  completeness: {
+    percentage: number;
+    required_present: number;
+    required_total: number;
+    optional_present: number;
+    optional_total: number;
+    checklist: DocumentChecklistItem[];
+  };
+  policies?: Policy[];
+  documents?: DocumentSummary[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Policy {
