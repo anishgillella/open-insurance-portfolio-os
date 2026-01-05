@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Badge } from '@/components/primitives';
-import type { Property } from '@/lib/mock-data';
+import type { Property } from '@/lib/api';
 
 interface PropertyCardProps {
   property: Property;
@@ -73,8 +73,8 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
                 <MapPin className="h-3.5 w-3.5" />
                 {property.address.city}, {property.address.state}
               </span>
-              <span>{property.property_type}</span>
-              <span>{property.total_units} units</span>
+              <span>{property.property_type || 'Unknown'}</span>
+              <span>{property.total_units ?? 0} units</span>
             </div>
           </div>
 
@@ -82,7 +82,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
           <div className="text-right">
             <p className="text-sm text-[var(--color-text-muted)]">TIV</p>
             <p className="font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.total_insured_value)}
+              {formatCurrency(Number(property.total_insured_value) || 0)}
             </p>
           </div>
 
@@ -90,7 +90,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
           <div className="text-right">
             <p className="text-sm text-[var(--color-text-muted)]">Premium</p>
             <p className="font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.total_premium)}
+              {formatCurrency(Number(property.total_premium) || 0)}
             </p>
           </div>
 
@@ -174,10 +174,10 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
         {/* Property Type & Units */}
         <div className="flex items-center gap-2 mb-4">
           <Badge variant="secondary" size="sm">
-            {property.property_type}
+            {property.property_type || 'Unknown'}
           </Badge>
           <span className="text-sm text-[var(--color-text-muted)]">
-            {property.total_buildings} buildings, {property.total_units} units
+            {property.total_buildings} buildings, {property.total_units ?? 0} units
           </span>
         </div>
 
@@ -188,7 +188,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               Total Insured Value
             </p>
             <p className="text-lg font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.total_insured_value)}
+              {formatCurrency(Number(property.total_insured_value) || 0)}
             </p>
           </div>
           <div>
@@ -196,7 +196,7 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               Annual Premium
             </p>
             <p className="text-lg font-semibold text-[var(--color-text-primary)]">
-              {formatCurrency(property.total_premium)}
+              {formatCurrency(Number(property.total_premium) || 0)}
             </p>
           </div>
         </div>

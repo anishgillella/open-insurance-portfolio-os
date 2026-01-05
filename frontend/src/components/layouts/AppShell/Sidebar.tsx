@@ -7,9 +7,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Building2,
-  FileText,
   AlertTriangle,
-  FolderOpen,
   RefreshCw,
   MessageSquare,
   ChevronLeft,
@@ -25,10 +23,8 @@ interface SidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Properties', href: '/properties', icon: Building2 },
-  { name: 'Policies', href: '/policies', icon: FileText },
-  { name: 'Gaps', href: '/gaps', icon: AlertTriangle, badge: 7 },
+  { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
-  { name: 'Documents', href: '/documents', icon: FolderOpen },
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
 ];

@@ -60,23 +60,26 @@ class DashboardService:
         Returns:
             DashboardSummary with all statistics.
         """
-        # Get portfolio stats
-        portfolio_stats = await self._get_portfolio_stats(organization_id)
+        # Fetch properties once and reuse for multiple calculations
+        properties = await self.property_repo.list_with_summary(
+            organization_id=organization_id,
+            limit=1000,
+        )
 
-        # Get expiration stats
+        # Get base stats (counts only - fast query)
+        base_stats = await self.property_repo.get_portfolio_stats(organization_id)
+
+        # Calculate all stats from the cached properties list
+        portfolio_stats = self._calculate_portfolio_stats(properties, base_stats)
+        gap_stats = self._calculate_gap_stats(properties)
+        health_score_stats = self._calculate_health_score_stats(properties)
+
+        # Get expiration stats (requires policy repo query)
         expiration_stats = await self._get_expiration_stats(organization_id)
 
-        # Get gap stats
-        gap_stats = await self._get_gap_stats(organization_id)
-
-        # Get compliance stats (placeholder for now)
+        # Placeholders
         compliance_stats = ComplianceStats()
-
-        # Get completeness stats (placeholder for now)
         completeness_stats = CompletenessStats()
-
-        # Get health score stats (placeholder for now)
-        health_score_stats = HealthScoreStats()
 
         return DashboardSummary(
             portfolio_stats=portfolio_stats,
@@ -88,26 +91,171 @@ class DashboardService:
             generated_at=datetime.utcnow(),
         )
 
-    async def _get_portfolio_stats(
-        self, organization_id: str | None = None
+    def _calculate_portfolio_stats(
+        self, properties: list, base_stats: dict
     ) -> PortfolioStats:
-        """Get portfolio-level statistics.
+        """Calculate portfolio-level statistics from pre-fetched properties.
 
-        Args:
-            organization_id: Optional organization filter.
-
-        Returns:
-            PortfolioStats with counts and totals.
+        Aggregates TIV and premium from insurance programs with fallback
+        to document extraction data when program values are not populated.
         """
-        stats = await self.property_repo.get_portfolio_stats(organization_id)
+        total_tiv = Decimal("0")
+        total_premium = Decimal("0")
+
+        for prop in properties:
+            prop_tiv = Decimal("0")
+            prop_premium = Decimal("0")
+
+            # First, try to get values from insurance programs
+            for program in prop.insurance_programs:
+                if program.status == "active":
+                    if program.total_premium:
+                        prop_premium += program.total_premium
+                    if program.total_insured_value:
+                        prop_tiv += program.total_insured_value
+
+            # If no values from programs, try document extraction fallback
+            if prop_premium == 0 and prop_tiv == 0 and prop.documents:
+                doc_premium, doc_tiv = self._extract_financial_data_from_documents(
+                    prop.documents
+                )
+                prop_premium = doc_premium
+                prop_tiv = doc_tiv
+
+            total_premium += prop_premium
+            total_tiv += prop_tiv
 
         return PortfolioStats(
-            total_properties=stats.get("total_properties", 0),
-            total_buildings=stats.get("total_buildings", 0),
-            total_units=stats.get("total_units", 0),
-            total_insured_value=stats.get("total_insured_value", Decimal("0")),
-            total_annual_premium=stats.get("total_annual_premium", Decimal("0")),
+            total_properties=base_stats.get("total_properties", 0),
+            total_buildings=base_stats.get("total_buildings", 0),
+            total_units=base_stats.get("total_units", 0),
+            total_insured_value=total_tiv or Decimal("0"),
+            total_annual_premium=total_premium or Decimal("0"),
         )
+
+    def _extract_financial_data_from_documents(
+        self, documents
+    ) -> tuple[Decimal, Decimal]:
+        """Extract total premium and TIV from document extraction data.
+
+        Falls back to extraction_json when program/policy totals are not populated.
+        """
+        total_premium = Decimal("0")
+        total_tiv = Decimal("0")
+
+        for doc in documents:
+            if not doc.extraction_json:
+                continue
+
+            extraction = (
+                doc.extraction_json if isinstance(doc.extraction_json, dict) else {}
+            )
+
+            # Try invoice data first (most reliable for premiums)
+            invoice = extraction.get("invoice") or {}
+            if invoice.get("total_amount"):
+                try:
+                    total_premium += Decimal(str(invoice["total_amount"]))
+                except (ValueError, TypeError):
+                    pass
+
+            # Try SOV data for TIV
+            sov = extraction.get("sov") or {}
+            if sov.get("total_insured_value"):
+                try:
+                    total_tiv += Decimal(str(sov["total_insured_value"]))
+                except (ValueError, TypeError):
+                    pass
+
+            # Try COI data for TIV
+            coi = extraction.get("coi") or {}
+            if total_tiv == 0 and coi.get("property_limit"):
+                try:
+                    total_tiv = Decimal(str(coi["property_limit"]))
+                except (ValueError, TypeError):
+                    pass
+
+            # Try policy data
+            policy = extraction.get("policy") or {}
+            if policy.get("premium") and not invoice.get("total_amount"):
+                try:
+                    total_premium += Decimal(str(policy["premium"]))
+                except (ValueError, TypeError):
+                    pass
+            if total_tiv == 0 and policy.get("total_insured_value"):
+                try:
+                    total_tiv = Decimal(str(policy["total_insured_value"]))
+                except (ValueError, TypeError):
+                    pass
+
+        return total_premium, total_tiv
+
+    def _calculate_health_score_stats(self, properties: list) -> HealthScoreStats:
+        """Calculate portfolio-wide health score statistics from pre-fetched properties.
+
+        Averages health scores from all properties in the portfolio.
+        """
+        if not properties:
+            return HealthScoreStats()
+
+        total_score = 0
+        count = 0
+
+        for prop in properties:
+            score = self._calculate_property_health_score(prop)
+            if score is not None:
+                total_score += score
+                count += 1
+
+        if count == 0:
+            return HealthScoreStats()
+
+        avg_score = round(total_score / count)
+
+        return HealthScoreStats(
+            portfolio_average=avg_score,
+            trend="stable",
+            trend_delta=0,
+        )
+
+    def _calculate_property_health_score(self, prop) -> int:
+        """Calculate health score for a single property.
+
+        Based on gaps, coverage completeness, and policy status.
+        """
+        # Base score starts at 100
+        score = 100
+
+        # Deduct for gaps
+        if prop.coverage_gaps:
+            open_gaps = [
+                g for g in prop.coverage_gaps
+                if g.status == "open" and g.deleted_at is None
+            ]
+            for gap in open_gaps:
+                if gap.severity == "critical":
+                    score -= 15
+                elif gap.severity == "warning":
+                    score -= 8
+                else:
+                    score -= 3
+
+        # Deduct for expired or expiring policies
+        if prop.insurance_programs:
+            for program in prop.insurance_programs:
+                if program.status == "active":
+                    for policy in program.policies:
+                        if policy.expiration_date:
+                            days_until = (policy.expiration_date - date.today()).days
+                            if days_until < 0:
+                                score -= 20  # Expired
+                            elif days_until <= 14:
+                                score -= 10  # Critical expiration
+                            elif days_until <= 30:
+                                score -= 5  # Warning expiration
+
+        # Ensure score stays in 0-100 range
+        return max(0, min(100, score))
 
     async def _get_expiration_stats(
         self, organization_id: str | None = None
@@ -152,23 +300,8 @@ class DashboardService:
             next_expiration=next_expiration,
         )
 
-    async def _get_gap_stats(
-        self, organization_id: str | None = None
-    ) -> GapStats:
-        """Get coverage gap statistics.
-
-        Args:
-            organization_id: Optional organization filter.
-
-        Returns:
-            GapStats with gap counts.
-        """
-        # Get properties with gaps
-        properties = await self.property_repo.list_with_summary(
-            organization_id=organization_id,
-            limit=1000,
-        )
-
+    def _calculate_gap_stats(self, properties: list) -> GapStats:
+        """Calculate coverage gap statistics from pre-fetched properties."""
         total_open = 0
         critical = 0
         warning = 0

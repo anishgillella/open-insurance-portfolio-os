@@ -5,10 +5,33 @@ Schemas for property listing, detail views, and related data.
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from app.schemas.common import AddressSchema
+
+
+# ---------------------------------------------------------------------------
+# Policy Summary Schema (for embedding in PropertyDetail)
+# ---------------------------------------------------------------------------
+
+
+class PolicySummaryItem(BaseModel):
+    """Policy summary for property detail view."""
+
+    id: str = Field(..., description="Policy ID")
+    policy_number: str | None = Field(default=None, description="Policy number")
+    policy_type: str = Field(..., description="Policy type")
+    carrier: str | None = Field(default=None, description="Carrier name")
+    effective_date: date | None = Field(default=None, description="Effective date")
+    expiration_date: date | None = Field(default=None, description="Expiration date")
+    premium: Decimal | None = Field(default=None, description="Premium amount")
+    limit: Decimal | None = Field(default=None, description="Coverage limit")
+    deductible: Decimal | None = Field(default=None, description="Deductible")
+    status: Literal["active", "expired", "pending"] = Field(
+        default="active", description="Policy status"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -281,6 +304,11 @@ class PropertyDetail(BaseModel):
     )
     completeness: CompletenessSummarySchema = Field(
         default_factory=CompletenessSummarySchema, description="Completeness"
+    )
+
+    # Policies
+    policies: list[PolicySummaryItem] = Field(
+        default_factory=list, description="Policies associated with property"
     )
 
     # Timestamps
