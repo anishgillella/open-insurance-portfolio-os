@@ -23,6 +23,7 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import async_session_maker
 from app.repositories.certificate_repository import CertificateRepository
 from app.repositories.claim_repository import ClaimRepository
@@ -290,6 +291,19 @@ class IngestionService:
                 document.id, ProcessingStatus.FAILED, error=str(e)
             )
 
+        # Step 3.5: Generate embeddings for RAG/Chat
+        embedding_stats: dict | None = None
+        try:
+            embedding_stats = await self._run_embedding_pipeline(document.id)
+            logger.info(
+                f"Embedding completed: {embedding_stats.get('chunks_created', 0)} chunks, "
+                f"{embedding_stats.get('vectors_upserted', 0)} vectors"
+            )
+        except Exception as e:
+            # Embedding errors are non-fatal - document is still usable
+            logger.warning(f"Embedding failed: {e}")
+            errors.append(f"Embedding failed: {e}")
+
         # Step 4: Create database records from extraction
         # Now always runs since we auto-create property and program
         if extraction_result and program_id:
@@ -351,6 +365,15 @@ class IngestionService:
             extraction_summary = extraction_summary or {}
             extraction_summary["storage"] = storage_urls
 
+        # Add embedding stats to summary
+        if embedding_stats:
+            extraction_summary = extraction_summary or {}
+            extraction_summary["embedding"] = {
+                "chunks": embedding_stats.get("chunks_created", 0),
+                "vectors": embedding_stats.get("vectors_upserted", 0),
+                "tokens": embedding_stats.get("tokens_used", 0),
+            }
+
         status = "completed" if not errors else "completed_with_errors"
 
         return IngestResponse(
@@ -370,7 +393,7 @@ class IngestionService:
         property_id: str | None = None,
         program_id: str | None = None,
         extensions: set[str] | None = None,
-        max_concurrent: int = 5,
+        max_concurrent: int | None = None,
         force_reprocess: bool = True,
         auto_create_entities: bool = True,
     ) -> list[IngestResponse]:
@@ -398,6 +421,10 @@ class IngestionService:
         Returns:
             List of IngestResponse for each file.
         """
+        # Use config value if not specified
+        if max_concurrent is None:
+            max_concurrent = settings.max_concurrent_files
+
         if extensions is None:
             extensions = {".pdf", ".png", ".jpg", ".jpeg"}
 
@@ -839,3 +866,27 @@ class IngestionService:
             logger.warning(f"Conflict detection failed for property {property_id}: {e}")
         except Exception as e:
             logger.warning(f"Conflict detection failed for property {property_id}: {e}")
+
+    async def _run_embedding_pipeline(self, document_id: str) -> dict:
+        """Run the embedding pipeline for a document.
+
+        This chunks the document's OCR text, generates embeddings, and stores them
+        in Pinecone for RAG/Chat functionality.
+
+        Args:
+            document_id: Document ID to process.
+
+        Returns:
+            Dictionary with embedding statistics.
+        """
+        from app.services.embedding_pipeline_service import (
+            EmbeddingPipelineService,
+            EmbeddingPipelineError,
+        )
+
+        logger.info(f"Running embedding pipeline for document {document_id}")
+
+        pipeline_service = EmbeddingPipelineService(self.session)
+        result = await pipeline_service.process_document(document_id, force_reprocess=False)
+
+        return result

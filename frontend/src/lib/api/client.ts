@@ -82,6 +82,26 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   return handleResponse<T>(response);
 }
 
+export async function apiDelete(endpoint: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    throw new ApiError(response.status, response.statusText, data);
+  }
+  // DELETE returns 204 No Content, so don't try to parse response
+}
+
 // ============ DASHBOARD API ============
 
 // Nested structures matching backend response
@@ -337,6 +357,9 @@ export const propertiesApi = {
 
   getPolicies: (propertyId: string) =>
     apiGet<Policy[]>(`/properties/${propertyId}/policies`),
+
+  delete: (propertyId: string) =>
+    apiDelete(`/properties/${propertyId}`),
 };
 
 // ============ HEALTH SCORE API ============

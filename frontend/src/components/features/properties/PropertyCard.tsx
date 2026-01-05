@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   TrendingUp,
   ArrowRight,
+  Trash2,
 } from 'lucide-react';
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Badge } from '@/components/primitives';
@@ -17,9 +18,10 @@ import type { Property } from '@/lib/api';
 interface PropertyCardProps {
   property: Property;
   view?: 'grid' | 'list';
+  onDelete?: (property: Property) => void;
 }
 
-export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
+export function PropertyCard({ property, view = 'grid', onDelete }: PropertyCardProps) {
   // Handle health_score being either a number or an object with a score property
   const healthScoreValue = typeof property.health_score === 'object' && property.health_score !== null
     ? (property.health_score as { score?: number }).score ?? 0
@@ -110,6 +112,25 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
               {property.days_until_expiration || 'N/A'} days
             </p>
           </div>
+
+          {/* Delete Button */}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(property);
+              }}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                'text-[var(--color-text-muted)] hover:text-[var(--color-critical-500)]',
+                'hover:bg-[var(--color-critical-50)] dark:hover:bg-[var(--color-critical-500)]/10'
+              )}
+              title="Delete property"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
 
           <ArrowRight className="h-5 w-5 text-[var(--color-text-muted)]" />
         </motion.div>
@@ -217,9 +238,29 @@ export function PropertyCard({ property, view = 'grid' }: PropertyCardProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-1 text-sm text-[var(--color-primary-500)] font-medium">
-            View details
-            <ArrowRight className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            {/* Delete Button */}
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(property);
+                }}
+                className={cn(
+                  'p-2 rounded-lg transition-colors',
+                  'text-[var(--color-text-muted)] hover:text-[var(--color-critical-500)]',
+                  'hover:bg-[var(--color-critical-50)] dark:hover:bg-[var(--color-critical-500)]/10'
+                )}
+                title="Delete property"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            <div className="flex items-center gap-1 text-sm text-[var(--color-primary-500)] font-medium">
+              View details
+              <ArrowRight className="h-4 w-4" />
+            </div>
           </div>
         </div>
       </motion.div>

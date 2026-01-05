@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
 # Create async engine
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.debug,
+    echo=settings.db_echo_sql,  # Separate from debug to avoid SQL query spam
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,
     pool_timeout=settings.db_pool_timeout,

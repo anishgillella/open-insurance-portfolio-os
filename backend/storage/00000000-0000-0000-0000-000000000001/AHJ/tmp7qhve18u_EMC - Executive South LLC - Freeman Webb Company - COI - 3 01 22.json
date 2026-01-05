@@ -1,0 +1,160 @@
+{
+  "classification": {
+    "document_type": "coi",
+    "document_subtype": null,
+    "policy_type": "general_liability",
+    "confidence": 1.0,
+    "carrier_name": "General Casualty Company Of Wisconsin",
+    "policy_number": "CCI1372740",
+    "effective_date": "2021-03-01",
+    "expiration_date": "2022-03-01",
+    "insured_name": "Eastman Management Corp."
+  },
+  "policy": null,
+  "program": null,
+  "coi": {
+    "certificate_number": "NYC-011247078-01",
+    "revision_number": "3",
+    "issue_date": "2021-12-21",
+    "producer_name": "Marsh USA, Inc.",
+    "producer_address": "1166 Avenue of the Americas New York, NY 10036",
+    "producer_phone": null,
+    "producer_email": "NewYork.Certs@marsh.com",
+    "producer_reference": "CN104680935-GU-21-22",
+    "insured_name": "Eastman Management Corp.",
+    "insured_address": "651 Old Mount Pleasant Avenue Livingston, NJ 07039",
+    "holder_name": "Freeman Webb Company, Realtors'",
+    "holder_address": "3810 Bedford Avenue Suite 300 Nashville, TN 37215",
+    "insurers": {
+      "A": {
+        "name": "General Casualty Company Of Wisconsin",
+        "naic": "24414"
+      },
+      "B": {
+        "name": "ACE Property And Casualty Ins Co",
+        "naic": "20699"
+      },
+      "C": {
+        "name": null,
+        "naic": null
+      },
+      "D": {
+        "name": null,
+        "naic": null
+      },
+      "E": {
+        "name": null,
+        "naic": null
+      },
+      "F": {
+        "name": null,
+        "naic": null
+      }
+    },
+    "policies": [
+      {
+        "insurer_letter": "A",
+        "policy_type": "general_liability",
+        "policy_number": "CCI1372740",
+        "carrier_name": "General Casualty Company Of Wisconsin",
+        "naic_number": "24414",
+        "effective_date": "2021-03-01",
+        "expiration_date": "2022-03-01",
+        "coverage_form": "occurrence",
+        "is_additional_insured": true,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": "policy",
+        "limits": {
+          "EACH OCCURRENCE": 1000000.0,
+          "DAMAGE TO RENTED PREMISES (Ea occurrence)": 1000000.0,
+          "MED EXP (Any one person)": 10000.0,
+          "PERSONAL & ADV INJURY": 1000000.0,
+          "GENERAL AGGREGATE": 2000000.0,
+          "PRODUCTS - COMP/OP AGG": 2000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "B",
+        "policy_type": "umbrella",
+        "policy_number": "HLI20-A-G72673116 Cat Mgmt Sublimit of Ins $250,000",
+        "carrier_name": "ACE Property And Casualty Ins Co",
+        "naic_number": "20699",
+        "effective_date": "2021-03-01",
+        "expiration_date": "2022-03-01",
+        "coverage_form": "occurrence",
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "EACH OCCURRENCE": 25000000.0,
+          "AGGREGATE": 25000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": null,
+        "policy_type": "workers_comp",
+        "policy_number": null,
+        "carrier_name": null,
+        "naic_number": null,
+        "effective_date": null,
+        "expiration_date": null,
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "PER STATUTE": null,
+          "E.L. EACH ACCIDENT": null,
+          "E.L. DISEASE - EA EMPLOYEE": null,
+          "E.L. DISEASE - POLICY LIMIT": null
+        },
+        "confidence": 1.0
+      }
+    ],
+    "gl_each_occurrence": 1000000.0,
+    "gl_damage_to_rented": 1000000.0,
+    "gl_medical_expense": 10000.0,
+    "gl_personal_advertising": 1000000.0,
+    "gl_general_aggregate": 2000000.0,
+    "gl_products_completed": 2000000.0,
+    "gl_coverage_form": "occurrence",
+    "gl_aggregate_limit_applies_per": "policy",
+    "auto_combined_single": null,
+    "auto_bodily_injury_per_person": null,
+    "auto_bodily_injury_per_accident": null,
+    "auto_property_damage": null,
+    "auto_types": [],
+    "umbrella_limit": 25000000.0,
+    "umbrella_aggregate": 25000000.0,
+    "umbrella_deductible": null,
+    "umbrella_retention": null,
+    "umbrella_coverage_form": "occurrence",
+    "workers_comp_per_statute": true,
+    "workers_comp_other": false,
+    "workers_comp_each_accident": null,
+    "workers_comp_disease_ea_employee": null,
+    "workers_comp_disease_policy_limit": null,
+    "workers_comp_excluded_partners": false,
+    "property_limit": null,
+    "description_of_operations": "Executive South, LLC- 651 Old Mount Pleasant Ave Suite 110, Livingston, NJ 07039 Freeman Webb Company, Realtors' is included as additional insured where required by written contract.",
+    "additional_insureds": [
+      "Freeman Webb Company, Realtors'"
+    ],
+    "subrogation_waiver_applies": false,
+    "cancellation_notice_days": null,
+    "cancellation_terms": "SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.",
+    "authorized_representative": "Marsh USA Inc.",
+    "loan_number": null,
+    "mortgagee_clause": null,
+    "loss_payee_clause": null,
+    "confidence": 1.0
+  },
+  "invoice": null,
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nACORD\n\nCERTIFICATE OF LIABILITY INSURANCE\n\nDATE (MM/DD/YYYY)\n\n12/21/2021\n\n|  THIS CERTIFICATE IS ISSUED AS A MATTER OF INFORMATION ONLY AND CONFERS NO RIGHTS UPON THE CERTIFICATE HOLDER. THIS CERTIFICATE DOES NOT AFFIRMATIVELY OR NEGATIVELY AMEND, EXTEND OR ALTER THE COVERAGE AFFORDED BY THE POLICIES BELOW. THIS CERTIFICATE OF INSURANCE DOES NOT CONSTITUTE A CONTRACT BETWEEN THE ISSUING INSURER(S), AUTHORIZED REPRESENTATIVE OR PRODUCER, AND THE CERTIFICATE HOLDER.  |   |   |\n| --- | --- | --- |\n|  IMPORTANT: If the certificate holder is an ADDITIONAL INSURED, the policy(ies) must have ADDITIONAL INSURED provisions or be endorsed. If SUBROGATION IS WAIVED, subject to the terms and conditions of the policy, certain policies may require an endorsement. A statement on this certificate does not confer rights to the certificate holder in lieu of such endorsement(s).  |   |   |\n|  PRODUCER Marsh USA, Inc. 1166 Avenue of the Americas New York, NY 10036 Attn: Email: NewYork.Certs@marsh.com CN104680935-GU-21-22 | CONTACT NAME:  |   |\n|   |  PHONE (A/C, No, Ext): | FAX (A/C, No):  |\n|   |  E-MAIL ADDRESS:  |   |\n|   |  INSURER(S) AFFORDING COVERAGE | NAIC #  |\n|   |  INSURER A: General Casualty Company Of Wisconsin | 24414  |\n|  INSURED Eastman Management Corp. 651 Old Mount Pleasant Avenue Livingston, NJ 07039 | INSURER B: ACE Property And Casualty Ins Co | 20699  |\n|   |  INSURER C: |   |\n|   |  INSURER D: |   |\n|   |  INSURER E: |   |\n|   |  INSURER F: |   |\n\nCOVERAGES\nCERTIFICATE NUMBER:\nNYC-011247078-01\nREVISION NUMBER: 3\n\n| THIS IS TO CERTIFY THAT THE POLICIES OF INSURANCE LISTED BELOW HAVE BEEN ISSUED TO THE INSURED NAMED ABOVE FOR THE POLICY PERIOD INDICATED. NOTWITHSTANDING ANY REQUIREMENT, TERM OR CONDITION OF ANY CONTRACT OR OTHER DOCUMENT WITH RESPECT TO WHICH THIS CERTIFICATE MAY BE ISSUED OR MAY PERTAIN, THE INSURANCE AFFORDED BY THE POLICIES DESCRIBED HEREIN IS SUBJECT TO ALL THE TERMS, EXCLUSIONS AND CONDITIONS OF SUCH POLICIES. LIMITS SHOWN MAY HAVE BEEN REDUCED BY PAID CLAIMS. |\n| --- |\n| INSR LTR | TYPE OF INSURANCE | ADDL SUBR INSD | WVD | POLICY NUMBER | POLICY EFF (MM/DD/YYYY) | POLICY EXP (MM/DD/YYYY) | LIMITS |\n| A | X | COMMERCIAL GENERAL LIABILITY |  |  | CCI1372740 | 03/01/2021 | 03/01/2022 | EACH OCCURRENCE | $ | 1,000,000 |\n|  | CLAIMS-MADE | X OCCUR | DAMAGE TO RENTED PREMISES (Ea occurrence) | $ | 1,000,000 |\n|  |  |  | MED EXP (Any one person) | $ | 10,000 |\n|  |  |  | PERSONAL & ADV INJURY | $ | 1,000,000 |\n| GEN'L AGGREGATE LIMIT APPLIES PER: | GENERAL AGGREGATE | $ | 2,000,000 |\n| X | POLICY | PROJ JECT | X LOC | PRODUCTS - COMP/OP AGG | $ | 2,000,000 |\n|  | OTHER: |  |  | $ |\n|  | AUTOMOBILE LIABILITY |  |  |  |  |  | COMBINED SINGLE LIMIT (Ea accident) | $ |  |\n|  | ANY AUTO | BODILY INJURY (Per person) | $ |  |\n|  | OWNED | SCHEDULED | BODILY INJURY (Per accident) | $ |  |\n|  | AUTOS ONLY | AUTOS | PROPERTY DAMAGE (Per accident) | $ |  |\n|  | HIRED | NON-OWNED |  |  | $ |\n| B | X | UMBRELLA LIAB | X OCCUR |  | HLI20-A-G72673116 Cat Mgmt Sublimit of Ins $250,000 | 03/01/2021 | 03/01/2022 | EACH OCCURRENCE | $ | 25,000,000 |\n|  | EXCESS LIAB | CLAIMS-MADE | AGGREGATE | $ | 25,000,000 |\n|  | DED | RETENTION $ |  |  | $ |  |\n|  | WORKERS COMPENSATION AND EMPLOYERS' LIABILITY Y/N ANYPROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER/EXCLUDED? (Mandatory in NH) If yes, describe under DESCRIPTION OF OPERATIONS below | N/A |  |  |  |  | PER STATUTE OTH-ER |  |  |\n| E.L. EACH ACCIDENT | $ |  |\n| E.L. DISEASE - EA EMPLOYEE | $ |  |\n| E.L. DISEASE - POLICY LIMIT | $ |  |\n| DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required) Executive South, LLC- 651 Old Mount Pleasant Ave Suite 110, Livingston, NJ 07039 Freeman Webb Company, Realtors' is included as additional insured where required by written contract. |\n\nCERTIFICATE HOLDER\nCANCELLATION\n\n|  Freeman Webb Company, Realtors' 3810 Bedford Avenue Suite 300 Nashville, TN 37215 | SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.  |\n| --- | --- |\n|   |  AUTHORIZED REPRESENTATIVE Marsh USA Inc.  |\n\n\u00a9 1988-2016 ACORD CORPORATION. All rights reserved.\n\nACORD 25 (2016/03)\n\nThe ACORD name and logo are registered marks of ACORD",
+  "overall_confidence": 1.0
+}

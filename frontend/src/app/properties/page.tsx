@@ -15,6 +15,7 @@ import {
   Clock,
   Loader2,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { cn, getGrade } from '@/lib/utils';
 import { Button, Badge, Card } from '@/components/primitives';
@@ -41,6 +42,11 @@ export default function PropertiesPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Delete modal state
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -125,6 +131,35 @@ export default function PropertiesPage() {
     setFilterGrade('all');
     setFilterExpiration('all');
     setSearchQuery('');
+  };
+
+  // Handle delete property
+  const handleDeleteClick = (property: Property) => {
+    setPropertyToDelete(property);
+    setDeleteError(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!propertyToDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await propertiesApi.delete(propertyToDelete.id);
+      setPropertyToDelete(null);
+      // Refresh data to update all counts
+      await fetchData();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete property');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setPropertyToDelete(null);
+    setDeleteError(null);
   };
 
   if (isLoading) {
@@ -451,7 +486,7 @@ export default function PropertiesPage() {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.2 }}
             >
-              <PropertyCard property={property} view={viewMode} />
+              <PropertyCard property={property} view={viewMode} onDelete={handleDeleteClick} />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -483,6 +518,91 @@ export default function PropertiesPage() {
           )}
         </motion.div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {propertyToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={handleDeleteCancel}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={cn(
+                'bg-[var(--color-surface)] rounded-2xl shadow-xl',
+                'max-w-md w-full overflow-hidden'
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-[var(--color-border-subtle)]">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/20">
+                    <Trash2 className="h-5 w-5 text-[var(--color-critical-500)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                      Delete Property
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      This action cannot be undone
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <p className="text-[var(--color-text-secondary)] mb-4">
+                  Are you sure you want to delete <span className="font-semibold text-[var(--color-text-primary)]">{propertyToDelete.name}</span>?
+                </p>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  This will permanently remove the property and all associated data including:
+                </p>
+                <ul className="mt-2 text-sm text-[var(--color-text-muted)] list-disc list-inside space-y-1">
+                  <li>All uploaded documents</li>
+                  <li>Coverage gaps and analysis</li>
+                  <li>Insurance policies and programs</li>
+                  <li>Compliance records</li>
+                </ul>
+
+                {deleteError && (
+                  <div className="mt-4 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/30">
+                    <p className="text-sm text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)]">
+                      {deleteError}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handleDeleteCancel}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                  className="bg-[var(--color-critical-500)] hover:bg-[var(--color-critical-600)]"
+                  leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Property'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

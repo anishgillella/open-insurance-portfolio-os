@@ -108,10 +108,10 @@ class ExtractionConfig:
     initial_delay: float = 1.0
     backoff_multiplier: float = 2.0
 
-    # Chunking settings
-    max_chunk_chars: int = 50000
-    chunk_overlap_chars: int = 2000
-    max_concurrent_chunks: int = 5
+    # Chunking settings - use config values
+    max_chunk_chars: int = field(default_factory=lambda: settings.extraction_chunk_size)
+    chunk_overlap_chars: int = field(default_factory=lambda: settings.extraction_chunk_overlap)
+    max_concurrent_chunks: int = field(default_factory=lambda: settings.max_concurrent_chunks)
 
     # Validation settings
     fail_on_validation_error: bool = False
