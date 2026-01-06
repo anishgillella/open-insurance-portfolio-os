@@ -1,0 +1,71 @@
+{
+  "classification": {
+    "document_type": "invoice",
+    "document_subtype": null,
+    "policy_type": "property",
+    "confidence": 1.0,
+    "carrier_name": null,
+    "policy_number": null,
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "insured_name": "Grove at Valdosta Apartments, LLC."
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": {
+    "invoice_number": "BB-32634887-180",
+    "invoice_date": "2025-04-09",
+    "due_date": null,
+    "vendor_name": "West Series of Lockton Companies, LLC dba Lockton Insurance Brokers, LLC",
+    "vendor_address": null,
+    "subtotal": null,
+    "taxes": null,
+    "fees": null,
+    "total_amount": 226886.4,
+    "line_items": [
+      {
+        "description": "Property",
+        "amount": 136280.82,
+        "policy_number": null
+      },
+      {
+        "description": "Boiler & Machinery",
+        "amount": 0.0,
+        "policy_number": null
+      },
+      {
+        "description": "Terrorism",
+        "amount": 0.0,
+        "policy_number": null
+      },
+      {
+        "description": "General Liability",
+        "amount": 90605.57,
+        "policy_number": null
+      },
+      {
+        "description": "Umbrella & Excess Liability",
+        "amount": 0.0,
+        "policy_number": null
+      },
+      {
+        "description": "Active Assailant",
+        "amount": 0.0,
+        "policy_number": null
+      },
+      {
+        "description": "Flood-Excess NFIP Only",
+        "amount": 0.0,
+        "policy_number": null
+      }
+    ],
+    "policy_numbers": [],
+    "confidence": 0.9
+  },
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nLOCKTON\n\nTO: Asset Living\n945 Bunker Hill Road, Floor 14\nHouston, TX 77024\n\n# West Series of Lockton Companies, LLC dba Lockton Insurance Brokers, LLC\n\nInvoice #: BB-32634887-180\nInvoice Date: 04/09/2025\nLocation Name: Grand at Lake Sheri, The (fka Grove at Valdosta)\nAmount Due: $226,886.40\nPAYMENT DUE UPON RECEIPT\n\nTo ensure proper credit, detach this portion and return with your payment.\n\n|  Insured | Insured Location | Policy Period  |\n| --- | --- | --- |\n|  Grove at Valdosta Apartments, LLC. | Grand at Lake Sheri, The (fka Grove at Valdosta) 2201 Baytree Road Valdosta, GA 31602 | 4/1/2025-4/1/2026  |\n|  Effective Date | Item | Amount Due  |\n|  4/1/2025 | Property\nBoiler & Machinery\nTerrorism\nGeneral Liability\nUmbrella & Excess Liability\nActive Assailant\nFlood-Excess NFIP Only | $136,280.82\nIncluded\nIncluded\n$90,605.57\nIncluded\nIncluded\nIncluded  |\n|   | *TOTAL PREMIUM, TAXES, FEES, LOSS AGGREGATE: | $226,886.40  |\n|  Please reference BB-32634887-180 with your payment and please pay promptly to avoid cancellation.  |   |   |\n|  Pay by ACH (preferred):\nACH or Wire ABA: 101015101\nAccount: 8093758007\nWest Series of Lockton Companies, LLC\nBank Name: BOK Financial\nEmail remittance to: clientpayments@lockton.com | Pay by OVERNIGHT CHECK with FedEx or UPS only (this facility does not accept USPS remittance mail):\nWest Series of Lockton Companies, LLC\nLockton Premium Trust\nAttn: Remittance Services Dept# 42245\n2200 Hwy 121\nGrapevine, TX 76051 | Pay by CHECK with USPS:\nWest Series of Lockton Companies, LLC\nDept 42245\nPO BOX 650823\nDallas, TX 75265-0823  |\n|  For questions regarding this invoice, please contact:\nKatie Taylor\nPhone: (303) 414-6438\nEmail: Katie.Taylor@lockton.com\nFax: (303) 865-6438  |   |   |\n\n* Note: In addition to premium paid to the insurance carrier(s) and premium taxes for the coverages noted above, the amount above includes compensation to the broker, administrative fees, and other charges unrelated to premium which are collected and sent to Asset Living (\"Client\") including loss fund contributions calculated and maintained by Client, which Client determines is non-refundable and may be applied to subsequent policy year loss funds. The amount of premium Sako and Partners Lower Holdings, LLC dba Asset (\"Client\") allocates to you and other participants in Client's insurance program is based on various factors particular to the coverage and risk which may include, among others, property characteristics, market factors, loss history, geographic location, building structure and potential exposures unique to the risk. Participants will be charged premium at inception and for any mid-term additions to the insurance program. Lockton may deposit your payment in an interest-bearing account, along with payments from other entities affiliated with Client or other Lockton clients, and Lockton will retain any interest earned on such funds while held prior to sending the funds to carrier(s) and/or Client. Client may authorize and instruct Lockton to forward to carrier(s) as and when necessary, any premium funds paid by participants and return premiums received against amounts due to fulfill the total premium obligations due for the coverage(s) procured by Client for you and other affiliated entities under the insurance program for the applicable policy year and the applicable coverage. Client is responsible for any return premiums due to you. Payment of this invoice by you constitutes your acknowledgment, consent and agreement to the information provided above.",
+  "overall_confidence": 0.9
+}

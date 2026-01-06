@@ -1,0 +1,36 @@
+{
+  "classification": {
+    "document_type": "proposal",
+    "document_subtype": null,
+    "policy_type": "unknown",
+    "confidence": 1.0,
+    "carrier_name": null,
+    "policy_number": null,
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "insured_name": null
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": null,
+  "sov": null,
+  "proposal": {
+    "confidence": 0.8,
+    "named_insured": null,
+    "insured_address": null,
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "proposal_title": null,
+    "proposal_type": "renewal",
+    "properties": [],
+    "portfolio_expiring_premium": null,
+    "portfolio_renewal_premium": null,
+    "portfolio_premium_change": null,
+    "portfolio_premium_change_pct": null,
+    "carriers": []
+  },
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\nLOCKTON\n\nUNCOMMONLY INDEPENDENT\n\nMarch 25, 2025\n\nPlease find attached your quote for the April 1, 2025 \u2013 April 1, 2026 policy term.\n\nThe deadline to return an executed quote via DocuSign is **5:00 PM ET on Friday, March 28**. We realize this is a tight turnaround, but this year \u2013 as in recent years \u2013 it was in the program\u2019s and its participants\u2019 best interest to negotiate as long as possible. **Thank you for your patience, and your continued support of the program \u2013 we could not do it without the efforts of our clients.**\n\n## Property\n\n- We were successful in **reestablishing blanket limits** by **removing margin clauses** from the property program for the renewal term.\n- The deductible has **increased to $50,000** per occurrence with exceptions as noted in the quote.\n- CO/OK/TX Wind &amp; Hail deductible has **increased to 3%** of TIV, subject to $50,000 minimum.\n- Named Storm deductible for locations not in Tier 1 Zones has **increased to $250,000** per occurrence.\n\n## Liability\n\n- We continue to have full coverage (no exclusions or sublimits) for **Assault &amp; Battery** and **Abuse &amp; Molestation** unlike much of the rest of the marketplace.\n- The General Liability deductible remains at **$10,000** (per expiring) for all locations, except for Georgia, Florida, and Houston/Harris County, Texas locations (see below).\n- **Georgia, Florida, and Houston/Harris County, Texas:**\n- There is a **Firearms exclusion**, but we are **including Active Assailant** coverage to fill that gap in coverage as much as possible.\n- The deductible/retention this year will be **$50,000** (per expiring).\n\n## Pollution\n\n- The Pollution policy has a 3-year term. Pollution coverage for your location(s) was **previously paid** through the expiration date of 4/1/2027. Pollution premium is not included in the total cost listed on your quote.\n\n## Buy Down and Financing Options\n\n- If you would like a quote to buy down any of the property policy deductibles, please let us know and we will obtain that for you.\n- Premium financing is available. Please just let us know if you need to explore financing for any of your locations and we will get you a quote. Financing can be arranged after binding and prior to paying your invoice so you do not have to make this decision before binding.\n\nWe realize that you may have questions. Please reach out to us at **assetliving@lockton.com** and we will respond as quickly as possible to answer those questions.\n\nLOCKTON COMPANIES\n\n8110 East Union Avenue, Suite 100, Denver, CO 80237-2966\n\n303.414.6000\n\nlockton.com",
+  "overall_confidence": 0.8
+}

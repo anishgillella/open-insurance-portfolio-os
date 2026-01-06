@@ -1,0 +1,44 @@
+{
+  "classification": {
+    "document_type": "sov",
+    "document_subtype": null,
+    "policy_type": "property",
+    "confidence": 0.95,
+    "carrier_name": "Lockton",
+    "policy_number": "ESTIMATE-0214329",
+    "effective_date": "2025-10-24",
+    "expiration_date": "2026-10-24",
+    "insured_name": "Asset Living - The Grand at Lake Sheri"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": null,
+  "sov": {
+    "as_of_date": null,
+    "total_insured_value": 3029753.0,
+    "properties": [
+      {
+        "property_name": "Asset Living - The Grand at Lake Sheri",
+        "address": "2201 Baytree Road",
+        "city": "VALDOSTA",
+        "state": "GA",
+        "zip_code": "31602",
+        "building_value": 3029753.0,
+        "contents_value": null,
+        "business_income_value": null,
+        "total_insured_value": 3029753.0,
+        "construction_type": "Frame (ISO 1)",
+        "year_built": 2011,
+        "square_footage": 24923,
+        "stories": null,
+        "occupancy": "Apartment, Low-Rise"
+      }
+    ],
+    "confidence": 1.0
+  },
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nCoreLogic\nValuation Detailed Report\nLockton\n10/23/2025\n\nVALUATION\n\nValuation Number: ESTIMATE-0214329\nValue Basis: Reconstruction\nEffective Date: 10/24/2025\nExpiration Date: 10/24/2026\nEstimate Expiration Date: 01/22/2026\nCost as of: 08/2025\nValuation Modified Date: 10/24/2025\n\nBUSINESS\n\nAsset Living - The Grand at Lake Sheri\n2201 Baytree Road\nVALDOSTA, GA 31602 USA\n\nLOCATION 1 - Asset Living - The Grand at Lake Sheri\n\nAsset Living - The Grand at Lake Sheri\n2201 Baytree Road\nVALDOSTA, GA 31602 USA\n\nBUILDING 1 - Residential\n\nResidential\n\nSUPERSTRUCTURE\n\nOccupancy: 100% Apartment, Low-Rise\nConstruction Type: 100% Frame (ISO 1)\nGross Floor Area: 24,923 sq.ft.\nConstruction Quality: 2.0 - Average\nYear Built: 2011\n\nAdjustments\n\nHillside Construction: Degree of Slope: Flat\nSite Position: Unknown\nSize Accesibility: Excellent\nSoil Condition: Excellent\n\nFees\n\nArchitect Fees: 7% is included\nOverhead and Profit: 20% is included\n\nSUMMARY OF COSTS  User Provided  Reconstruction  Exclusion\n\nPage 1 of 4\n\n---\n\n<!-- Page 2 -->\nCoreLogic\n\nValuation Detailed Report\n\nLockton\n\nPolicy Number: ESTIMATE-0214329\n\n10/23/2025\n\n|  SUMMARY OF COSTS | User Provided |  | Reconstruction | Exclusion  |\n| --- | --- | --- | --- | --- |\n|  SUPERSTRUCTURE  |   |   |   |   |\n|  Site Preparation |  |  | $1,665 |   |\n|  Foundations |  |  | $82,423 |   |\n|  Exterior |  |  | $592,878 |   |\n|  Roof |  |  | $102,938 |   |\n|  Interior |  |  | $971,738 |   |\n|  Mechanicals |  |  | $1,045,233 |   |\n|  Built-ins |  |  | $232,877 |   |\n|  TOTAL RC Residential |  |  | $3,029,753 |   |\n|  TOTAL RC BUILDING 1 Residential |  |  | $3,029,753 |   |\n|   | Reconstruction | Sq.Ft. | $/Sq.Ft. |   |\n|  LOCATION TOTAL, Location 1 | $3,029,753 | 24,923 | $122 |   |\n|   | Reconstruction | Sq.Ft. | $/Sq.Ft. |   |\n|  VALUATION GRAND TOTAL | $3,029,753 | 24,923 | $122 |   |\n\n---\n\n<!-- Page 3 -->\nCoreLogic\n\nValuation Detailed Report\n\nLockton\n\nSUMMARY REPORT\n\nPolicy Number: ESTIMATE-0214329\n\n10/23/2025\n\nVALUATION\n\n|  Valuation Number: | ESTIMATE-0214329 | Effective Date: | 10/24/2025  |\n| --- | --- | --- | --- |\n|  Value Basis: | Reconstruction | Expiration Date: | 10/24/2026  |\n|   |  | Estimate Expiration Date: | 01/22/2026  |\n|   |  | Cost as of: | 08/2025  |\n|   |  | Valuation Modified Date: | 10/24/2025  |\n\nBUSINESS\n\nAsset Living - The Grand at Lake Sheri\n\n2201 Baytree Road\n\nVALDOSTA, GA 31602 USA\n\nLOCATION 1 - Asset Living - The Grand at Lake Sheri\n\nAsset Living - The Grand at Lake Sheri\n\n2201 Baytree Road\n\nVALDOSTA, GA 31602 USA\n\n|  BUILDING 1: SUPERSTRUCTURE |   |   | Reconstruction | Sq.Ft. | $/Sq.Ft.  |\n| --- | --- | --- | --- | --- | --- |\n|  Residential | 100% | Apartment, Low-Rise | $3,029,753 | 24,923 | $122  |\n|  Section Totals |   |   | Reconstruction | Sq.Ft. | $/Sq.Ft.  |\n|  Residential | 100% | Apartment, Low-Rise | $3,029,753 | 24,923 | $122  |\n|  BUILDING TOTAL, Building 1 |   |   | $3,029,753 | 24,923 | $122  |\n|  BUILDING INSURANCE SUMMARY  |   |   |   |   |   |\n|  Total Insured Amount |   |   | $0 |  |   |\n|  Percent of Insurance to Value |   |   | 0% |  |   |\n|  100% Co-insurance Requirement |   |   | $3,029,753 |  | $3,029,753  |\n|  -100% Variance |   |   | ($3,029,753) |  |   |\n|   |   |   | Reconstruction | Sq.Ft. | $/Sq.Ft.  |\n|  LOCATION TOTAL, Location 1 |   |   | $3,029,753 | 24,923 | $122  |\n|   |   |   | Reconstruction | Sq.Ft. | $/Sq.Ft.  |\n|  VALUATION GRAND TOTAL |   |   | $3,029,753 | 24,923 | $122  |\n\n---\n\n<!-- Page 4 -->\nCoreLogic\n\nValuation Detailed Report Lockton\n\nPolicy Number: ESTIMATE-0214329\n\n10/23/2025\n\n# End of Report\n\n\u00a9 2025 CoreLogic, Inc. All rights reserved. Confidential. The use, distribution, or reproduction of this report, in whole or in part, for any purpose other than as permitted without the prior written consent of CoreLogic is strictly prohibited. No right or license is granted to use any patent, trade secret, trademark, copyright, or other technology know-how owned, controlled, or held by CoreLogic. The unauthorized disclosure of this report or any of the contents thereof without the express prior written consent of CoreLogic may cause CoreLogic irreparable injury, such that no remedy at law will afford it adequate protection against, or appropriate compensation for, such injury and CoreLogic shall be entitled to seek an injunction or other equitable relief, damages, or other relief as may be granted by a court of competent jurisdiction. The content and information in this report is provided \"as is\" without guarantee or warranty of any kind, express or implied, including without limitation, any guarantees or warranties of completeness, accuracy, applicability, merchantability, non-infringement of intellectual property rights, or fitness for a particular purpose including, but not limited to, any guarantees or warranties in connection with any of your and/or CoreLogic's inputs or any AI features or content of this report. CoreLogic is not responsible for your inputs and/or use of, nor any decisions based on or in reliance on, this report. CoreLogic does not guarantee, represent or warrant that this report is complete or free from error and does not assume, and expressly disclaims, any liability to any person or entity for any loss or damage caused or resulting in whole or in part by any reliance on this report including, but not limited to, any loss or damage caused or resulting in whole or in part by errors or omissions in this report and/or any AI features or content thereof and/or errors or omissions in your or CoreLogic's inputs. CoreLogic costs include labor and material, normal profit, and overhead as of the date of the report, represent general estimates which are not to be considered a detailed quantity survey, and include generalities and assumptions that are common to the types of structures represented in the software. The commercial contents values included in this report are estimates only and should not be considered the actual value of commercial contents insurance coverage that should be underwritten for the insured. CoreLogic\u00ae, Commercial Valuation\u00ae, and Commercial ExpressLync\u00ae are the registered trademarks of CoreLogic, Inc. or its affiliates or subsidiaries.\n\nPage 4 of 4",
+  "overall_confidence": 1.0
+}

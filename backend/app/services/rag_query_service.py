@@ -150,6 +150,17 @@ class RAGQueryService:
             m for m in query_result.matches
             if m.score >= min_score
         ]
+
+        # Log score distribution for debugging
+        if query_result.matches:
+            scores = [m.score for m in query_result.matches]
+            logger.info(
+                f"Score distribution: min={min(scores):.3f}, max={max(scores):.3f}, "
+                f"threshold={min_score}, kept={len(filtered_matches)}/{len(query_result.matches)}"
+            )
+        else:
+            logger.warning(f"No matches returned from Pinecone for query: {query[:100]}")
+
         logger.debug(f"After score filter: {len(filtered_matches)} matches")
 
         if not filtered_matches:
