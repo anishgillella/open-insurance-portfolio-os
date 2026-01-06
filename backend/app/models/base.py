@@ -33,6 +33,7 @@ class SoftDeleteMixin:
         DateTime(timezone=True),
         nullable=True,
         default=None,
+        index=True,  # Index for efficient filtering on soft-delete queries
     )
 
 

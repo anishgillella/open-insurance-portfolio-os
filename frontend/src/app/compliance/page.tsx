@@ -78,22 +78,43 @@ function CompliancePageContent() {
         setSelectedTemplate(templatesArray[0].id);
       }
 
-      // Fetch compliance for each property
-      const results = new Map<string, ComplianceResult>();
+      // Use batch endpoint for compliance - much more efficient than N+1 calls
       const filteredProps = propertyFilter
         ? propsArray.filter((p) => p.id === propertyFilter)
         : propsArray;
 
-      await Promise.all(
-        filteredProps.map(async (property) => {
-          try {
-            const result = await complianceApi.getPropertyCompliance(property.id);
-            results.set(property.id, result);
-          } catch {
-            // Property may not have compliance data yet
+      const results = new Map<string, ComplianceResult>();
+
+      if (filteredProps.length > 0) {
+        try {
+          const batchResponse = await complianceApi.batchCheckCompliance(
+            filteredProps.map((p) => p.id)
+          );
+          // Convert batch response to the format expected by the component
+          for (const item of batchResponse.results) {
+            if (item.compliance_checks.length > 0) {
+              // Use the first compliance check as the main result
+              const mainCheck = item.compliance_checks[0];
+              results.set(item.property_id, {
+                ...mainCheck,
+                property_name: item.property_name,
+              });
+            }
           }
-        })
-      );
+        } catch {
+          // Fall back to individual calls if batch fails
+          await Promise.all(
+            filteredProps.map(async (property) => {
+              try {
+                const result = await complianceApi.getPropertyCompliance(property.id);
+                results.set(property.id, result);
+              } catch {
+                // Property may not have compliance data yet
+              }
+            })
+          );
+        }
+      }
       setComplianceResults(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load compliance data');

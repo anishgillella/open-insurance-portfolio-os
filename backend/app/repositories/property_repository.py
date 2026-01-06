@@ -102,7 +102,7 @@ class PropertyRepository(BaseRepository[Property]):
             organization_id=organization_id,
         )
 
-    async def list_with_summary(
+    async def list_basic(
         self,
         organization_id: str | None = None,
         state: str | None = None,
@@ -111,7 +111,10 @@ class PropertyRepository(BaseRepository[Property]):
         sort_order: str = "asc",
         limit: int = 100,
     ) -> list[Property]:
-        """Get properties with related data for list view.
+        """Get properties without eager-loading relationships.
+
+        Use this for simple list views where only property data is needed.
+        Much faster than list_with_summary.
 
         Args:
             organization_id: Optional organization filter.
@@ -122,20 +125,84 @@ class PropertyRepository(BaseRepository[Property]):
             limit: Maximum records.
 
         Returns:
-            List of properties with eager-loaded relationships.
+            List of properties (relationships not loaded).
         """
-        stmt = (
-            select(Property)
-            .options(
-                selectinload(Property.buildings),
+        stmt = select(Property).where(Property.deleted_at.is_(None))
+
+        # Apply filters
+        if organization_id:
+            stmt = stmt.where(Property.organization_id == organization_id)
+        if state:
+            stmt = stmt.where(Property.state == state)
+        if search:
+            search_term = f"%{search}%"
+            stmt = stmt.where(
+                (Property.name.ilike(search_term))
+                | (Property.address.ilike(search_term))
+                | (Property.city.ilike(search_term))
+            )
+
+        # Apply sorting
+        sort_column = getattr(Property, sort_by, Property.name)
+        if sort_order == "desc":
+            stmt = stmt.order_by(sort_column.desc())
+        else:
+            stmt = stmt.order_by(sort_column.asc())
+
+        stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_with_summary(
+        self,
+        organization_id: str | None = None,
+        state: str | None = None,
+        search: str | None = None,
+        sort_by: str = "name",
+        sort_order: str = "asc",
+        limit: int = 100,
+        include_buildings: bool = True,
+        include_programs: bool = True,
+        include_gaps: bool = True,
+        include_documents: bool = False,
+    ) -> list[Property]:
+        """Get properties with selectively loaded related data.
+
+        Args:
+            organization_id: Optional organization filter.
+            state: Optional state filter.
+            search: Optional search term.
+            sort_by: Sort field.
+            sort_order: Sort direction.
+            limit: Maximum records.
+            include_buildings: Load building relationships (default True).
+            include_programs: Load insurance programs and policies (default True).
+            include_gaps: Load coverage gaps (default True).
+            include_documents: Load documents (default False - expensive!).
+
+        Returns:
+            List of properties with selectively eager-loaded relationships.
+        """
+        # Build options list based on what's needed
+        options = []
+        if include_buildings:
+            options.append(selectinload(Property.buildings))
+        if include_programs:
+            options.append(
                 selectinload(Property.insurance_programs).selectinload(
                     InsuranceProgram.policies
-                ),
-                selectinload(Property.coverage_gaps),
-                selectinload(Property.documents),
+                )
             )
-            .where(Property.deleted_at.is_(None))
-        )
+        if include_gaps:
+            options.append(selectinload(Property.coverage_gaps))
+        if include_documents:
+            options.append(selectinload(Property.documents))
+
+        stmt = select(Property).where(Property.deleted_at.is_(None))
+
+        if options:
+            stmt = stmt.options(*options)
 
         # Apply filters
         if organization_id:
