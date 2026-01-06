@@ -344,3 +344,216 @@ class PropertyDocumentsResponse(BaseModel):
         default_factory=list, description="List of documents"
     )
     total_count: int = Field(default=0, description="Total number of documents")
+
+
+# ---------------------------------------------------------------------------
+# Extracted Data Response
+# ---------------------------------------------------------------------------
+
+
+class ExtractedFieldValue(BaseModel):
+    """A single extracted field value with source document reference."""
+
+    value: str | int | float | bool | None = Field(
+        ..., description="Extracted value"
+    )
+    source_document_id: str = Field(..., description="Source document ID")
+    source_document_name: str = Field(..., description="Source document filename")
+    source_document_type: str | None = Field(
+        default=None, description="Document type (COI, SOV, etc.)"
+    )
+    extraction_confidence: float | None = Field(
+        default=None, description="Confidence score (0-1)"
+    )
+    extracted_at: datetime | None = Field(
+        default=None, description="When this value was extracted"
+    )
+
+
+class ExtractedFieldWithSources(BaseModel):
+    """A field with all its extracted values from different documents."""
+
+    field_name: str = Field(..., description="Field name")
+    display_name: str = Field(..., description="Human-readable field name")
+    category: str = Field(..., description="Category (property, valuation, coverage, etc.)")
+    values: list[ExtractedFieldValue] = Field(
+        default_factory=list, description="All extracted values for this field"
+    )
+    consolidated_value: str | int | float | bool | None = Field(
+        default=None, description="Best/latest value for display"
+    )
+
+
+class DocumentExtractionSummary(BaseModel):
+    """Summary of extractions from a single document."""
+
+    document_id: str = Field(..., description="Document ID")
+    document_name: str = Field(..., description="Document filename")
+    document_type: str | None = Field(default=None, description="Document type")
+    uploaded_at: datetime = Field(..., description="Upload timestamp")
+    extraction_confidence: float | None = Field(
+        default=None, description="Overall extraction confidence"
+    )
+    extracted_fields: dict[str, str | int | float | bool | None] = Field(
+        default_factory=dict, description="All extracted fields from this document"
+    )
+
+
+class ValuationSummary(BaseModel):
+    """Valuation information extracted from documents."""
+
+    id: str = Field(..., description="Valuation record ID")
+    valuation_date: date | None = Field(default=None, description="Valuation date")
+    valuation_source: str | None = Field(
+        default=None, description="Source (SOV, appraisal, corelogic, etc.)"
+    )
+    building_value: Decimal | None = Field(default=None, description="Building value")
+    contents_value: Decimal | None = Field(default=None, description="Contents value")
+    business_income_value: Decimal | None = Field(
+        default=None, description="Business income value"
+    )
+    total_insured_value: Decimal | None = Field(
+        default=None, description="Total insured value"
+    )
+    price_per_sqft: Decimal | None = Field(
+        default=None, description="Price per square foot"
+    )
+    sq_ft_used: int | None = Field(default=None, description="Square footage used")
+    source_document_id: str | None = Field(
+        default=None, description="Source document ID"
+    )
+    source_document_name: str | None = Field(
+        default=None, description="Source document filename"
+    )
+
+
+class CoverageExtractionSummary(BaseModel):
+    """Coverage information extracted from documents."""
+
+    coverage_name: str = Field(..., description="Coverage name")
+    coverage_category: str | None = Field(default=None, description="Coverage category")
+    limit_amount: Decimal | None = Field(default=None, description="Limit amount")
+    limit_type: str | None = Field(default=None, description="Limit type")
+    deductible_amount: Decimal | None = Field(
+        default=None, description="Deductible amount"
+    )
+    deductible_type: str | None = Field(default=None, description="Deductible type")
+    source_document_id: str | None = Field(
+        default=None, description="Source document ID"
+    )
+    source_document_name: str | None = Field(
+        default=None, description="Source document filename"
+    )
+
+
+class PolicyExtractionSummary(BaseModel):
+    """Policy information extracted from documents."""
+
+    id: str = Field(..., description="Policy ID")
+    policy_type: str = Field(..., description="Policy type")
+    policy_number: str | None = Field(default=None, description="Policy number")
+    carrier_name: str | None = Field(default=None, description="Carrier name")
+    effective_date: date | None = Field(default=None, description="Effective date")
+    expiration_date: date | None = Field(default=None, description="Expiration date")
+    premium: Decimal | None = Field(default=None, description="Premium amount")
+    coverages: list[CoverageExtractionSummary] = Field(
+        default_factory=list, description="Coverages"
+    )
+    source_document_id: str | None = Field(
+        default=None, description="Source document ID"
+    )
+    source_document_name: str | None = Field(
+        default=None, description="Source document filename"
+    )
+
+
+class CertificateExtractionSummary(BaseModel):
+    """Certificate (COI/EOP) information extracted from documents."""
+
+    id: str = Field(..., description="Certificate ID")
+    certificate_type: str = Field(..., description="Certificate type (coi, eop)")
+    certificate_number: str | None = Field(
+        default=None, description="Certificate number"
+    )
+    producer_name: str | None = Field(default=None, description="Producer/broker name")
+    insured_name: str | None = Field(default=None, description="Insured name")
+    holder_name: str | None = Field(default=None, description="Certificate holder name")
+    effective_date: date | None = Field(default=None, description="Effective date")
+    expiration_date: date | None = Field(default=None, description="Expiration date")
+    gl_each_occurrence: Decimal | None = Field(
+        default=None, description="GL each occurrence limit"
+    )
+    gl_general_aggregate: Decimal | None = Field(
+        default=None, description="GL general aggregate limit"
+    )
+    property_limit: Decimal | None = Field(
+        default=None, description="Property limit"
+    )
+    umbrella_limit: Decimal | None = Field(
+        default=None, description="Umbrella limit"
+    )
+    source_document_id: str | None = Field(
+        default=None, description="Source document ID"
+    )
+    source_document_name: str | None = Field(
+        default=None, description="Source document filename"
+    )
+
+
+class FinancialExtractionSummary(BaseModel):
+    """Financial (invoice) information extracted from documents."""
+
+    id: str = Field(..., description="Financial record ID")
+    record_type: str = Field(..., description="Record type (invoice, quote)")
+    total: Decimal | None = Field(default=None, description="Total amount")
+    taxes: Decimal | None = Field(default=None, description="Taxes")
+    fees: Decimal | None = Field(default=None, description="Fees")
+    invoice_date: date | None = Field(default=None, description="Invoice date")
+    due_date: date | None = Field(default=None, description="Due date")
+    source_document_id: str | None = Field(
+        default=None, description="Source document ID"
+    )
+    source_document_name: str | None = Field(
+        default=None, description="Source document filename"
+    )
+
+
+class PropertyExtractedDataResponse(BaseModel):
+    """Complete extracted data for a property from all documents."""
+
+    property_id: str = Field(..., description="Property ID")
+    property_name: str = Field(..., description="Property name")
+
+    # Consolidated property data with all sources
+    extracted_fields: list[ExtractedFieldWithSources] = Field(
+        default_factory=list,
+        description="All extracted fields with their source documents",
+    )
+
+    # Structured extracted data
+    valuations: list[ValuationSummary] = Field(
+        default_factory=list, description="Valuations from SOV/appraisals"
+    )
+    policies: list[PolicyExtractionSummary] = Field(
+        default_factory=list, description="Policies with coverages"
+    )
+    certificates: list[CertificateExtractionSummary] = Field(
+        default_factory=list, description="COIs and EOPs"
+    )
+    financials: list[FinancialExtractionSummary] = Field(
+        default_factory=list, description="Invoices and financial records"
+    )
+
+    # Per-document breakdown
+    document_extractions: list[DocumentExtractionSummary] = Field(
+        default_factory=list, description="Extractions organized by source document"
+    )
+
+    # Summary stats
+    total_documents: int = Field(default=0, description="Total documents processed")
+    documents_with_extractions: int = Field(
+        default=0, description="Documents with successful extractions"
+    )
+    last_extraction_at: datetime | None = Field(
+        default=None, description="Most recent extraction timestamp"
+    )

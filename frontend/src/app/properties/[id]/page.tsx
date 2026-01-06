@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   Upload,
+  Database,
 } from 'lucide-react';
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Button, Card, Badge } from '@/components/primitives';
@@ -477,6 +478,12 @@ export default function PropertyDetailPage({ params }: PageProps) {
               <Link href={`/documents?property_id=${property.id}`} className="block">
                 <Button variant="secondary" className="w-full justify-start" leftIcon={<FileText className="h-4 w-4" />}>
                   View Documents ({property.documents?.length || 0})
+                </Button>
+              </Link>
+
+              <Link href={`/properties/${property.id}/extracted-data`} className="block">
+                <Button variant="secondary" className="w-full justify-start" leftIcon={<Database className="h-4 w-4" />}>
+                  View Extracted Data
                 </Button>
               </Link>
             </div>

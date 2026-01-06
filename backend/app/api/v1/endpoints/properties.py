@@ -11,23 +11,33 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.core.dependencies import AsyncSessionDep
 from app.repositories.policy_repository import PolicyRepository
 from app.repositories.property_repository import PropertyRepository
+from app.repositories.valuation_repository import ValuationRepository
 from app.schemas.common import AddressSchema
 from app.schemas.policy import PolicyListItem, PropertyPoliciesResponse, PropertyPolicySummary
 from app.schemas.property import (
     BuildingSchema,
+    CertificateExtractionSummary,
     ComplianceSummarySchema,
     CompletenessSummarySchema,
+    CoverageExtractionSummary,
     DocumentChecklistItem,
+    DocumentExtractionSummary,
+    ExtractedFieldValue,
+    ExtractedFieldWithSources,
+    FinancialExtractionSummary,
     GapsCountSchema,
     GapsSummarySchema,
     HealthScoreSchema,
     InsuranceSummarySchema,
+    PolicyExtractionSummary,
     PolicySummaryItem,
     PropertyDetail,
     PropertyDocumentItem,
     PropertyDocumentsResponse,
+    PropertyExtractedDataResponse,
     PropertyListItem,
     PropertyListResponse,
+    ValuationSummary,
 )
 
 router = APIRouter()
@@ -738,4 +748,393 @@ async def get_property_documents(
     return PropertyDocumentsResponse(
         documents=items,
         total_count=len(items),
+    )
+
+
+# Field display name mapping for extracted data
+FIELD_DISPLAY_NAMES = {
+    # Property fields
+    "year_built": "Year Built",
+    "construction_type": "Construction Type",
+    "square_footage": "Square Footage",
+    "stories": "Number of Stories",
+    "units": "Number of Units",
+    "occupancy": "Occupancy Type",
+    "address": "Address",
+    "city": "City",
+    "state": "State",
+    "zip_code": "ZIP Code",
+    "property_type": "Property Type",
+    "roof_type": "Roof Type",
+    "roof_year": "Roof Year",
+    "sprinkler_type": "Sprinkler Type",
+    "has_sprinklers": "Has Sprinklers",
+    "protection_class": "Protection Class",
+    "flood_zone": "Flood Zone",
+    "earthquake_zone": "Earthquake Zone",
+    "wind_zone": "Wind Zone",
+    # Valuation fields
+    "building_value": "Building Value",
+    "contents_value": "Contents Value",
+    "business_income_value": "Business Income Value",
+    "total_insured_value": "Total Insured Value (TIV)",
+    "price_per_sqft": "Price per Sq Ft",
+    # Policy fields
+    "policy_number": "Policy Number",
+    "carrier_name": "Carrier",
+    "effective_date": "Effective Date",
+    "expiration_date": "Expiration Date",
+    "premium": "Premium",
+    "named_insured": "Named Insured",
+    # Coverage fields
+    "limit_amount": "Limit Amount",
+    "deductible_amount": "Deductible",
+    # Certificate fields
+    "producer_name": "Producer/Broker",
+    "holder_name": "Certificate Holder",
+    "gl_each_occurrence": "GL Each Occurrence",
+    "gl_general_aggregate": "GL General Aggregate",
+    "property_limit": "Property Limit",
+    "umbrella_limit": "Umbrella Limit",
+}
+
+
+def _flatten_extraction_json(extraction_json: dict, doc_type: str) -> dict:
+    """Flatten nested extraction JSON into a simple key-value dict."""
+    result = {}
+    if not extraction_json:
+        return result
+
+    # Handle different document type structures
+    if doc_type and doc_type.lower() == "coi":
+        coi_data = extraction_json.get("coi") or extraction_json
+        for key in ["producer_name", "insured_name", "holder_name", "effective_date",
+                    "expiration_date", "gl_each_occurrence", "gl_general_aggregate",
+                    "property_limit", "umbrella_limit", "certificate_number"]:
+            if key in coi_data and coi_data[key] is not None:
+                result[key] = coi_data[key]
+
+    elif doc_type and doc_type.lower() == "eop":
+        eop_data = extraction_json.get("eop") or extraction_json
+        for key in ["producer_name", "insured_name", "property_limit",
+                    "effective_date", "expiration_date"]:
+            if key in eop_data and eop_data[key] is not None:
+                result[key] = eop_data[key]
+
+    elif doc_type and doc_type.lower() == "sov":
+        sov_data = extraction_json.get("sov") or extraction_json
+        if sov_data.get("total_insured_value"):
+            result["total_insured_value"] = sov_data["total_insured_value"]
+        # Get first property details
+        props = sov_data.get("properties", [])
+        if props and len(props) > 0:
+            prop = props[0]
+            for key in ["year_built", "construction_type", "square_footage", "stories",
+                        "building_value", "contents_value", "business_income_value"]:
+                if key in prop and prop[key] is not None:
+                    result[key] = prop[key]
+
+    elif doc_type and doc_type.lower() == "invoice":
+        inv_data = extraction_json.get("invoice") or extraction_json
+        for key in ["total_amount", "taxes", "fees", "invoice_date", "due_date"]:
+            if key in inv_data and inv_data[key] is not None:
+                result[key] = inv_data[key]
+
+    elif doc_type and doc_type.lower() == "policy":
+        policy_data = extraction_json.get("policy") or extraction_json
+        for key in ["policy_number", "carrier_name", "effective_date", "expiration_date",
+                    "premium", "named_insured", "policy_type"]:
+            if key in policy_data and policy_data[key] is not None:
+                result[key] = policy_data[key]
+
+    elif doc_type and doc_type.lower() == "proposal":
+        prop_data = extraction_json.get("proposal") or extraction_json
+        for key in ["effective_date", "expiration_date", "total_premium",
+                    "total_insured_value"]:
+            if key in prop_data and prop_data[key] is not None:
+                result[key] = prop_data[key]
+        # Get properties data
+        props = prop_data.get("properties", [])
+        if props and len(props) > 0:
+            prop = props[0]
+            for key in ["unit_count", "total_insured_value", "renewal_tiv"]:
+                if key in prop and prop[key] is not None:
+                    if key == "unit_count":
+                        result["units"] = prop[key]
+                    else:
+                        result[key] = prop[key]
+
+    # Also try to extract from root level for any document type
+    for key in ["year_built", "construction_type", "square_footage", "stories",
+                "units", "total_insured_value", "building_value", "contents_value"]:
+        if key in extraction_json and extraction_json[key] is not None and key not in result:
+            result[key] = extraction_json[key]
+
+    return result
+
+
+@router.get("/{property_id}/extracted-data", response_model=PropertyExtractedDataResponse)
+async def get_property_extracted_data(
+    property_id: str,
+    db: AsyncSessionDep,
+) -> PropertyExtractedDataResponse:
+    """Get all extracted data for a property from all documents.
+
+    Returns comprehensive extraction data including:
+    - All extracted fields with source document references
+    - Valuations from SOV/appraisals
+    - Policies with coverages
+    - Certificates (COI/EOP)
+    - Financial records (invoices)
+    - Per-document extraction breakdown
+    """
+    repo = PropertyRepository(db)
+    valuation_repo = ValuationRepository(db)
+    policy_repo = PolicyRepository(db)
+
+    # Verify property exists
+    prop = await repo.get_with_details(property_id)
+    if not prop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Property {property_id} not found",
+        )
+
+    # Get all documents for this property
+    documents = await repo.get_documents_by_property(property_id, limit=500)
+
+    # Build field aggregation dict: field_name -> list of values with sources
+    field_values: dict[str, list[ExtractedFieldValue]] = {}
+    document_extractions: list[DocumentExtractionSummary] = []
+    last_extraction_at = None
+    docs_with_extractions = 0
+
+    for doc in documents:
+        if doc.deleted_at is not None:
+            continue
+
+        # Track extraction timestamp
+        if doc.extraction_completed_at:
+            if last_extraction_at is None or doc.extraction_completed_at > last_extraction_at:
+                last_extraction_at = doc.extraction_completed_at
+
+        # Flatten extraction JSON
+        extracted_fields = {}
+        if doc.extraction_json:
+            docs_with_extractions += 1
+            extracted_fields = _flatten_extraction_json(
+                doc.extraction_json, doc.document_type
+            )
+
+            # Add each field to aggregation
+            for field_name, value in extracted_fields.items():
+                if value is None:
+                    continue
+
+                field_value = ExtractedFieldValue(
+                    value=value,
+                    source_document_id=doc.id,
+                    source_document_name=doc.file_name or "Unknown",
+                    source_document_type=doc.document_type,
+                    extraction_confidence=doc.extraction_confidence,
+                    extracted_at=doc.extraction_completed_at,
+                )
+
+                if field_name not in field_values:
+                    field_values[field_name] = []
+                field_values[field_name].append(field_value)
+
+        # Build document extraction summary
+        document_extractions.append(
+            DocumentExtractionSummary(
+                document_id=doc.id,
+                document_name=doc.file_name or "Unknown",
+                document_type=doc.document_type,
+                uploaded_at=doc.created_at,
+                extraction_confidence=doc.extraction_confidence,
+                extracted_fields=extracted_fields,
+            )
+        )
+
+    # Build extracted fields with sources list
+    extracted_fields_list: list[ExtractedFieldWithSources] = []
+    for field_name, values in field_values.items():
+        # Determine category based on field name
+        if field_name in ["building_value", "contents_value", "business_income_value",
+                         "total_insured_value", "price_per_sqft"]:
+            category = "valuation"
+        elif field_name in ["policy_number", "carrier_name", "premium", "named_insured"]:
+            category = "policy"
+        elif field_name in ["gl_each_occurrence", "gl_general_aggregate", "property_limit",
+                           "umbrella_limit", "producer_name", "holder_name"]:
+            category = "coverage"
+        else:
+            category = "property"
+
+        # Consolidated value is the most recent or highest confidence
+        consolidated = values[0].value if values else None
+        if len(values) > 1:
+            # Sort by extraction date (newest first) then confidence
+            sorted_values = sorted(
+                values,
+                key=lambda v: (v.extracted_at or date.min, v.extraction_confidence or 0),
+                reverse=True,
+            )
+            consolidated = sorted_values[0].value
+
+        extracted_fields_list.append(
+            ExtractedFieldWithSources(
+                field_name=field_name,
+                display_name=FIELD_DISPLAY_NAMES.get(field_name, field_name.replace("_", " ").title()),
+                category=category,
+                values=values,
+                consolidated_value=consolidated,
+            )
+        )
+
+    # Sort by category then field name
+    extracted_fields_list.sort(key=lambda f: (f.category, f.field_name))
+
+    # Get valuations
+    valuations_db = await valuation_repo.get_by_property(property_id)
+    valuations: list[ValuationSummary] = []
+    for v in valuations_db:
+        # Find source document name
+        doc_name = None
+        for doc in documents:
+            if doc.id == v.document_id:
+                doc_name = doc.file_name
+                break
+
+        valuations.append(
+            ValuationSummary(
+                id=v.id,
+                valuation_date=v.valuation_date,
+                valuation_source=v.valuation_source,
+                building_value=v.building_value,
+                contents_value=v.contents_value,
+                business_income_value=v.business_income_value,
+                total_insured_value=v.total_insured_value,
+                price_per_sqft=v.price_per_sqft,
+                sq_ft_used=v.sq_ft_used,
+                source_document_id=v.document_id,
+                source_document_name=doc_name,
+            )
+        )
+
+    # Get policies with coverages
+    policies_db = await policy_repo.get_by_property(property_id)
+    policies: list[PolicyExtractionSummary] = []
+    for p in policies_db:
+        # Find source document name
+        doc_name = None
+        for doc in documents:
+            if doc.id == p.document_id:
+                doc_name = doc.file_name
+                break
+
+        coverages: list[CoverageExtractionSummary] = []
+        if p.coverages:
+            for c in p.coverages:
+                cov_doc_name = None
+                for doc in documents:
+                    if doc.id == c.source_document_id:
+                        cov_doc_name = doc.file_name
+                        break
+
+                coverages.append(
+                    CoverageExtractionSummary(
+                        coverage_name=c.coverage_name or "Unknown",
+                        coverage_category=c.coverage_category,
+                        limit_amount=c.limit_amount,
+                        limit_type=c.limit_type,
+                        deductible_amount=c.deductible_amount,
+                        deductible_type=c.deductible_type,
+                        source_document_id=c.source_document_id,
+                        source_document_name=cov_doc_name,
+                    )
+                )
+
+        policies.append(
+            PolicyExtractionSummary(
+                id=p.id,
+                policy_type=p.policy_type or "unknown",
+                policy_number=p.policy_number,
+                carrier_name=p.carrier_name,
+                effective_date=p.effective_date,
+                expiration_date=p.expiration_date,
+                premium=p.premium,
+                coverages=coverages,
+                source_document_id=p.document_id,
+                source_document_name=doc_name,
+            )
+        )
+
+    # Get certificates (from insurance programs)
+    certificates: list[CertificateExtractionSummary] = []
+    for program in prop.insurance_programs:
+        if hasattr(program, "certificates"):
+            for cert in program.certificates:
+                doc_name = None
+                for doc in documents:
+                    if doc.id == cert.document_id:
+                        doc_name = doc.file_name
+                        break
+
+                certificates.append(
+                    CertificateExtractionSummary(
+                        id=cert.id,
+                        certificate_type=cert.certificate_type or "coi",
+                        certificate_number=cert.certificate_number,
+                        producer_name=cert.producer_name,
+                        insured_name=cert.insured_name,
+                        holder_name=cert.holder_name,
+                        effective_date=cert.effective_date,
+                        expiration_date=cert.expiration_date,
+                        gl_each_occurrence=cert.gl_each_occurrence,
+                        gl_general_aggregate=cert.gl_general_aggregate,
+                        property_limit=cert.property_limit,
+                        umbrella_limit=cert.umbrella_limit,
+                        source_document_id=cert.document_id,
+                        source_document_name=doc_name,
+                    )
+                )
+
+    # Get financials
+    financials: list[FinancialExtractionSummary] = []
+    for program in prop.insurance_programs:
+        if hasattr(program, "financials"):
+            for fin in program.financials:
+                doc_name = None
+                for doc in documents:
+                    if doc.id == fin.document_id:
+                        doc_name = doc.file_name
+                        break
+
+                financials.append(
+                    FinancialExtractionSummary(
+                        id=fin.id,
+                        record_type=fin.record_type or "invoice",
+                        total=fin.total,
+                        taxes=fin.taxes,
+                        fees=fin.fees,
+                        invoice_date=fin.invoice_date,
+                        due_date=fin.due_date,
+                        source_document_id=fin.document_id,
+                        source_document_name=doc_name,
+                    )
+                )
+
+    return PropertyExtractedDataResponse(
+        property_id=prop.id,
+        property_name=prop.name,
+        extracted_fields=extracted_fields_list,
+        valuations=valuations,
+        policies=policies,
+        certificates=certificates,
+        financials=financials,
+        document_extractions=document_extractions,
+        total_documents=len(documents),
+        documents_with_extractions=docs_with_extractions,
+        last_extraction_at=last_extraction_at,
     )
