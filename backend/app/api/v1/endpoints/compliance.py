@@ -12,6 +12,9 @@ from app.models.lender_requirement import LenderRequirement
 from app.repositories.property_repository import PropertyRepository
 from pydantic import BaseModel
 from app.schemas.gap import (
+    BatchComplianceItem,
+    BatchComplianceRequest,
+    BatchComplianceResponse,
     ComplianceCheckRequest,
     ComplianceCheckResult,
     ComplianceIssueSchema,
@@ -32,6 +35,105 @@ class LiveComplianceCheckRequest(BaseModel):
     create_gaps: bool = True
 
 router = APIRouter()
+
+
+@router.post("/batch", response_model=BatchComplianceResponse)
+async def batch_check_compliance(
+    request: BatchComplianceRequest,
+    db: AsyncSessionDep,
+) -> BatchComplianceResponse:
+    """Check compliance for multiple properties in a single request.
+
+    This is much more efficient than calling get_property_compliance
+    for each property individually. Use this for portfolio-wide compliance views.
+
+    Args:
+        request: List of property IDs to check.
+        db: Database session.
+
+    Returns:
+        BatchComplianceResponse with compliance status for all properties.
+    """
+    service = ComplianceService(db)
+    prop_repo = PropertyRepository(db)
+
+    results: list[BatchComplianceItem] = []
+    compliant_count = 0
+    non_compliant_count = 0
+    no_requirements_count = 0
+
+    # Process all properties
+    for property_id in request.property_ids:
+        prop = await prop_repo.get_by_id(property_id)
+        if not prop:
+            continue
+
+        # Run compliance checks for this property
+        check_results = await service.check_compliance_for_property(
+            property_id, create_gaps=request.create_gaps
+        )
+
+        # Build response item
+        compliance_checks = []
+        total_issues = 0
+        overall_status = "compliant"
+
+        for result in check_results:
+            issues = [
+                ComplianceIssueSchema(
+                    check_name=i.check_name,
+                    severity=i.severity,
+                    message=i.message,
+                    current_value=i.current_value,
+                    required_value=i.required_value,
+                )
+                for i in result.issues
+            ]
+            total_issues += len(issues)
+
+            # Track worst status
+            if result.status == "non_compliant":
+                overall_status = "non_compliant"
+            elif result.status == "partial" and overall_status != "non_compliant":
+                overall_status = "partial"
+
+            compliance_checks.append(
+                ComplianceCheckResult(
+                    property_id=result.property_id,
+                    lender_requirement_id=result.lender_requirement_id,
+                    template_name=result.template_name,
+                    status=result.status,
+                    is_compliant=result.is_compliant,
+                    issues=issues,
+                    checked_at=datetime.now(timezone.utc),
+                )
+            )
+
+        if not compliance_checks:
+            overall_status = "no_requirements"
+            no_requirements_count += 1
+        elif overall_status == "compliant":
+            compliant_count += 1
+        else:
+            non_compliant_count += 1
+
+        results.append(
+            BatchComplianceItem(
+                property_id=property_id,
+                property_name=prop.name,
+                overall_status=overall_status,
+                total_issues=total_issues,
+                compliance_checks=compliance_checks,
+            )
+        )
+
+    return BatchComplianceResponse(
+        results=results,
+        total_properties=len(results),
+        compliant_count=compliant_count,
+        non_compliant_count=non_compliant_count,
+        no_requirements_count=no_requirements_count,
+    )
 
 
 @router.get("/templates", response_model=ComplianceTemplatesResponse)

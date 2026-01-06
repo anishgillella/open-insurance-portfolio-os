@@ -298,3 +298,33 @@ class AnalysisStatusResponse(BaseModel):
     status: str = Field(..., description="pending, in_progress, completed, failed")
     message: str | None = None
     result: PropertyAnalysisResult | GapAnalysisResult | None = None
+
+
+# Batch Compliance Schemas
+
+
+class BatchComplianceRequest(BaseModel):
+    """Request for batch compliance check across multiple properties."""
+
+    property_ids: list[str] = Field(..., description="List of property IDs to check")
+    create_gaps: bool = Field(False, description="Create gap records for issues")
+
+
+class BatchComplianceItem(BaseModel):
+    """Compliance result for a single property in batch response."""
+
+    property_id: str
+    property_name: str
+    overall_status: str = Field(..., description="compliant, non_compliant, partial, no_requirements")
+    total_issues: int = 0
+    compliance_checks: list[ComplianceCheckResult] = Field(default_factory=list)
+
+
+class BatchComplianceResponse(BaseModel):
+    """Response for batch compliance check."""
+
+    results: list[BatchComplianceItem]
+    total_properties: int
+    compliant_count: int
+    non_compliant_count: int
+    no_requirements_count: int

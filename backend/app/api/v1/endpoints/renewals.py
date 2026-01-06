@@ -23,6 +23,10 @@ from app.schemas.renewal import (
     FactorBreakdownSchema,
     GenerateForecastRequest,
     GenerateForecastResponse,
+    # Batch forecast schemas
+    BatchForecastRequest,
+    BatchForecastItem,
+    BatchForecastResponse,
     # Alert schemas
     RenewalAlertResponse,
     AlertListResponse,
@@ -208,6 +212,81 @@ async def list_forecasts(
     return ForecastListResponse(
         forecasts=items,
         total_count=len(items),
+    )
+
+
+@router.post("/forecasts/batch", response_model=BatchForecastResponse)
+async def batch_get_forecasts(
+    request: BatchForecastRequest,
+    db: AsyncSessionDep,
+) -> BatchForecastResponse:
+    """Get forecasts for multiple properties in a single request.
+
+    This is much more efficient than calling get_renewal_forecast
+    for each property individually. Use this for portfolio-wide renewal views.
+
+    Args:
+        request: List of property IDs to get forecasts for.
+        db: Database session.
+
+    Returns:
+        BatchForecastResponse with forecasts for all properties.
+    """
+    service = RenewalForecastService(db)
+
+    forecasts: list[BatchForecastItem] = []
+    properties_with_forecasts = 0
+    total_premium = Decimal("0")
+    total_change_pct = 0.0
+    change_count = 0
+
+    for property_id in request.property_ids:
+        result = await service.get_forecast(property_id)
+
+        if result:
+            properties_with_forecasts += 1
+            days = (result.current_expiration_date - date.today()).days if result.current_expiration_date else None
+
+            # Calculate change percentage
+            change_pct = None
+            if result.current_premium and result.llm_predicted_mid:
+                change_pct = float((result.llm_predicted_mid - result.current_premium) / result.current_premium * 100)
+                total_change_pct += change_pct
+                change_count += 1
+
+            if result.current_premium:
+                total_premium += result.current_premium
+
+            forecasts.append(BatchForecastItem(
+                property_id=result.property_id,
+                property_name=result.property_name,
+                has_forecast=True,
+                current_premium=result.current_premium,
+                current_expiration_date=result.current_expiration_date,
+                days_until_expiration=days,
+                forecast_low=result.llm_predicted_low,
+                forecast_mid=result.llm_predicted_mid,
+                forecast_high=result.llm_predicted_high,
+                forecast_change_pct=change_pct,
+                confidence_score=result.llm_confidence_score,
+                forecast_date=result.forecast_date,
+            ))
+        else:
+            # Property exists but no forecast
+            forecasts.append(BatchForecastItem(
+                property_id=property_id,
+                property_name="Unknown",
+                has_forecast=False,
+            ))
+
+    avg_change = total_change_pct / change_count if change_count > 0 else None
+
+    return BatchForecastResponse(
+        forecasts=forecasts,
+        total_properties=len(forecasts),
+        properties_with_forecasts=properties_with_forecasts,
+        total_premium_at_risk=total_premium if total_premium > 0 else None,
+        avg_forecast_change_pct=avg_change,
     )
 
 

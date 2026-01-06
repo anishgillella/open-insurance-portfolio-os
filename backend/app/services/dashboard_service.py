@@ -61,9 +61,14 @@ class DashboardService:
             DashboardSummary with all statistics.
         """
         # Fetch properties once and reuse for multiple calculations
+        # Don't include documents - they're expensive and not needed for summary
         properties = await self.property_repo.list_with_summary(
             organization_id=organization_id,
             limit=1000,
+            include_buildings=True,
+            include_programs=True,
+            include_gaps=True,
+            include_documents=False,
         )
 
         # Get base stats (counts only - fast query)
@@ -407,6 +412,7 @@ class DashboardService:
         alert_type: str | None = None,
         organization_id: str | None = None,
         limit: int = 20,
+        _cached_properties: list | None = None,
     ) -> AlertsResponse:
         """Get active alerts.
 
@@ -415,6 +421,7 @@ class DashboardService:
             alert_type: Optional type filter.
             organization_id: Optional organization filter.
             limit: Maximum results.
+            _cached_properties: Pre-fetched properties to avoid duplicate query.
 
         Returns:
             AlertsResponse with alerts and counts.
@@ -468,10 +475,19 @@ class DashboardService:
 
         # Get gap alerts
         if not alert_type or alert_type == "gap":
-            properties = await self.property_repo.list_with_summary(
-                organization_id=organization_id,
-                limit=1000,
-            )
+            # Use cached properties if provided, otherwise fetch
+            # Only load gaps - that's all we need for alerts
+            if _cached_properties is not None:
+                properties = _cached_properties
+            else:
+                properties = await self.property_repo.list_with_summary(
+                    organization_id=organization_id,
+                    limit=1000,
+                    include_buildings=False,
+                    include_programs=False,
+                    include_gaps=True,
+                    include_documents=False,
+                )
 
             for prop in properties:
                 for gap in prop.coverage_gaps:

@@ -701,3 +701,41 @@ class ComparisonListResponse(BaseModel):
 
     comparisons: list[ComparisonListItem]
     total_count: int
+
+
+# =============================================================================
+# Batch Forecast Schemas
+# =============================================================================
+
+
+class BatchForecastRequest(BaseModel):
+    """Request for batch forecast retrieval across multiple properties."""
+
+    property_ids: list[str] = Field(..., description="List of property IDs to get forecasts for")
+
+
+class BatchForecastItem(BaseModel):
+    """Forecast summary for a single property in batch response."""
+
+    property_id: str
+    property_name: str
+    has_forecast: bool = False
+    current_premium: Decimal | None = None
+    current_expiration_date: date | None = None
+    days_until_expiration: int | None = None
+    forecast_low: Decimal | None = None
+    forecast_mid: Decimal | None = None
+    forecast_high: Decimal | None = None
+    forecast_change_pct: float | None = None
+    confidence_score: int | None = None
+    forecast_date: datetime | None = None
+
+
+class BatchForecastResponse(BaseModel):
+    """Response for batch forecast retrieval."""
+
+    forecasts: list[BatchForecastItem]
+    total_properties: int
+    properties_with_forecasts: int
+    total_premium_at_risk: Decimal | None = None
+    avg_forecast_change_pct: float | None = None

@@ -464,6 +464,23 @@ export interface ComplianceTemplate {
   requirements: Record<string, unknown>;
 }
 
+// Batch compliance types
+export interface BatchComplianceItem {
+  property_id: string;
+  property_name: string;
+  overall_status: 'compliant' | 'non_compliant' | 'partial' | 'no_requirements';
+  total_issues: number;
+  compliance_checks: ComplianceResult[];
+}
+
+export interface BatchComplianceResponse {
+  results: BatchComplianceItem[];
+  total_properties: number;
+  compliant_count: number;
+  non_compliant_count: number;
+  no_requirements_count: number;
+}
+
 export const complianceApi = {
   getPropertyCompliance: (propertyId: string, templateId?: string) =>
     apiGet<ComplianceResult>(`/compliance/properties/${propertyId}`, templateId ? { template_id: templateId } : undefined),
@@ -473,6 +490,10 @@ export const complianceApi = {
 
   checkCompliance: (propertyId: string, templateId: string) =>
     apiPost<ComplianceResult>('/compliance/check', { property_id: propertyId, template_id: templateId }),
+
+  // Batch endpoint - much more efficient for portfolio-wide compliance views
+  batchCheckCompliance: (propertyIds: string[], createGaps = false) =>
+    apiPost<BatchComplianceResponse>('/compliance/batch', { property_ids: propertyIds, create_gaps: createGaps }),
 };
 
 // ============ RENEWALS API ============
@@ -599,12 +620,40 @@ export interface MarketContext {
   fetched_at: string;
 }
 
+// Batch forecast types
+export interface BatchForecastItem {
+  property_id: string;
+  property_name: string;
+  has_forecast: boolean;
+  current_premium: number | null;
+  current_expiration_date: string | null;
+  days_until_expiration: number | null;
+  forecast_low: number | null;
+  forecast_mid: number | null;
+  forecast_high: number | null;
+  forecast_change_pct: number | null;
+  confidence_score: number | null;
+  forecast_date: string | null;
+}
+
+export interface BatchForecastResponse {
+  forecasts: BatchForecastItem[];
+  total_properties: number;
+  properties_with_forecasts: number;
+  total_premium_at_risk: number | null;
+  avg_forecast_change_pct: number | null;
+}
+
 export const renewalsApi = {
   getForecast: (propertyId: string) =>
     apiGet<RenewalForecast>(`/renewals/forecast/${propertyId}`),
 
   generateForecast: (propertyId: string) =>
     apiPost<RenewalForecast>(`/renewals/forecast/${propertyId}`),
+
+  // Batch endpoint - much more efficient for portfolio-wide renewal views
+  batchGetForecasts: (propertyIds: string[]) =>
+    apiPost<BatchForecastResponse>('/renewals/forecasts/batch', { property_ids: propertyIds }),
 
   getTimeline: (orgId = DEFAULT_ORG_ID, daysAhead = 90) =>
     apiGet<RenewalTimelineResponse>('/renewals/timeline', { organization_id: orgId, days_ahead: String(daysAhead) }),

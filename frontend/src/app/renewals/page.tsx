@@ -70,18 +70,62 @@ export default function RenewalsPage() {
       setTimelineSummary(summaryData);
       setAlerts(alertsArray);
 
-      // Fetch forecasts for each property with timeline
+      // Use batch endpoint for forecasts - much more efficient than N+1 calls
       const forecastMap = new Map<string, RenewalForecast>();
-      await Promise.all(
-        timelinesArray.map(async (timeline) => {
-          try {
-            const forecast = await renewalsApi.getForecast(timeline.property_id);
-            forecastMap.set(timeline.property_id, forecast);
-          } catch {
-            // Property may not have forecast yet
+      if (timelinesArray.length > 0) {
+        // Get unique property IDs from timeline
+        const propertyIds = [...new Set(timelinesArray.map((t) => t.property_id))];
+
+        try {
+          const batchResponse = await renewalsApi.batchGetForecasts(propertyIds);
+          // Convert batch response to the format expected by the component
+          for (const item of batchResponse.forecasts) {
+            if (item.has_forecast) {
+              // Convert BatchForecastItem to RenewalForecast format
+              const forecast: RenewalForecast = {
+                id: item.property_id,
+                property_id: item.property_id,
+                property_name: item.property_name,
+                current_premium: item.current_premium || 0,
+                current_expiration_date: item.current_expiration_date || '',
+                days_until_expiration: item.days_until_expiration || 0,
+                forecast: item.forecast_mid ? {
+                  low: item.forecast_low || 0,
+                  mid: item.forecast_mid,
+                  high: item.forecast_high || 0,
+                  low_change_percent: 0,
+                  mid_change_percent: item.forecast_change_pct || 0,
+                  high_change_percent: 0,
+                } : {
+                  low: 0,
+                  mid: 0,
+                  high: 0,
+                  low_change_percent: 0,
+                  mid_change_percent: 0,
+                  high_change_percent: 0,
+                },
+                confidence: (item.confidence_score || 0) / 100,
+                factors: [],
+                negotiation_points: [],
+                calculated_at: item.forecast_date || new Date().toISOString(),
+              };
+              forecastMap.set(item.property_id, forecast);
+            }
           }
-        })
-      );
+        } catch {
+          // Fall back to individual calls if batch fails
+          await Promise.all(
+            timelinesArray.map(async (timeline) => {
+              try {
+                const forecast = await renewalsApi.getForecast(timeline.property_id);
+                forecastMap.set(timeline.property_id, forecast);
+              } catch {
+                // Property may not have forecast yet
+              }
+            })
+          );
+        }
+      }
       setForecasts(forecastMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load renewal data');
