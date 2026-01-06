@@ -35,7 +35,7 @@ function SceneContent({
       {/* Lighting */}
       <ambientLight intensity={0.4} />
       <pointLight position={[10, 10, 10]} intensity={0.8} />
-      <pointLight position={[-10, -10, -10]} intensity={0.3} color="#1677FF" />
+      <pointLight position={[-10, -10, -10]} intensity={0.3} color="#14B8A6" />
 
       {/* Content */}
       {children}

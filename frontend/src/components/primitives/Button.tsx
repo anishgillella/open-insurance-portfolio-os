@@ -12,17 +12,19 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'gradient-primary text-white shadow-md hover:shadow-lg',
+          'bg-[#1A1A2E] text-white shadow-md hover:bg-[#2D2D44] hover:shadow-lg',
         secondary:
           'bg-[var(--color-surface-elevated)] border border-[var(--color-border-default)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-border-strong)]',
         ghost:
           'hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]',
         danger:
-          'gradient-critical text-white shadow-md hover:shadow-lg',
+          'bg-[var(--color-critical-500)] text-white shadow-md hover:bg-[var(--color-critical-600)] hover:shadow-lg',
         success:
-          'gradient-success text-white shadow-md hover:shadow-lg',
+          'bg-[var(--color-primary-500)] text-white shadow-md hover:bg-[var(--color-primary-600)] hover:shadow-lg',
         outline:
           'border-2 border-[var(--color-primary-500)] text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]',
+        teal:
+          'bg-[var(--color-primary-500)] text-white shadow-md hover:bg-[var(--color-primary-600)] hover:shadow-lg',
       },
       size: {
         sm: 'h-8 px-3 text-sm',

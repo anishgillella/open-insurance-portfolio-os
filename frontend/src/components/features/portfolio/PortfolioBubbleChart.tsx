@@ -148,7 +148,7 @@ export function PortfolioBubbleChart({
                   </span>
                 </div>
               </div>
-              <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-blue-400">
+              <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-teal-400">
                 Click to view details
               </div>
             </div>
