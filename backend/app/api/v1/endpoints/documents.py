@@ -1,17 +1,21 @@
 """Document ingestion API endpoints."""
 
+import asyncio
 import logging
 import shutil
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.dependencies import get_db
+from app.models.document import Document
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.document import (
     DocumentClassification,
@@ -37,6 +41,85 @@ class DocumentListResponse(BaseModel):
 
     documents: list[DocumentResponse]
     total: int
+
+
+class AsyncUploadResponse(BaseModel):
+    """Response from async document upload."""
+
+    document_id: str
+    file_name: str
+    status: str  # "pending", "processing", "completed", "failed"
+    message: str
+
+
+# Background processing tasks storage (in production, use Redis or similar)
+_background_tasks: dict[str, asyncio.Task] = {}
+
+
+async def process_document_background(
+    document_id: str,
+    file_path: str,
+    organization_id: str,
+    property_name: str,
+    property_id: str | None,
+    program_id: str | None,
+) -> None:
+    """Process a document in the background.
+
+    Creates its own database session since this runs outside the request context.
+    """
+    from app.core.database import async_session_maker
+
+    logger.info(f"[BACKGROUND] Starting processing for document {document_id}")
+
+    async with async_session_maker() as db:
+        try:
+            # Get the document record
+            repo = DocumentRepository(db)
+            document = await repo.get_by_id(document_id)
+
+            if not document:
+                logger.error(f"[BACKGROUND] Document {document_id} not found")
+                return
+
+            # Update status to processing
+            document.upload_status = "processing"
+            await db.commit()
+
+            # Process using ingestion service
+            service = IngestionService(db)
+            result = await service.ingest_file(
+                file_path=file_path,
+                organization_id=organization_id,
+                property_name=property_name,
+                property_id=property_id,
+                program_id=program_id,
+                existing_document_id=document_id,
+            )
+
+            # Update upload_status to completed after successful processing
+            document = await repo.get_by_id(document_id)
+            if document:
+                document.upload_status = "completed"
+
+            await db.commit()
+            logger.info(f"[BACKGROUND] Completed processing for document {document_id}: {result.status}")
+
+        except Exception as e:
+            logger.error(f"[BACKGROUND] Failed processing document {document_id}: {e}")
+            try:
+                # Update status to failed
+                document = await repo.get_by_id(document_id)
+                if document:
+                    document.upload_status = "failed"
+                    document.extraction_status = "failed"
+                    await db.commit()
+            except Exception as commit_err:
+                logger.error(f"[BACKGROUND] Failed to update status: {commit_err}")
+        finally:
+            # Clean up task reference
+            if document_id in _background_tasks:
+                del _background_tasks[document_id]
 
 
 @router.get("", response_model=DocumentListResponse)
@@ -209,6 +292,115 @@ async def ingest_directory(
         logger.error(f"Directory ingestion failed: {e}")
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upload/async", response_model=AsyncUploadResponse)
+async def upload_document_async(
+    file: UploadFile = File(...),
+    organization_id: str = Form(...),
+    property_name: str = Form(...),
+    property_id: str | None = Form(None),
+    program_id: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+) -> AsyncUploadResponse:
+    """Upload a document and process it asynchronously.
+
+    This endpoint saves the file and returns immediately with a document ID.
+    Processing (OCR, classification, extraction, embeddings) happens in the background.
+    Use GET /documents/{document_id} to check processing status.
+
+    Args:
+        file: Uploaded file.
+        organization_id: Organization ID.
+        property_name: Property name.
+        property_id: Optional property ID.
+        program_id: Optional insurance program ID.
+        db: Database session.
+
+    Returns:
+        AsyncUploadResponse with document ID and status.
+    """
+    # Validate file type
+    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".tif"}
+    file_ext = Path(file.filename or "").suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+        )
+
+    # Create upload directory if needed
+    upload_dir = Path(settings.local_upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save uploaded file
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=file_ext,
+            dir=upload_dir,
+        ) as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            temp_path = Path(tmp_file.name)
+
+        # Rename to include original filename
+        final_path = upload_dir / f"{temp_path.stem}_{file.filename}"
+        temp_path.rename(final_path)
+
+        logger.info(f"Saved uploaded file to: {final_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to save uploaded file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+
+    # Create document record with pending status
+    document_id = str(uuid.uuid4())
+    document = Document(
+        id=document_id,
+        file_name=file.filename or "unknown",
+        file_url=str(final_path),  # Local path for now, updated after S3 upload
+        organization_id=organization_id,
+        property_id=property_id,
+        upload_status="pending",
+        ocr_status="pending",
+        extraction_status="pending",
+    )
+    db.add(document)
+    await db.commit()
+
+    logger.info(f"Created document record {document_id} with pending status")
+
+    # Start background processing
+    logger.info(f"Starting background task for document {document_id}")
+    try:
+        task = asyncio.create_task(
+            process_document_background(
+                document_id=document_id,
+                file_path=str(final_path),
+                organization_id=organization_id,
+                property_name=property_name,
+                property_id=property_id,
+                program_id=program_id,
+            )
+        )
+        _background_tasks[document_id] = task
+
+        # Add callback to log any exceptions from the task
+        def task_done_callback(t: asyncio.Task) -> None:
+            if t.exception():
+                logger.error(f"Background task for {document_id} failed with exception: {t.exception()}")
+
+        task.add_done_callback(task_done_callback)
+        logger.info(f"Background task created for document {document_id}")
+    except Exception as e:
+        logger.error(f"Failed to create background task for {document_id}: {e}")
+
+    return AsyncUploadResponse(
+        document_id=document_id,
+        file_name=file.filename or "unknown",
+        status="pending",
+        message="Document uploaded successfully. Processing started in background.",
+    )
 
 
 @router.post("/upload", response_model=IngestResponse)

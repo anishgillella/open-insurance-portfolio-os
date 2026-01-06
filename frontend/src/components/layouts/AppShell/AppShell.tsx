@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { ChatWidget } from '@/components/chat';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -36,6 +37,9 @@ export function AppShell({ children }: AppShellProps) {
           {children}
         </div>
       </main>
+
+      {/* Floating Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }
