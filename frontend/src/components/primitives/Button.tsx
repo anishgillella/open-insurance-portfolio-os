@@ -14,7 +14,7 @@ const buttonVariants = cva(
         primary:
           'gradient-primary text-white shadow-md hover:shadow-lg',
         secondary:
-          'bg-white border border-[var(--color-border-default)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-border-strong)]',
+          'bg-[var(--color-surface-elevated)] border border-[var(--color-border-default)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] hover:border-[var(--color-border-strong)]',
         ghost:
           'hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]',
         danger:

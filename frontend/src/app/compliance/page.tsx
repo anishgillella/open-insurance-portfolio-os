@@ -11,7 +11,6 @@ import {
   Download,
   Building2,
   ChevronRight,
-  Play,
   Loader2,
   AlertTriangle,
 } from 'lucide-react';
@@ -20,16 +19,13 @@ import { DataCard } from '@/components/patterns';
 import {
   ComplianceStatusCard,
   ComplianceChecklist,
-  TemplateSelector,
   CoverageOverview,
 } from '@/components/features/compliance';
-import { LenderRequirementsCard } from '@/components/features/enrichment';
 import { staggerContainer, staggerItem, modalOverlay, modalContent } from '@/lib/motion/variants';
 import {
   complianceApi,
   propertiesApi,
   type ComplianceResult,
-  type ComplianceTemplate,
   type Property,
 } from '@/lib/api';
 
@@ -47,82 +43,105 @@ function CompliancePageContent() {
   const searchParams = useSearchParams();
   const propertyFilter = searchParams.get('property_id') || searchParams.get('property') || undefined;
 
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [selectedPropertyCompliance, setSelectedPropertyCompliance] = useState<ComplianceResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
 
   const [properties, setProperties] = useState<Property[]>([]);
-  const [templates, setTemplates] = useState<ComplianceTemplate[]>([]);
   const [complianceResults, setComplianceResults] = useState<Map<string, ComplianceResult>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingCompliance, setIsLoadingCompliance] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to fetch compliance data for properties
+  const fetchComplianceData = useCallback(async (propsArray: Property[]) => {
+    const filteredProps = propertyFilter
+      ? propsArray.filter((p) => p.id === propertyFilter)
+      : propsArray;
+
+    if (filteredProps.length === 0) return;
+
+    setIsLoadingCompliance(true);
+    const results = new Map<string, ComplianceResult>();
+
+    try {
+      const batchResponse = await complianceApi.batchCheckCompliance(
+        filteredProps.map((p) => p.id)
+      );
+      // Convert batch response to the format expected by the component
+      for (const item of batchResponse.results) {
+        if (item.compliance_checks.length > 0) {
+          // Use the first compliance check as the main result
+          const mainCheck = item.compliance_checks[0];
+          // Map issues to checks format expected by the UI
+          const checks = (mainCheck.issues || []).map((issue) => ({
+            requirement: issue.check_name || issue.message,
+            status: issue.severity === 'critical' || issue.severity === 'warning' ? 'fail' as const : 'pass' as const,
+            current_value: issue.current_value,
+            required_value: issue.required_value,
+          }));
+          results.set(item.property_id, {
+            property_id: item.property_id,
+            property_name: item.property_name,
+            template_id: mainCheck.template_name || '',
+            template_name: mainCheck.template_name || 'Default',
+            lender_name: mainCheck.lender_name || '',
+            is_compliant: mainCheck.is_compliant,
+            checks,
+            last_checked: mainCheck.checked_at || new Date().toISOString(),
+          });
+        } else {
+          // No compliance checks - show as compliant with no checks
+          results.set(item.property_id, {
+            property_id: item.property_id,
+            property_name: item.property_name,
+            template_id: '',
+            template_name: 'No Requirements',
+            lender_name: '',
+            is_compliant: true,
+            checks: [],
+            last_checked: new Date().toISOString(),
+          });
+        }
+      }
+    } catch {
+      // Fall back to individual calls if batch fails
+      await Promise.all(
+        filteredProps.map(async (property) => {
+          try {
+            const result = await complianceApi.getPropertyCompliance(property.id);
+            results.set(property.id, result);
+          } catch {
+            // Property may not have compliance data yet
+          }
+        })
+      );
+    }
+
+    setComplianceResults(results);
+    setIsLoadingCompliance(false);
+  }, [propertyFilter]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [propertiesData, templatesData] = await Promise.all([
-        propertiesApi.list(),
-        complianceApi.listTemplates(),
-      ]);
-      // Handle various API response formats
+      // Show page immediately
+      setIsLoading(false);
+
+      // Load properties (can be slow due to remote DB)
+      const propertiesData = await propertiesApi.list();
       const propsArray = Array.isArray(propertiesData) ? propertiesData :
         (propertiesData as { properties?: Property[]; items?: Property[] })?.properties ||
         (propertiesData as { items?: Property[] })?.items || [];
-      const templatesArray = Array.isArray(templatesData) ? templatesData :
-        (templatesData as { templates?: ComplianceTemplate[]; items?: ComplianceTemplate[] })?.templates ||
-        (templatesData as { items?: ComplianceTemplate[] })?.items || [];
       setProperties(propsArray);
-      setTemplates(templatesArray);
-      if (templatesArray.length > 0) {
-        setSelectedTemplate(templatesArray[0].id);
-      }
 
-      // Use batch endpoint for compliance - much more efficient than N+1 calls
-      const filteredProps = propertyFilter
-        ? propsArray.filter((p) => p.id === propertyFilter)
-        : propsArray;
-
-      const results = new Map<string, ComplianceResult>();
-
-      if (filteredProps.length > 0) {
-        try {
-          const batchResponse = await complianceApi.batchCheckCompliance(
-            filteredProps.map((p) => p.id)
-          );
-          // Convert batch response to the format expected by the component
-          for (const item of batchResponse.results) {
-            if (item.compliance_checks.length > 0) {
-              // Use the first compliance check as the main result
-              const mainCheck = item.compliance_checks[0];
-              results.set(item.property_id, {
-                ...mainCheck,
-                property_name: item.property_name,
-              });
-            }
-          }
-        } catch {
-          // Fall back to individual calls if batch fails
-          await Promise.all(
-            filteredProps.map(async (property) => {
-              try {
-                const result = await complianceApi.getPropertyCompliance(property.id);
-                results.set(property.id, result);
-              } catch {
-                // Property may not have compliance data yet
-              }
-            })
-          );
-        }
-      }
-      setComplianceResults(results);
+      // Load compliance data in background (slowest)
+      fetchComplianceData(propsArray);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load compliance data');
-    } finally {
       setIsLoading(false);
     }
-  }, [propertyFilter]);
+  }, [fetchComplianceData]);
 
   useEffect(() => {
     fetchData();
@@ -159,33 +178,6 @@ function CompliancePageContent() {
     setIsModalOpen(false);
     setSelectedPropertyCompliance(null);
   }, []);
-
-  const handleRunCheck = useCallback(async () => {
-    if (!selectedTemplate) return;
-    setIsChecking(true);
-    try {
-      const filteredProps = propertyFilter
-        ? properties.filter((p) => p.id === propertyFilter)
-        : properties;
-
-      const newResults = new Map(complianceResults);
-      await Promise.all(
-        filteredProps.map(async (property) => {
-          try {
-            const result = await complianceApi.checkCompliance(property.id, selectedTemplate);
-            newResults.set(property.id, result);
-          } catch {
-            // Skip properties that fail
-          }
-        })
-      );
-      setComplianceResults(newResults);
-    } catch (err) {
-      console.error('Failed to run compliance check:', err);
-    } finally {
-      setIsChecking(false);
-    }
-  }, [properties, propertyFilter, selectedTemplate, complianceResults]);
 
   // Get property name for filter display
   const filteredPropertyName = propertyFilter
@@ -250,14 +242,6 @@ function CompliancePageContent() {
           >
             Export Report
           </Button>
-          <Button
-            variant="primary"
-            leftIcon={isChecking ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            onClick={handleRunCheck}
-            disabled={isChecking || !selectedTemplate}
-          >
-            {isChecking ? 'Checking...' : 'Run Check'}
-          </Button>
         </div>
       </motion.div>
 
@@ -297,52 +281,6 @@ function CompliancePageContent() {
             <CoverageOverview coverages={coverageTypes} />
           </Card>
 
-          {/* Template Selector (compact) */}
-          <Card padding="lg">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              Compliance Template
-            </h2>
-            <div className="space-y-3">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setSelectedTemplate(template.id)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all border ${
-                    selectedTemplate === template.id
-                      ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]'
-                      : 'border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)]'
-                  }`}
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      selectedTemplate === template.id
-                        ? 'bg-[var(--color-primary-500)]'
-                        : 'bg-[var(--color-border-default)]'
-                    }`}
-                  />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-[var(--color-text-primary)]">
-                      {template.name}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {template.lender_name}
-                    </p>
-                  </div>
-                  {selectedTemplate === template.id && (
-                    <Badge variant="primary" size="sm">Active</Badge>
-                  )}
-                </button>
-              ))}
-              {templates.length === 0 && (
-                <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
-                  No compliance templates available
-                </p>
-              )}
-            </div>
-          </Card>
-
-          {/* Lender Requirements Lookup (AI-Powered) */}
-          <LenderRequirementsCard />
         </motion.div>
 
         {/* Right Column - Property Compliance List */}
@@ -357,7 +295,12 @@ function CompliancePageContent() {
               </Badge>
             </div>
 
-            {filteredStatuses.length === 0 ? (
+            {isLoadingCompliance ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 text-[var(--color-primary-500)] animate-spin mb-4" />
+                <p className="text-[var(--color-text-muted)]">Loading compliance data...</p>
+              </div>
+            ) : filteredStatuses.length === 0 ? (
               <div className="text-center py-8">
                 <Building2 className="h-12 w-12 text-[var(--color-text-muted)] mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

@@ -146,7 +146,7 @@ export function PropertyRiskCard({ propertyId, propertyAddress, className }: Pro
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
             Property Risk Analysis
           </h2>
-          {riskData?.overall_risk_score !== null && (
+          {riskData?.overall_risk_score !== null && riskData?.overall_risk_score !== undefined && (
             <Badge variant={getRiskBadgeVariant(
               riskData.overall_risk_score <= 30 ? 'low' :
               riskData.overall_risk_score <= 60 ? 'moderate' : 'high'
