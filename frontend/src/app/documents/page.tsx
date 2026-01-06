@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, Suspense, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -44,6 +44,16 @@ function DocumentsPageContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
+  // Upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadPropertyId, setUploadPropertyId] = useState<string>('');
+  const [uploadPropertyName, setUploadPropertyName] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [uploadResults, setUploadResults] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -71,6 +81,21 @@ function DocumentsPageContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Auto-refresh while documents are processing
+  useEffect(() => {
+    const hasProcessingDocs = documents.some(
+      (doc) => doc.upload_status === 'pending' || doc.upload_status === 'processing'
+    );
+
+    if (hasProcessingDocs) {
+      const intervalId = setInterval(() => {
+        fetchData();
+      }, 5000); // Refresh every 5 seconds
+
+      return () => clearInterval(intervalId);
+    }
+  }, [documents, fetchData]);
 
   // Get property name for filter display
   const filteredProperty = propertyFilter
@@ -121,7 +146,8 @@ function DocumentsPageContent() {
   const stats = useMemo(() => {
     const total = documents.length;
     const completed = documents.filter((d) => d.upload_status === 'completed').length;
-    const processing = documents.filter((d) => d.upload_status === 'processing').length;
+    // Count both 'pending' and 'processing' as in-progress
+    const processing = documents.filter((d) => d.upload_status === 'processing' || d.upload_status === 'pending').length;
     const failed = documents.filter((d) => d.upload_status === 'failed').length;
     const needsReview = documents.filter((d) => d.needs_human_review).length;
     return { total, completed, processing, failed, needsReview };
@@ -146,7 +172,9 @@ function DocumentsPageContent() {
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-[var(--color-success-500)]" />;
       case 'processing':
-        return <Clock className="h-4 w-4 text-[var(--color-warning-500)] animate-pulse" />;
+        return <Loader2 className="h-4 w-4 text-[var(--color-warning-500)] animate-spin" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-[var(--color-info-500)] animate-pulse" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-[var(--color-critical-500)]" />;
       default:
@@ -160,10 +188,12 @@ function DocumentsPageContent() {
         return <Badge variant="success">Completed</Badge>;
       case 'processing':
         return <Badge variant="warning">Processing</Badge>;
+      case 'pending':
+        return <Badge variant="info">Pending</Badge>;
       case 'failed':
         return <Badge variant="critical">Failed</Badge>;
       default:
-        return <Badge variant="neutral">Pending</Badge>;
+        return <Badge variant="neutral">{status}</Badge>;
     }
   };
 
@@ -182,6 +212,90 @@ function DocumentsPageContent() {
     if (pct >= 80) return <Badge variant="success">{pct}%</Badge>;
     if (pct >= 60) return <Badge variant="warning">{pct}%</Badge>;
     return <Badge variant="critical">{pct}%</Badge>;
+  };
+
+  // Upload handlers
+  const handleOpenUploadModal = () => {
+    setUploadFiles([]);
+    setUploadPropertyId(propertyFilter || '');
+    setUploadPropertyName('');
+    setUploadResults({ success: 0, failed: 0, errors: [] });
+    setIsUploadModalOpen(true);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const pdfFiles = files.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    setUploadFiles(prev => [...prev, ...pdfFiles]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setUploadFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) return;
+    if (!uploadPropertyId && !uploadPropertyName.trim()) {
+      setUploadResults({ success: 0, failed: 0, errors: ['Please select an existing property or enter a new property name'] });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: uploadFiles.length });
+    setUploadResults({ success: 0, failed: 0, errors: [] });
+
+    const results = { success: 0, failed: 0, errors: [] as string[] };
+    const propertyName = uploadPropertyId
+      ? properties.find(p => p.id === uploadPropertyId)?.name || uploadPropertyName.trim()
+      : uploadPropertyName.trim();
+
+    // Use async upload - files upload in parallel and process in background
+    const CONCURRENCY_LIMIT = 3; // Upload 3 files at a time
+    let completed = 0;
+
+    const uploadFile = async (file: File) => {
+      try {
+        // Use async upload endpoint - returns immediately after file transfer
+        await documentsApi.uploadAsync(
+          file,
+          propertyName,
+          undefined,
+          uploadPropertyId || undefined
+        );
+        results.success++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push(`${file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`);
+      }
+      completed++;
+      setUploadProgress({ current: completed, total: uploadFiles.length });
+    };
+
+    // Process files with concurrency limit
+    const chunks = [];
+    for (let i = 0; i < uploadFiles.length; i += CONCURRENCY_LIMIT) {
+      chunks.push(uploadFiles.slice(i, i + CONCURRENCY_LIMIT));
+    }
+
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map(uploadFile));
+    }
+
+    setUploadResults(results);
+    setIsUploading(false);
+    setUploadProgress(null);
+
+    // Refresh documents list - documents will show with "pending" or "processing" status
+    if (results.success > 0) {
+      fetchData();
+    }
+  };
+
+  const handleCloseUploadModal = () => {
+    if (!isUploading) {
+      setIsUploadModalOpen(false);
+      setUploadFiles([]);
+    }
   };
 
   if (isLoading) {
@@ -247,11 +361,22 @@ function DocumentsPageContent() {
           <Button
             variant="primary"
             leftIcon={<Upload className="h-4 w-4" />}
+            onClick={handleOpenUploadModal}
           >
             Upload
           </Button>
         </div>
       </motion.div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        multiple
+        className="hidden"
+        onChange={handleFileSelect}
+      />
 
       {/* Stats Row - Compact horizontal layout */}
       <motion.div variants={staggerItem}>
@@ -583,6 +708,194 @@ function DocumentsPageContent() {
           </Card>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      {/* Upload Modal */}
+      <AnimatePresence>
+        {isUploadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60"
+              onClick={handleCloseUploadModal}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-[var(--color-surface)] rounded-xl shadow-2xl border border-[var(--color-border-default)] w-full max-w-lg z-10"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-subtle)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Upload Documents</h3>
+                <button
+                  onClick={handleCloseUploadModal}
+                  disabled={isUploading}
+                  className="p-2 hover:bg-[var(--color-surface-sunken)] rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <X className="h-5 w-5 text-[var(--color-text-muted)]" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* Property Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                    Property
+                  </label>
+                  <select
+                    value={uploadPropertyId}
+                    onChange={(e) => {
+                      setUploadPropertyId(e.target.value);
+                      if (e.target.value) setUploadPropertyName('');
+                    }}
+                    disabled={isUploading}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] disabled:opacity-50"
+                  >
+                    <option value="">Select existing property or create new</option>
+                    {properties.map((prop) => (
+                      <option key={prop.id} value={prop.id}>{prop.name}</option>
+                    ))}
+                  </select>
+                  {!uploadPropertyId && (
+                    <input
+                      type="text"
+                      placeholder="Or enter new property name..."
+                      value={uploadPropertyName}
+                      onChange={(e) => setUploadPropertyName(e.target.value)}
+                      disabled={isUploading}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] disabled:opacity-50"
+                    />
+                  )}
+                </div>
+
+                {/* File Drop Zone */}
+                <div
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    isUploading
+                      ? 'border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] cursor-not-allowed'
+                      : 'border-[var(--color-border-default)] hover:border-[var(--color-primary-500)] hover:bg-[var(--color-primary-50)]'
+                  }`}
+                >
+                  <Upload className="h-8 w-8 text-[var(--color-text-muted)] mx-auto mb-2" />
+                  <p className="text-sm text-[var(--color-text-primary)] font-medium">
+                    Click to select PDF files
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    or drag and drop
+                  </p>
+                </div>
+
+                {/* Selected Files */}
+                {uploadFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                      {uploadFiles.length} file{uploadFiles.length !== 1 ? 's' : ''} selected
+                    </div>
+                    <div className="max-h-[150px] overflow-y-auto space-y-1">
+                      {uploadFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between px-3 py-2 bg-[var(--color-surface-sunken)] rounded-lg"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-[var(--color-text-muted)] flex-shrink-0" />
+                            <span className="text-sm text-[var(--color-text-primary)] truncate">
+                              {file.name}
+                            </span>
+                            <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">
+                              ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
+                          </div>
+                          {!isUploading && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFile(index);
+                              }}
+                              className="p-1 hover:bg-[var(--color-surface)] rounded transition-colors"
+                            >
+                              <X className="h-4 w-4 text-[var(--color-text-muted)]" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Progress */}
+                {isUploading && uploadProgress && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[var(--color-text-primary)]">Uploading...</span>
+                      <span className="text-[var(--color-text-muted)]">
+                        {uploadProgress.current} of {uploadProgress.total}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-[var(--color-surface-sunken)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-primary-500)] transition-all duration-300"
+                        style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Results */}
+                {!isUploading && (uploadResults.success > 0 || uploadResults.failed > 0) && (
+                  <div className="space-y-2">
+                    {uploadResults.success > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-[var(--color-success-600)]">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>{uploadResults.success} file{uploadResults.success !== 1 ? 's' : ''} uploaded successfully</span>
+                      </div>
+                    )}
+                    {uploadResults.failed > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm text-[var(--color-critical-600)]">
+                          <XCircle className="h-4 w-4" />
+                          <span>{uploadResults.failed} file{uploadResults.failed !== 1 ? 's' : ''} failed</span>
+                        </div>
+                        {uploadResults.errors.length > 0 && (
+                          <div className="text-xs text-[var(--color-critical-500)] pl-6 space-y-0.5">
+                            {uploadResults.errors.slice(0, 3).map((err, i) => (
+                              <div key={i}>{err}</div>
+                            ))}
+                            {uploadResults.errors.length > 3 && (
+                              <div>...and {uploadResults.errors.length - 3} more errors</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-4 border-t border-[var(--color-border-subtle)]">
+                <Button
+                  variant="ghost"
+                  onClick={handleCloseUploadModal}
+                  disabled={isUploading}
+                >
+                  {uploadResults.success > 0 ? 'Close' : 'Cancel'}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleUpload}
+                  disabled={isUploading || uploadFiles.length === 0}
+                  leftIcon={isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                >
+                  {isUploading ? 'Uploading...' : `Upload ${uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}`}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Document Detail Modal */}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import {
   Send,
   Loader2,
@@ -375,7 +376,13 @@ function MessageBubble({ message }: { message: Message }) {
             </div>
           ) : (
             <>
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              {isUser ? (
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-headings:my-2 prose-strong:text-[var(--color-text-primary)] prose-strong:font-semibold">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              )}
               {message.isStreaming && (
                 <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
               )}

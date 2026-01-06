@@ -98,6 +98,7 @@ class IngestionService:
         program_id: str | None = None,
         force_reprocess: bool = True,
         auto_create_entities: bool = True,
+        existing_document_id: str | None = None,
     ) -> IngestResponse:
         """Ingest a single document file.
 
@@ -170,19 +171,37 @@ class IngestionService:
         file_type = path.suffix.lower().lstrip(".")
         mime_type = self._get_mime_type(path)
 
-        # Use atomic upsert to handle race conditions in parallel processing
-        # This will either create a new document or update an existing one
-        document, is_new = await self.document_repo.upsert_from_file(
-            file_name=path.name,
-            file_url=str(path.absolute()),
-            organization_id=organization_id,
-            property_id=property_id,
-            file_size_bytes=file_size,
-            file_type=file_type,
-            mime_type=mime_type,
-        )
+        # If existing_document_id provided (async upload), use that document
+        if existing_document_id:
+            document = await self.document_repo.get_by_id(existing_document_id)
+            if not document:
+                return IngestResponse(
+                    document_id=existing_document_id,
+                    file_name=path.name,
+                    status="failed",
+                    errors=[f"Document {existing_document_id} not found"],
+                )
+            is_new = False
+            # Update the document with file metadata
+            document.file_size_bytes = file_size
+            document.file_type = file_type
+            document.mime_type = mime_type
+            document.property_id = property_id
+            logger.info(f"Using existing document record: {document.id}")
+        else:
+            # Use atomic upsert to handle race conditions in parallel processing
+            # This will either create a new document or update an existing one
+            document, is_new = await self.document_repo.upsert_from_file(
+                file_name=path.name,
+                file_url=str(path.absolute()),
+                organization_id=organization_id,
+                property_id=property_id,
+                file_size_bytes=file_size,
+                file_type=file_type,
+                mime_type=mime_type,
+            )
 
-        if not is_new and not force_reprocess:
+        if not is_new and not force_reprocess and not existing_document_id:
             logger.info(f"Document already exists, skipping: {path.name} (id: {document.id})")
             return IngestResponse(
                 document_id=document.id,

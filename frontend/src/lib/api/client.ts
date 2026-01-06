@@ -733,6 +733,13 @@ export interface UploadResponse {
   errors?: string[];
 }
 
+export interface AsyncUploadResponse {
+  document_id: string;
+  file_name: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  message: string;
+}
+
 export interface DirectoryUploadResponse {
   directory_path: string;
   total_files: number;
@@ -769,6 +776,18 @@ export const documentsApi = {
       formData.append('property_id', propertyId);
     }
     return apiPostFormData<UploadResponse>('/documents/upload', formData);
+  },
+
+  // Async upload - returns immediately, processing happens in background
+  uploadAsync: (file: File, propertyName: string, orgId = DEFAULT_ORG_ID, propertyId?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('organization_id', orgId);
+    formData.append('property_name', propertyName);
+    if (propertyId) {
+      formData.append('property_id', propertyId);
+    }
+    return apiPostFormData<AsyncUploadResponse>('/documents/upload/async', formData);
   },
 
   uploadDirectory: (directoryPath: string, propertyName: string, orgId = DEFAULT_ORG_ID, propertyId?: string) =>
@@ -902,27 +921,35 @@ export async function streamChat(
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
 
+    let currentEvent = '';
     for (const line of lines) {
       if (line.startsWith('event: ')) {
-        const eventType = line.slice(7).trim();
+        currentEvent = line.slice(7).trim();
         continue;
       }
       if (line.startsWith('data: ')) {
         const data = line.slice(6);
         try {
-          // Try to parse as JSON first
           const parsed = JSON.parse(data);
-          if (parsed.sources) {
-            callbacks.onSources(parsed.sources);
-          } else if (parsed.conversation_id) {
+
+          // Handle based on event type
+          if (currentEvent === 'content' && parsed.text !== undefined) {
+            callbacks.onContent(parsed.text);
+          } else if (currentEvent === 'sources' || Array.isArray(parsed)) {
+            callbacks.onSources(Array.isArray(parsed) ? parsed : parsed.sources || []);
+          } else if (currentEvent === 'done' || parsed.conversation_id) {
             callbacks.onDone(parsed.conversation_id, parsed.confidence || 0);
           } else if (parsed.error) {
             callbacks.onError(parsed.error);
+          } else if (parsed.text !== undefined) {
+            // Fallback for content without event type
+            callbacks.onContent(parsed.text);
           }
         } catch {
-          // Not JSON, treat as content
+          // Not JSON, treat as raw content
           callbacks.onContent(data);
         }
+        currentEvent = '';
       }
     }
   }

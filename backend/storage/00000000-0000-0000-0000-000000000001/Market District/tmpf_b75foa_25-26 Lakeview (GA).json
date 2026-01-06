@@ -1,0 +1,171 @@
+{
+  "classification": {
+    "document_type": "proposal",
+    "document_subtype": null,
+    "policy_type": "unknown",
+    "confidence": 1.0,
+    "carrier_name": null,
+    "policy_number": null,
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "insured_name": "Lakeview Apartments Brampton LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": null,
+  "sov": null,
+  "proposal": {
+    "confidence": 1.0,
+    "named_insured": "Lakeview Apartments Brampton LLC",
+    "insured_address": "1150 Brampton Avenue, Statesboro, GA, 30458",
+    "effective_date": "2025-04-01",
+    "expiration_date": "2026-04-01",
+    "proposal_title": "Asset Living's Client-Exclusive Insurance Program Quote",
+    "proposal_type": "new_business",
+    "properties": [
+      {
+        "property_name": "Lakeview (GA)",
+        "property_address": "1150 Brampton Avenue, Statesboro, GA, 30458",
+        "unit_count": 200,
+        "total_insured_value": 33954098.0,
+        "expiring_tiv": null,
+        "renewal_tiv": 33954098.0,
+        "coverages": [
+          {
+            "coverage_type": "Property",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 115476.99,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Equipment Breakdown/Boiler and Machinery",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Property Loss Fund (Fully Earned)",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "General Liability",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 87322.2,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Umbrella and Excess Liability (Fully Earned)",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Active Assailant",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Terrorism",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Flood \u2013 Excess NFIP Only",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Flood \u2013 NFIP",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": null,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Pollution Liability (Fully Earned)",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Insurance Carrier Taxes and Fees",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Asset Administrative Fee",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 0.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          }
+        ],
+        "expiring_total_premium": null,
+        "renewal_total_premium": 202799.19,
+        "price_per_door_expiring": null,
+        "price_per_door_renewal": 1013.99595
+      }
+    ],
+    "portfolio_expiring_premium": null,
+    "portfolio_renewal_premium": 202799.19,
+    "portfolio_premium_change": null,
+    "portfolio_premium_change_pct": null,
+    "carriers": []
+  },
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nLocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\n# Asset Living\n\nClient-Exclusive Insurance Program Quote\n\nApril 1, 2025 \u2013 April 1, 2026\n\n4913-8682-0140.1\n\nASSET\n\nLOCKTON\n\n---\n\n<!-- Page 2 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\n# Program Eligibility\n\n- Dedicated insurance program available to market-rate, purpose-built student and affordable apartments\n- Based on acceptable five-year loss history or an affidavit of no known property or casualty losses\n- Available only to properties managed by Asset Living\u00b9 (coterminous with the management agreement)\n- Warranties: It is warranted by the Owner as a condition precedent to the acceptance of this insurance that:\n- No vacant buildings - defined as any building below 75% occupancy, except for new construction\n- No Pull cords, call buttons, emergency call systems, healthcare providers, medical services, transportation services, meal services, homeless/transitional housing or childcare services\n- Continued coverage under the program is subject to satisfactory loss control inspections, including remediation of all loss control recommendations\n\nPlease reach out to us at AssetLiving@lockton.com if you have any questions.\n\n\u00b9 Throughout this Program Quote, references to Asset Living shall mean Sako and Partners Lower Holdings LLC and all its subsidiaries.\n\nAsset Living 2 Lockton Companies\n\nLockton Companies thanks you for the opportunity to discuss your insurance and risk management program. This summary is a brief overview of that program and is based on the exposure information you provided. Please refer to the policies for complete terms, conditions, limitations, definitions, and exclusions. Higher limits may be available upon request.\n\n4913-8682-0140.1\n\n---\n\n<!-- Page 3 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\n# Asset Living's Client-Exclusive Insurance Program Quote\n\nPolicy Term: 4/1/2025 to 4/1/2026\n\n|  Prepared For | Insured Location | Quote Description  |\n| --- | --- | --- |\n|  Lakeview Apartments Brampton LLC | Lakeview (GA) | Property and Liability Insurance  |\n|  Date Quote Issued: 3/25/2025 | 1150 Brampton Avenue, Statesboro, GA, 30458 |   |\n|  Exposure | 2025 \u2013 2026 Values  |\n| --- | --- |\n|  Building Value | $27,317,640  |\n|  Contents Value | $200,000  |\n|  Business Income | $6,436,458  |\n|  Garage Value | N/A  |\n|  Retail Value | N/A  |\n|  Total Insurable Value | $33,954,098  |\n|  Number of Units | 200  |\n\nThe provided quote is based on the exposure information shown above. Please review and contact us at AssetLiving@Lockton.com if any of the information is incorrect. Failure to disclose or misstatement will result in a declination and/or cancellation.\n\nEach participant is solely responsible for carefully reviewing these values to determine accuracy and adequacy for their location(s).\n\nAsset Living\n\nLockton Companies\n\nLockton Companies thanks you for the opportunity to discuss your insurance and risk management program. This summary is a brief overview of that program and is based on the exposure information you provided. Please refer to the policies for complete terms, conditions, limitations, definitions, and exclusions. Higher limits may be available upon request.\n\n4913-8682-0140.1\n\n---\n\n<!-- Page 4 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\n# Asset Living's Client-Exclusive Insurance Program Quote\n\nPolicy Term: 4/1/2025 to 4/1/2026\n\n|  Coverage | Effective Date | 2025-2026 Annual Cost  |\n| --- | --- | --- |\n|  Property | 4/1/2025 | $115,476.99  |\n|  Equipment Breakdown/Boiler and Machinery | 4/1/2025 | Included  |\n|  Property Loss Fund (Fully Earned) | 4/1/2025 | Included  |\n|  General Liability | 4/1/2025 | $87,322.20  |\n|  Umbrella and Excess Liability (Fully Earned) | 4/1/2025 | Included  |\n|  Active Assailant | 4/1/2025 | Included  |\n|  Terrorism | 4/1/2025 | Included  |\n|  Flood \u2013 Excess NFIP Only | 4/1/2025 | Included  |\n|  Flood \u2013 NFIP | 4/1/2025 | Not Included  |\n|  Pollution Liability (Fully Earned) | 4/1/2025 | Included  |\n|  Insurance Carrier Taxes and Fees | 4/1/2025 | Included  |\n|  Asset Administrative Fee | 4/1/2025 | Included  |\n|  Total Program Costs |  | $202,799.19  |\n\nThis quote is subject to being withdrawn upon written notice by broker and/or Asset Living within 10 days per the terms, conditions and disclosures contained herein. An outline of coverage follows. In the event of any property leaving the program during the policy period, any premium associated with the following is 100% earned and not refundable. The minimum earned on the remaining premium is 35%.\n\n- Umbrella and Excess Liability (Fully Earned)\n- Property Loss Fund (Fully Earned)\n- Pollution Liability (Fully Earned)\n- All property premium, including taxes and fees, for Tier 1 locations is 100% earned if coverage is in force at any point between June 1 and November 30.\n\nIf you wish to bind coverage, you may do so by signing this quotation acceptance and authorization to bind via DocuSign. You will receive an email from DocuSign to sign the acceptance page electronically. Please email assetliving@lockton.com if you have any technical difficulties.\n\n**Midterm Changes:** Please note that return premiums for the Program are reconciled on a quarterly basis. After the quarter ends it can take up to 90 days to receive return premiums. See Additional Program Terms, Conditions and Disclosures for further explanation (item 12).\n\nQ1: April 1 \u2013 June 30 / Q2: July 1 \u2013 September 30 / Q3: October 1 \u2013 December 31 / Q4: January 1 \u2013 March 31\n\nAsset Living\n\n4\n\nLockton Companies\n\nLockton Companies thanks you for the opportunity to discuss your insurance and risk management program. This summary is a brief overview of that program and is based on the exposure information you provided. Please refer to the policies for complete terms, conditions, limitations, definitions, and exclusions. Higher limits may be available upon request.\n\n4913-8682-0140.1\n\n---\n\n<!-- Page 5 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\nProperty Coverage Summary\n\n|  Program Limits (per occurrence, unless otherwise specified)  |   |\n| --- | --- |\n|  Total Program limit | $250,000,000  |\n|  Building/Real Property \u2013 Per occurrence (replacement cost) | Included  |\n|  Contents/Business Personal Property | Included  |\n|  Rental/Business Income (actual loss) | Included  |\n|  Perils insured | Special causes of loss  |\n|  Limits of Liability (per occurrence, unless otherwise specified)  |   |\n| --- | --- |\n|  Per occurrence, except | $250,000,000  |\n|  Earthquake (per occurrence and annual aggregate) New Madrid and Pacific Northwest | $25,000,000  |\n|  Earthquake (per occurrence and annual aggregate) California only | $25,000,000  |\n|  Earthquake (per occurrence and annual aggregate) All Other | $25,000,000  |\n|  Flood (per occurrence and annual aggregate) locations outside SFHA 100-year zone | $50,000,000  |\n|  Flood (per occurrence and annual aggregate) locations wholly or partially within SFHA 100-year flooding | $50,000,000  |\n|  Named Storm (per occurrence) | $150,000,000  |\n|  Debris Removal | 25% or $25,000,000 \u2013 whichever is greater  |\n|  Equipment Breakdown/Boiler and Machinery | $250,000,000  |\n|  Terrorism & Sabotage | $250,000,000  |\n|  Building Ordinance Law \u2013 Coverage A (undamaged portion of building) | Included  |\n|  Building Ordinance Law \u2013 Coverage B (demolition) | $10,000,000  |\n|  Building Ordinance Law \u2013 Coverage C (increased cost of construction) | $10,000,000  |\n|  Building Ordinance Law \u2013 Coverage D (business interruption) | $10,000,000  |\n|  Extended Period of Indemnity | 365 Days  |\n|  Property Deductibles (per location per occurrence, unless otherwise noted)  |   |\n| --- | --- |\n|  All Other Perils | $50,000  |\n|  Wind and Hail \u2013 All other states | $50,000  |\n|  Wind and Hail \u2013 TX, OK, CO | 3% of TIV, subject to $50,000 minimum  |\n|  Freeze Events \u2013 Water damage | $50,000  |\n|  Named Storm \u2013 All other locations | $250,000  |\n|  Named Storm \u2013 Entire state of Florida | 5% of TIV, subject to $100,000 minimum  |\n|  Named Storm \u2013 All other Tier 1 zones | 3% of TIV, subject to $100,000 minimum  |\n|  Earthquake \u2013 All other locations | $50,000  |\n\nAsset Living\n5\nLockton Companies\n\nLockton Companies thanks you for the opportunity to discuss your insurance and risk management program. This summary is a brief overview of that program and is based on the exposure information you provided. Please refer to the policies for complete terms, conditions, limitations, definitions, and exclusions. Higher limits may be available upon request.\n\n4913-8682-0140.1\n\n---\n\n<!-- Page 6 -->\nDocusign Envelope ID: 327ADE8F-88C2-4634-B32C-2972D28BC4C1\n\n|  Property Deductibles (per location per occurrence, unless otherwise noted)  |   |\n| --- | --- |\n|  Earthquake \u2013 CA, HI, AK, PR | 5% of TIV, subject to $50,000 minimum  |\n|  Earthquake \u2013 New Madrid counties | 2% of TIV, subject to $50,000 minimum  |\n|  Earthquake \u2013 Pacific Northwest counties | 2% of TIV, subject to $50,000 minimum  |\n|  Flood \u2013 All other loss | $50,000  |\n|  Flood \u2013 SFHA | Max NFIP or $250K per building/ $250K contents per building/$250K time element  |\n|  Equipment Breakdown/Boiler and Machinery | $10,000  |\n|  Terrorism & Sabotage | $25,000  |\n\n## Additional Terms and Conditions for Property Coverage:\n\n- Blanket Program Limit: Subject to a $250,000,000 loss limit per occurrence.\n- Sublimits are included in, and are not in addition to, the per occurrence primary policy limit. Additional sublimits/deductibles may apply as outlined in the policy.\n- Shared Program Notice: This proposal is an offer to become part of this Asset Living Client-Exclusive Program along with other owners who are clients of Asset Living. All participants' coverage under the Program will share in the per occurrence limits as shown. In the event of a loss or accumulation of covered losses sustained by the members which collectively exceed the per occurrence limits over the policy yea",
+  "overall_confidence": 1.0
+}
