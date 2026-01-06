@@ -167,9 +167,9 @@ export function MarketIntelligenceCard({ propertyId, className }: MarketIntellig
         <div className="flex-1">
           <p className="text-sm text-[var(--color-text-muted)]">Rate Trend</p>
           <p className={cn('text-2xl font-bold', getTrendColor(marketData?.rate_trend.direction || 'stable'))}>
-            {marketData?.rate_trend.rate_change_pct !== null
+            {marketData?.rate_trend?.rate_change_pct !== null && marketData?.rate_trend?.rate_change_pct !== undefined
               ? `${marketData.rate_trend.rate_change_pct > 0 ? '+' : ''}${marketData.rate_trend.rate_change_pct}%`
-              : marketData?.rate_trend.rate_change_range || 'Unknown'}
+              : marketData?.rate_trend?.rate_change_range || 'Unknown'}
           </p>
         </div>
         <div className="text-right">

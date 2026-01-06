@@ -389,7 +389,7 @@ export default function RenewalsPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                 {sortedTimelines.map((timeline) => {
                   const property = properties.find((p) => p.id === timeline.property_id);
                   const forecast = forecasts.get(timeline.property_id);

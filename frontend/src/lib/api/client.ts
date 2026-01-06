@@ -41,7 +41,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // ============ GENERIC FETCH HELPERS ============
 
-export async function apiGet<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+export async function apiGet<T>(endpoint: string, params?: Record<string, string | undefined>): Promise<T> {
   const url = new URL(`${API_BASE_URL}${endpoint}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -577,13 +577,39 @@ export interface ComplianceTemplate {
   requirements: Record<string, unknown>;
 }
 
+// Backend template format (from /compliance/templates)
+export interface ComplianceTemplateBackend {
+  name: string;
+  display_name: string;
+  description: string;
+}
+
 // Batch compliance types
+export interface ComplianceIssue {
+  check_name: string;
+  severity: string;
+  message: string;
+  current_value?: string;
+  required_value?: string;
+}
+
+export interface ComplianceCheckBackend {
+  property_id: string;
+  lender_requirement_id?: string;
+  lender_name?: string;
+  template_name: string;
+  status: string;
+  is_compliant: boolean;
+  issues: ComplianceIssue[];
+  checked_at?: string;
+}
+
 export interface BatchComplianceItem {
   property_id: string;
   property_name: string;
   overall_status: 'compliant' | 'non_compliant' | 'partial' | 'no_requirements';
   total_issues: number;
-  compliance_checks: ComplianceResult[];
+  compliance_checks: ComplianceCheckBackend[];
 }
 
 export interface BatchComplianceResponse {
@@ -598,8 +624,17 @@ export const complianceApi = {
   getPropertyCompliance: (propertyId: string, templateId?: string) =>
     apiGet<ComplianceResult>(`/compliance/properties/${propertyId}`, templateId ? { template_id: templateId } : undefined),
 
-  listTemplates: () =>
-    apiGet<ComplianceTemplate[]>('/compliance/templates'),
+  listTemplates: async (): Promise<ComplianceTemplate[]> => {
+    const response = await apiGet<{ templates: ComplianceTemplateBackend[] }>('/compliance/templates');
+    // Map backend format to frontend format
+    return (response.templates || []).map((t) => ({
+      id: t.name,
+      name: t.display_name,
+      lender_name: t.display_name, // Use display_name as lender_name for display
+      description: t.description,
+      requirements: {},
+    }));
+  },
 
   checkCompliance: (propertyId: string, templateId: string) =>
     apiPost<ComplianceResult>('/compliance/check', { property_id: propertyId, template_id: templateId }),
@@ -1274,7 +1309,7 @@ export interface LenderRequirementsResponse {
 export const enrichmentApi = {
   // Market Intelligence
   getMarketIntelligence: (propertyId: string, includeRaw = false) =>
-    apiGet<MarketIntelligenceResponse>(`/enrichment/market-intelligence/${propertyId}`, { include_raw_research: includeRaw }),
+    apiGet<MarketIntelligenceResponse>(`/enrichment/market-intelligence/${propertyId}`, { include_raw_research: String(includeRaw) }),
 
   // Property Risk
   enrichPropertyRisk: (propertyId: string, updateProperty = false, includeRaw = false) =>
@@ -1287,14 +1322,14 @@ export const enrichmentApi = {
   researchCarrier: (carrierName: string, propertyType?: string, includeRaw = false) =>
     apiGet<CarrierResearchResponse>(`/enrichment/carriers/${encodeURIComponent(carrierName)}/research`, {
       property_type: propertyType,
-      include_raw_research: includeRaw,
+      include_raw_research: String(includeRaw),
     }),
 
   // Lender Requirements
   getLenderRequirements: (lenderName: string, loanType?: string, includeRaw = false) =>
     apiGet<LenderRequirementsResponse>(`/enrichment/lenders/${encodeURIComponent(lenderName)}/requirements`, {
       loan_type: loanType,
-      include_raw_research: includeRaw,
+      include_raw_research: String(includeRaw),
     }),
 };
 
