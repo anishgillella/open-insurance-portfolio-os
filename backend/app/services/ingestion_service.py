@@ -32,6 +32,7 @@ from app.repositories.financial_repository import FinancialRepository
 from app.repositories.policy_repository import CoverageRepository, PolicyRepository
 from app.repositories.program_repository import ProgramRepository
 from app.repositories.property_repository import PropertyRepository
+from app.repositories.valuation_repository import ValuationRepository
 from app.schemas.document import (
     DocumentClassification,
     DocumentType,
@@ -88,6 +89,7 @@ class IngestionService:
         self.certificate_repo = CertificateRepository(session)
         self.financial_repo = FinancialRepository(session)
         self.claim_repo = ClaimRepository(session)
+        self.valuation_repo = ValuationRepository(session)
 
     async def ingest_file(
         self,
@@ -658,12 +660,155 @@ class IngestionService:
             logger.info(f"Created {len(claims)} claims from loss run")
             created_records["claim_ids"] = [c.id for c in claims]
 
-        # TODO: Create valuations from SOV extraction
-        # if extraction.sov and extraction.sov.properties:
-        #     for sov_property in extraction.sov.properties:
-        #         valuation = await self.valuation_repo.create_from_extraction(...)
+        # Create valuations from SOV extraction
+        if extraction.sov and extraction.sov.properties and property_id:
+            valuation_ids = []
+            for sov_property in extraction.sov.properties:
+                valuation = await self.valuation_repo.create_from_extraction(
+                    extraction=sov_property,
+                    property_id=property_id,
+                    document_id=document_id,
+                    valuation_date=extraction.sov.as_of_date,
+                    valuation_source="sov",
+                )
+                valuation_ids.append(valuation.id)
+            logger.info(f"Created {len(valuation_ids)} valuations from SOV")
+            created_records["valuation_ids"] = valuation_ids
+
+            # Update property metadata from first SOV property (usually the main one)
+            if extraction.sov.properties:
+                await self._update_property_from_sov(
+                    property_id, extraction.sov.properties[0], extraction.sov
+                )
+
+        # Create valuations from proposal properties if available
+        if extraction.proposal and extraction.proposal.properties and property_id:
+            for prop_quote in extraction.proposal.properties:
+                if prop_quote.total_insured_value:
+                    # Create a simplified SOV property extraction from proposal data
+                    from app.schemas.document import SOVPropertyExtraction
+                    sov_prop = SOVPropertyExtraction(
+                        property_name=prop_quote.property_name,
+                        address=prop_quote.property_address,
+                        total_insured_value=prop_quote.renewal_tiv or prop_quote.total_insured_value,
+                    )
+                    valuation = await self.valuation_repo.create_from_extraction(
+                        extraction=sov_prop,
+                        property_id=property_id,
+                        document_id=document_id,
+                        valuation_source="proposal",
+                    )
+                    created_records.setdefault("valuation_ids", []).append(valuation.id)
+
+            # Update property units from proposal if available
+            if extraction.proposal.properties and extraction.proposal.properties[0].unit_count:
+                await self.property_repo.update(
+                    property_id,
+                    units=extraction.proposal.properties[0].unit_count,
+                )
+
+        # Update insurance program aggregates
+        if program_id:
+            await self._update_program_aggregates(program_id)
 
         return created_records
+
+    async def _update_property_from_sov(
+        self,
+        property_id: str,
+        sov_property,
+        sov_extraction,
+    ) -> None:
+        """Update property metadata from SOV extraction.
+
+        Args:
+            property_id: Property ID to update.
+            sov_property: SOV property extraction data.
+            sov_extraction: Full SOV extraction for aggregate values.
+        """
+        updates = {}
+
+        # Update basic property info
+        if sov_property.year_built:
+            updates["year_built"] = sov_property.year_built
+        if sov_property.square_footage:
+            updates["sq_ft"] = sov_property.square_footage
+        if sov_property.construction_type:
+            updates["construction_type"] = sov_property.construction_type
+        if sov_property.stories:
+            updates["stories"] = sov_property.stories
+
+        # Address updates
+        if sov_property.address:
+            updates["address"] = sov_property.address
+        if sov_property.city:
+            updates["city"] = sov_property.city
+        if sov_property.state:
+            updates["state"] = sov_property.state
+        if sov_property.zip_code:
+            updates["zip"] = sov_property.zip_code
+
+        if updates:
+            await self.property_repo.update(property_id, **updates)
+            logger.info(f"Updated property {property_id} with SOV data: {list(updates.keys())}")
+
+    async def _update_program_aggregates(self, program_id: str) -> None:
+        """Update insurance program aggregate values from its policies and financials.
+
+        Args:
+            program_id: Insurance program ID.
+        """
+        from decimal import Decimal
+
+        program = await self.program_repo.get_by_id(program_id)
+        if not program:
+            return
+
+        total_premium = Decimal("0")
+        total_tiv = Decimal("0")
+        total_liability = Decimal("0")
+
+        # Get policies for this program
+        policies = await self.policy_repo.get_by_program(program_id)
+        for policy in policies:
+            if policy.premium:
+                total_premium += policy.premium
+            if policy.total_cost:
+                total_premium = max(total_premium, policy.total_cost)
+
+            # Sum coverage limits by type
+            if policy.coverages:
+                for cov in policy.coverages:
+                    if cov.limit_amount:
+                        if cov.coverage_category == "property":
+                            total_tiv = max(total_tiv, cov.limit_amount)
+                        elif cov.coverage_category == "liability":
+                            total_liability += cov.limit_amount
+
+        # Get financials (invoices) for more accurate premium
+        financials = await self.financial_repo.get_by_program(program_id)
+        for fin in financials:
+            if fin.total and fin.record_type == "invoice":
+                total_premium = max(total_premium, fin.total)
+
+        # Get valuations for TIV
+        if program.property_id:
+            valuations = await self.valuation_repo.get_by_property(program.property_id, limit=1)
+            if valuations and valuations[0].total_insured_value:
+                total_tiv = max(total_tiv, valuations[0].total_insured_value)
+
+        # Update program
+        await self.program_repo.update(
+            program_id,
+            total_premium=total_premium if total_premium > 0 else None,
+            total_insured_value=total_tiv if total_tiv > 0 else None,
+            total_liability_limit=total_liability if total_liability > 0 else None,
+            policies_count=len(policies),
+        )
+        logger.info(
+            f"Updated program {program_id} aggregates: "
+            f"premium={total_premium}, TIV={total_tiv}, liability={total_liability}"
+        )
 
     def _build_extraction_summary(self, extraction: ExtractionResult) -> dict:
         """Build a summary of extraction results.

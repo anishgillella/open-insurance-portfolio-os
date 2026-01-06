@@ -348,6 +348,115 @@ export interface DocumentSummary {
   created_at: string;
 }
 
+// ============ EXTRACTED DATA TYPES ============
+
+export interface ExtractedFieldValue {
+  value: string | number | boolean | null;
+  source_document_id: string;
+  source_document_name: string;
+  source_document_type: string | null;
+  extraction_confidence: number | null;
+  extracted_at: string | null;
+}
+
+export interface ExtractedFieldWithSources {
+  field_name: string;
+  display_name: string;
+  category: string;
+  values: ExtractedFieldValue[];
+  consolidated_value: string | number | boolean | null;
+}
+
+export interface DocumentExtractionSummary {
+  document_id: string;
+  document_name: string;
+  document_type: string | null;
+  uploaded_at: string;
+  extraction_confidence: number | null;
+  extracted_fields: Record<string, string | number | boolean | null>;
+}
+
+export interface ValuationSummary {
+  id: string;
+  valuation_date: string | null;
+  valuation_source: string | null;
+  building_value: string | null;
+  contents_value: string | null;
+  business_income_value: string | null;
+  total_insured_value: string | null;
+  price_per_sqft: string | null;
+  sq_ft_used: number | null;
+  source_document_id: string | null;
+  source_document_name: string | null;
+}
+
+export interface CoverageExtractionSummary {
+  coverage_name: string;
+  coverage_category: string | null;
+  limit_amount: string | null;
+  limit_type: string | null;
+  deductible_amount: string | null;
+  deductible_type: string | null;
+  source_document_id: string | null;
+  source_document_name: string | null;
+}
+
+export interface PolicyExtractionSummary {
+  id: string;
+  policy_type: string;
+  policy_number: string | null;
+  carrier_name: string | null;
+  effective_date: string | null;
+  expiration_date: string | null;
+  premium: string | null;
+  coverages: CoverageExtractionSummary[];
+  source_document_id: string | null;
+  source_document_name: string | null;
+}
+
+export interface CertificateExtractionSummary {
+  id: string;
+  certificate_type: string;
+  certificate_number: string | null;
+  producer_name: string | null;
+  insured_name: string | null;
+  holder_name: string | null;
+  effective_date: string | null;
+  expiration_date: string | null;
+  gl_each_occurrence: string | null;
+  gl_general_aggregate: string | null;
+  property_limit: string | null;
+  umbrella_limit: string | null;
+  source_document_id: string | null;
+  source_document_name: string | null;
+}
+
+export interface FinancialExtractionSummary {
+  id: string;
+  record_type: string;
+  total: string | null;
+  taxes: string | null;
+  fees: string | null;
+  invoice_date: string | null;
+  due_date: string | null;
+  source_document_id: string | null;
+  source_document_name: string | null;
+}
+
+export interface PropertyExtractedDataResponse {
+  property_id: string;
+  property_name: string;
+  extracted_fields: ExtractedFieldWithSources[];
+  valuations: ValuationSummary[];
+  policies: PolicyExtractionSummary[];
+  certificates: CertificateExtractionSummary[];
+  financials: FinancialExtractionSummary[];
+  document_extractions: DocumentExtractionSummary[];
+  total_documents: number;
+  documents_with_extractions: number;
+  last_extraction_at: string | null;
+}
+
 export const propertiesApi = {
   list: (orgId = DEFAULT_ORG_ID) =>
     apiGet<Property[]>('/properties', { organization_id: orgId }),
@@ -357,6 +466,9 @@ export const propertiesApi = {
 
   getPolicies: (propertyId: string) =>
     apiGet<Policy[]>(`/properties/${propertyId}/policies`),
+
+  getExtractedData: (propertyId: string) =>
+    apiGet<PropertyExtractedDataResponse>(`/properties/${propertyId}/extracted-data`),
 
   delete: (propertyId: string) =>
     apiDelete(`/properties/${propertyId}`),

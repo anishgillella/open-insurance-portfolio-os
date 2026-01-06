@@ -87,7 +87,7 @@ class PolicyRepository(BaseRepository[Policy]):
         limit: int = 100,
         offset: int = 0,
     ) -> list[Policy]:
-        """Get policies for an insurance program.
+        """Get policies for an insurance program with coverages loaded.
 
         Args:
             program_id: Insurance program ID.
@@ -95,13 +95,20 @@ class PolicyRepository(BaseRepository[Policy]):
             offset: Records to skip.
 
         Returns:
-            List of policies.
+            List of policies with coverages eager-loaded.
         """
-        return await self.get_all(
-            limit=limit,
-            offset=offset,
-            program_id=program_id,
+        stmt = (
+            select(self.model)
+            .options(selectinload(Policy.coverages))
+            .where(
+                self.model.deleted_at.is_(None),
+                self.model.program_id == program_id,
+            )
+            .offset(offset)
+            .limit(limit)
         )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique().all())
 
     async def get_by_policy_number(self, policy_number: str) -> Policy | None:
         """Get a policy by policy number.
