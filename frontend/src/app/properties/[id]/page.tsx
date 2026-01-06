@@ -26,7 +26,7 @@ import {
 import { cn, formatCurrency, getGrade, getGradeColor } from '@/lib/utils';
 import { Button, Card, Badge } from '@/components/primitives';
 import { GlassCard, ScoreRing, GradientProgress, StatusBadge } from '@/components/patterns';
-import { PropertyRiskCard, CarrierResearchCard } from '@/components/features/enrichment';
+import { PropertyRiskCard } from '@/components/features/enrichment';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
 import {
   propertiesApi,
@@ -665,12 +665,6 @@ export default function PropertyDetailPage({ params }: PageProps) {
           <PropertyRiskCard
             propertyId={property.id}
             propertyAddress={`${property.address.street}, ${property.address.city}, ${property.address.state}`}
-          />
-
-          {/* Carrier Research */}
-          <CarrierResearchCard
-            carrierName={property.policies?.[0]?.carrier || undefined}
-            propertyType={property.property_type || undefined}
           />
 
           {/* Last Updated */}

@@ -100,19 +100,19 @@ export function PortfolioBubbleChart({
           if (!prop) return null;
 
           return (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[var(--color-border-subtle)] p-3 min-w-[200px]">
-              <div className="font-semibold text-[var(--color-text-primary)] mb-2">
+            <div className="bg-gray-900 rounded-lg shadow-lg border border-gray-700 p-3 min-w-[200px]">
+              <div className="font-semibold text-white mb-2">
                 {prop.name}
               </div>
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-text-muted)]">Premium:</span>
-                  <span className="font-medium text-[var(--color-text-primary)]">
+                  <span className="text-gray-400">Premium:</span>
+                  <span className="font-medium text-white">
                     {formatCurrency(Number(prop.total_premium) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[var(--color-text-muted)]">Health Score:</span>
+                  <span className="text-gray-400">Health Score:</span>
                   <span
                     className="font-bold text-lg"
                     style={{ color: getScoreColor(prop.health_score) }}
@@ -121,34 +121,34 @@ export function PortfolioBubbleChart({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-text-muted)]">TIV:</span>
-                  <span className="font-medium text-[var(--color-text-primary)]">
+                  <span className="text-gray-400">TIV:</span>
+                  <span className="font-medium text-white">
                     {formatCurrency(Number(prop.total_insured_value) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-text-muted)]">Location:</span>
-                  <span className="text-[var(--color-text-secondary)]">
+                  <span className="text-gray-400">Location:</span>
+                  <span className="text-gray-300">
                     {prop.address.city}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-text-muted)]">Expires in:</span>
+                  <span className="text-gray-400">Expires in:</span>
                   <span
                     className={cn(
                       'font-medium',
                       (prop.days_until_expiration || 999) <= 30
-                        ? 'text-[var(--color-critical-500)]'
+                        ? 'text-red-400'
                         : (prop.days_until_expiration || 999) <= 60
-                        ? 'text-[var(--color-warning-500)]'
-                        : 'text-[var(--color-text-primary)]'
+                        ? 'text-amber-400'
+                        : 'text-white'
                     )}
                   >
                     {prop.days_until_expiration || 'N/A'} days
                   </span>
                 </div>
               </div>
-              <div className="mt-2 pt-2 border-t border-[var(--color-border-subtle)] text-xs text-[var(--color-primary-500)]">
+              <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-blue-400">
                 Click to view details
               </div>
             </div>

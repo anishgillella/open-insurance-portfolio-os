@@ -161,7 +161,7 @@ export function DataCard({
   return (
     <motion.div
       className={cn(
-        'p-6 bg-white rounded-xl shadow-[var(--shadow-elevation-2)] transition-all',
+        'p-6 bg-[var(--color-surface)] rounded-xl shadow-[var(--shadow-elevation-2)] border border-[var(--color-border-subtle)] transition-all',
         onClick && 'cursor-pointer hover:shadow-[var(--shadow-elevation-3)]',
         className
       )}
