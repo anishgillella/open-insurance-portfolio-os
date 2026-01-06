@@ -1067,6 +1067,26 @@ export async function streamChat(
   }
 }
 
+// ============ ADMIN API ============
+
+export interface ResetResponse {
+  success: boolean;
+  message: string;
+  tables_cleared: string[];
+  vectors_deleted: boolean;
+  vector_count_before: number | null;
+}
+
+export interface SystemStats {
+  database_stats: Record<string, number>;
+  vector_stats: Record<string, number | string> | null;
+}
+
+export const adminApi = {
+  getStats: () => apiGet<SystemStats>('/admin/stats'),
+  resetAllData: () => apiPost<ResetResponse>('/admin/reset'),
+};
+
 export default {
   dashboard: dashboardApi,
   properties: propertiesApi,
@@ -1076,5 +1096,6 @@ export default {
   renewals: renewalsApi,
   documents: documentsApi,
   chat: chatApi,
+  admin: adminApi,
   streamChat,
 };

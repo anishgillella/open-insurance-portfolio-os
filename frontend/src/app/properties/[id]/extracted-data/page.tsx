@@ -247,7 +247,7 @@ export default function ExtractedDataPage({ params }: PageProps) {
 
       {/* Fields View */}
       {activeTab === 'fields' && (
-        <motion.div variants={staggerItem} className="space-y-4">
+        <div className="space-y-4">
           {categories.map((category) => {
             const config = categoryConfig[category] || {
               icon: FileText,
@@ -354,12 +354,12 @@ export default function ExtractedDataPage({ params }: PageProps) {
               </p>
             </Card>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* Documents View */}
       {activeTab === 'documents' && (
-        <motion.div variants={staggerItem} className="space-y-4">
+        <div className="space-y-4">
           {data.document_extractions.map((doc) => {
             const isExpanded = expandedDocuments.has(doc.document_id);
             const fieldCount = Object.keys(doc.extracted_fields).length;
@@ -461,16 +461,15 @@ export default function ExtractedDataPage({ params }: PageProps) {
               </p>
             </Card>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* Structured Data Sections */}
       {activeTab === 'fields' && (
-        <>
+        <div className="space-y-6">
           {/* Valuations */}
           {data.valuations.length > 0 && (
-            <motion.div variants={staggerItem}>
-              <Card padding="lg">
+            <Card padding="lg">
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-[var(--color-success-500)]" />
                   Valuations
@@ -533,14 +532,12 @@ export default function ExtractedDataPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
-              </Card>
-            </motion.div>
+            </Card>
           )}
 
           {/* Policies */}
           {data.policies.length > 0 && (
-            <motion.div variants={staggerItem}>
-              <Card padding="lg">
+            <Card padding="lg">
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                   <Shield className="h-5 w-5 text-[var(--color-primary-500)]" />
                   Policies
@@ -586,14 +583,12 @@ export default function ExtractedDataPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
-              </Card>
-            </motion.div>
+            </Card>
           )}
 
           {/* Certificates */}
           {data.certificates.length > 0 && (
-            <motion.div variants={staggerItem}>
-              <Card padding="lg">
+            <Card padding="lg">
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                   <FileCheck className="h-5 w-5 text-[var(--color-info-500)]" />
                   Certificates
@@ -666,14 +661,12 @@ export default function ExtractedDataPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
-              </Card>
-            </motion.div>
+            </Card>
           )}
 
           {/* Financials */}
           {data.financials.length > 0 && (
-            <motion.div variants={staggerItem}>
-              <Card padding="lg">
+            <Card padding="lg">
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-[var(--color-warning-500)]" />
                   Financial Records
@@ -727,10 +720,9 @@ export default function ExtractedDataPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
-              </Card>
-            </motion.div>
+            </Card>
           )}
-        </>
+        </div>
       )}
     </motion.div>
   );

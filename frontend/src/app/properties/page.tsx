@@ -21,7 +21,7 @@ import { cn, getGrade } from '@/lib/utils';
 import { Button, Badge, Card } from '@/components/primitives';
 import { PropertyCard } from '@/components/features/properties';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
-import { propertiesApi, dashboardApi, type Property, type DashboardSummary } from '@/lib/api';
+import { propertiesApi, dashboardApi, adminApi, type Property, type DashboardSummary, type ResetResponse } from '@/lib/api';
 
 type ViewMode = 'grid' | 'list';
 type SortOption = 'name' | 'healthScore' | 'tiv' | 'premium' | 'expiration';
@@ -47,6 +47,12 @@ export default function PropertiesPage() {
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Reset modal state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetResult, setResetResult] = useState<ResetResponse | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -162,6 +168,35 @@ export default function PropertiesPage() {
     setDeleteError(null);
   };
 
+  // Handle reset all data
+  const handleResetClick = () => {
+    setShowResetModal(true);
+    setResetError(null);
+    setResetResult(null);
+  };
+
+  const handleResetConfirm = async () => {
+    setIsResetting(true);
+    setResetError(null);
+
+    try {
+      const result = await adminApi.resetAllData();
+      setResetResult(result);
+      // Refresh data after reset
+      await fetchData();
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : 'Failed to reset data');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleResetCancel = () => {
+    setShowResetModal(false);
+    setResetError(null);
+    setResetResult(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -201,9 +236,20 @@ export default function PropertiesPage() {
             Manage your portfolio of {properties.length} properties
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleResetClick}
+            className="text-[var(--color-critical-500)] hover:bg-[var(--color-critical-50)] dark:hover:bg-[var(--color-critical-500)]/10"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Reset All
+          </Button>
+        </div>
       </motion.div>
 
       {/* Summary Cards */}
@@ -598,6 +644,122 @@ export default function PropertiesPage() {
                 >
                   {isDeleting ? 'Deleting...' : 'Delete Property'}
                 </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset All Data Confirmation Modal */}
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={handleResetCancel}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={cn(
+                'bg-[var(--color-surface)] rounded-2xl shadow-xl',
+                'max-w-lg w-full overflow-hidden'
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-[var(--color-border-subtle)]">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/20">
+                    <Trash2 className="h-5 w-5 text-[var(--color-critical-500)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                      Reset All Data
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      This action is irreversible
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                {resetResult ? (
+                  // Show success result
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-[var(--color-success-50)] dark:bg-[var(--color-success-500)]/10 border border-[var(--color-success-200)] dark:border-[var(--color-success-500)]/30">
+                      <p className="text-sm font-medium text-[var(--color-success-600)] dark:text-[var(--color-success-400)]">
+                        {resetResult.message}
+                      </p>
+                    </div>
+                    <div className="text-sm text-[var(--color-text-secondary)]">
+                      <p><strong>Tables cleared:</strong> {resetResult.tables_cleared.length}</p>
+                      <p><strong>Vectors deleted:</strong> {resetResult.vectors_deleted ? 'Yes' : 'No'}</p>
+                      {resetResult.vector_count_before !== null && (
+                        <p><strong>Vectors removed:</strong> {resetResult.vector_count_before}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Show warning before reset
+                  <>
+                    <div className="p-4 rounded-lg bg-[var(--color-warning-50)] dark:bg-[var(--color-warning-500)]/10 border border-[var(--color-warning-200)] dark:border-[var(--color-warning-500)]/30 mb-4">
+                      <p className="text-sm font-medium text-[var(--color-warning-600)] dark:text-[var(--color-warning-400)]">
+                        Warning: This will permanently delete ALL data!
+                      </p>
+                    </div>
+                    <p className="text-[var(--color-text-secondary)] mb-4">
+                      Are you sure you want to reset the entire system? This will permanently remove:
+                    </p>
+                    <ul className="text-sm text-[var(--color-text-muted)] list-disc list-inside space-y-1 mb-4">
+                      <li>All properties and buildings</li>
+                      <li>All uploaded documents</li>
+                      <li>All insurance policies and coverages</li>
+                      <li>All valuations and certificates</li>
+                      <li>All coverage gaps and analysis</li>
+                      <li>All chat conversations</li>
+                      <li>All vector embeddings (RAG search data)</li>
+                    </ul>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      After reset, you can re-upload documents to start fresh with the new extraction features.
+                    </p>
+                  </>
+                )}
+
+                {resetError && (
+                  <div className="mt-4 p-3 rounded-lg bg-[var(--color-critical-50)] dark:bg-[var(--color-critical-500)]/10 border border-[var(--color-critical-200)] dark:border-[var(--color-critical-500)]/30">
+                    <p className="text-sm text-[var(--color-critical-600)] dark:text-[var(--color-critical-400)]">
+                      {resetError}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handleResetCancel}
+                  disabled={isResetting}
+                >
+                  {resetResult ? 'Close' : 'Cancel'}
+                </Button>
+                {!resetResult && (
+                  <Button
+                    variant="primary"
+                    onClick={handleResetConfirm}
+                    disabled={isResetting}
+                    className="bg-[var(--color-critical-500)] hover:bg-[var(--color-critical-600)]"
+                    leftIcon={isResetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  >
+                    {isResetting ? 'Resetting...' : 'Reset All Data'}
+                  </Button>
+                )}
               </div>
             </motion.div>
           </motion.div>
