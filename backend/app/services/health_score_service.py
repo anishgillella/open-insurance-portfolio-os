@@ -302,10 +302,15 @@ class HealthScoreService:
         for comp_name, max_score in self.COMPONENT_MAX_SCORES.items():
             comp_data = result.get("components", {}).get(comp_name, {})
             score = float(comp_data.get("score", 0))
+            # Cap score at max_score to prevent percentage > 100
+            score = min(score, max_score)
+            percentage = round(score / max_score * 100, 1) if max_score > 0 else 0
+            # Ensure percentage is capped at 100
+            percentage = min(percentage, 100.0)
             components[comp_name] = ComponentScore(
                 score=score,
                 max_points=max_score,
-                percentage=round(score / max_score * 100, 1) if max_score > 0 else 0,
+                percentage=percentage,
                 reasoning=comp_data.get("reasoning", ""),
                 key_findings=comp_data.get("key_findings", []),
                 concerns=comp_data.get("concerns", []),
@@ -380,10 +385,14 @@ class HealthScoreService:
         # Convert stored data to result
         components = {}
         for name, data in (score.components or {}).items():
+            # Cap percentage at 100 to prevent validation errors
+            percentage = min(data.get("percentage", 0), 100.0)
+            max_points = data.get("max", self.COMPONENT_MAX_SCORES.get(name, 0))
+            score_val = min(data.get("score", 0), max_points)  # Cap score at max
             components[name] = ComponentScore(
-                score=data.get("score", 0),
-                max_points=data.get("max", self.COMPONENT_MAX_SCORES.get(name, 0)),
-                percentage=data.get("percentage", 0),
+                score=score_val,
+                max_points=max_points,
+                percentage=percentage,
                 reasoning=data.get("reasoning", ""),
                 key_findings=data.get("key_findings", []),
                 concerns=data.get("concerns", []),

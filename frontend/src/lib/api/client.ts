@@ -312,6 +312,7 @@ export interface PropertyDetail {
   };
   policies?: Policy[];
   documents?: DocumentSummary[];
+  document_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -1067,6 +1068,236 @@ export async function streamChat(
   }
 }
 
+// ============ ENRICHMENT API (Parallel AI) ============
+
+// Market Intelligence Types
+export interface MarketTrend {
+  rate_change_pct: number | null;
+  rate_change_range: string | null;
+  direction: string;
+  confidence: string;
+}
+
+export interface CarrierAppetite {
+  carrier_name: string;
+  appetite: string;
+  notes: string | null;
+}
+
+export interface MarketIntelligenceResponse {
+  property_id: string;
+  property_type: string;
+  state: string;
+  research_date: string;
+  rate_trend: MarketTrend;
+  rate_trend_reasoning: string | null;
+  key_factors: string[];
+  factor_details: Record<string, string> | null;
+  carrier_appetite: CarrierAppetite[];
+  carrier_summary: string | null;
+  forecast_6mo: string | null;
+  forecast_12mo: string | null;
+  regulatory_changes: string[];
+  market_developments: string[];
+  premium_benchmark: string | null;
+  rate_per_sqft: number | null;
+  sources: string[];
+  parallel_latency_ms: number;
+  gemini_latency_ms: number;
+  total_latency_ms: number;
+  raw_research?: string | null;
+}
+
+// Property Risk Types
+export interface FloodRisk {
+  zone: string | null;
+  zone_description: string | null;
+  risk_level: string;
+  source: string | null;
+}
+
+export interface FireProtection {
+  protection_class: string | null;
+  fire_station_distance_miles: number | null;
+  hydrant_distance_feet: number | null;
+  source: string | null;
+}
+
+export interface WeatherRisk {
+  hurricane_risk: string;
+  tornado_risk: string;
+  hail_risk: string;
+  wildfire_risk: string;
+  earthquake_risk: string;
+  historical_events: string[];
+}
+
+export interface CrimeRisk {
+  crime_index: number | null;
+  crime_grade: string | null;
+  risk_level: string;
+  notes: string | null;
+}
+
+export interface EnvironmentalRisk {
+  hazards: string[];
+  superfund_nearby: boolean;
+  industrial_nearby: boolean;
+  risk_level: string;
+}
+
+export interface PropertyRiskResponse {
+  property_id: string;
+  address: string;
+  enrichment_date: string;
+  flood_risk: FloodRisk;
+  fire_protection: FireProtection;
+  weather_risk: WeatherRisk;
+  crime_risk: CrimeRisk;
+  environmental_risk: EnvironmentalRisk;
+  recent_permits: string[];
+  violations: string[];
+  infrastructure_issues: string[];
+  overall_risk_score: number | null;
+  risk_summary: string | null;
+  insurance_implications: string[];
+  sources: string[];
+  parallel_latency_ms: number;
+  gemini_latency_ms: number;
+  total_latency_ms: number;
+  raw_research?: string | null;
+  property_updated: boolean;
+}
+
+// Carrier Research Types
+export interface CarrierRatings {
+  am_best_rating: string | null;
+  am_best_outlook: string | null;
+  sp_rating: string | null;
+  moodys_rating: string | null;
+  rating_date: string | null;
+}
+
+export interface CarrierSpecialty {
+  line_of_business: string;
+  expertise_level: string;
+  notes: string | null;
+}
+
+export interface CarrierNews {
+  date: string | null;
+  headline: string;
+  summary: string | null;
+  sentiment: string;
+  source: string | null;
+}
+
+export interface CarrierResearchResponse {
+  carrier_name: string;
+  research_date: string;
+  ratings: CarrierRatings;
+  financial_strength: string;
+  financial_summary: string | null;
+  specialty_areas: CarrierSpecialty[];
+  primary_lines: string[];
+  market_position: string | null;
+  geographic_focus: string[];
+  target_segments: string[];
+  commercial_property_appetite: string;
+  appetite_notes: string | null;
+  recent_news: CarrierNews[];
+  news_summary: string | null;
+  customer_satisfaction: string | null;
+  claims_reputation: string | null;
+  concerns: string[];
+  regulatory_issues: string[];
+  sources: string[];
+  parallel_latency_ms: number;
+  gemini_latency_ms: number;
+  total_latency_ms: number;
+  raw_research?: string | null;
+}
+
+// Lender Requirements Types
+export interface CoverageRequirement {
+  coverage_type: string;
+  minimum_limit: number | null;
+  limit_description: string | null;
+  required: boolean;
+  notes: string | null;
+}
+
+export interface DeductibleRequirement {
+  coverage_type: string;
+  maximum_amount: number | null;
+  maximum_percentage: number | null;
+  description: string | null;
+}
+
+export interface EndorsementRequirement {
+  endorsement_name: string;
+  description: string | null;
+  required: boolean;
+}
+
+export interface LenderRequirementsResponse {
+  lender_name: string;
+  loan_type: string | null;
+  research_date: string;
+  property_coverage: CoverageRequirement | null;
+  liability_coverage: CoverageRequirement | null;
+  umbrella_coverage: CoverageRequirement | null;
+  flood_coverage: CoverageRequirement | null;
+  wind_coverage: CoverageRequirement | null;
+  other_coverages: CoverageRequirement[];
+  deductible_requirements: DeductibleRequirement[];
+  max_property_deductible_pct: number | null;
+  max_property_deductible_flat: number | null;
+  required_endorsements: EndorsementRequirement[];
+  mortgagee_clause_required: boolean;
+  notice_of_cancellation_days: number | null;
+  waiver_of_subrogation_required: boolean;
+  minimum_carrier_rating: string | null;
+  acceptable_rating_agencies: string[];
+  special_requirements: string[];
+  coastal_requirements: string | null;
+  earthquake_requirements: string | null;
+  source_document: string | null;
+  source_section: string | null;
+  sources: string[];
+  parallel_latency_ms: number;
+  gemini_latency_ms: number;
+  total_latency_ms: number;
+  raw_research?: string | null;
+}
+
+export const enrichmentApi = {
+  // Market Intelligence
+  getMarketIntelligence: (propertyId: string, includeRaw = false) =>
+    apiGet<MarketIntelligenceResponse>(`/enrichment/market-intelligence/${propertyId}`, { include_raw_research: includeRaw }),
+
+  // Property Risk
+  enrichPropertyRisk: (propertyId: string, updateProperty = false, includeRaw = false) =>
+    apiPost<PropertyRiskResponse>(`/enrichment/properties/${propertyId}/enrich-risk`, {
+      include_raw_research: includeRaw,
+      update_property: updateProperty,
+    }),
+
+  // Carrier Research
+  researchCarrier: (carrierName: string, propertyType?: string, includeRaw = false) =>
+    apiGet<CarrierResearchResponse>(`/enrichment/carriers/${encodeURIComponent(carrierName)}/research`, {
+      property_type: propertyType,
+      include_raw_research: includeRaw,
+    }),
+
+  // Lender Requirements
+  getLenderRequirements: (lenderName: string, loanType?: string, includeRaw = false) =>
+    apiGet<LenderRequirementsResponse>(`/enrichment/lenders/${encodeURIComponent(lenderName)}/requirements`, {
+      loan_type: loanType,
+      include_raw_research: includeRaw,
+    }),
+};
+
 // ============ ADMIN API ============
 
 export interface ResetResponse {
@@ -1096,6 +1327,7 @@ export default {
   renewals: renewalsApi,
   documents: documentsApi,
   chat: chatApi,
+  enrichment: enrichmentApi,
   admin: adminApi,
   streamChat,
 };

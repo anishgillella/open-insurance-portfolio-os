@@ -1,0 +1,63 @@
+{
+  "classification": {
+    "document_type": "proposal",
+    "document_subtype": null,
+    "policy_type": "general_liability",
+    "confidence": 1.0,
+    "carrier_name": "Century Surety Company",
+    "policy_number": "APP18885231",
+    "effective_date": "2024-11-15",
+    "expiration_date": "2025-11-15",
+    "insured_name": "Eastman Residential LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": null,
+  "sov": null,
+  "proposal": {
+    "confidence": 1.0,
+    "named_insured": "Eastman Residential LLC",
+    "insured_address": "651 Old Mt Pleasant Ave Livingston, NJ 07039",
+    "effective_date": "2024-11-15",
+    "expiration_date": "2025-11-15",
+    "proposal_title": "Insurance Proposal",
+    "proposal_type": "new_business",
+    "properties": [
+      {
+        "property_name": null,
+        "property_address": null,
+        "unit_count": null,
+        "total_insured_value": null,
+        "expiring_tiv": null,
+        "renewal_tiv": null,
+        "coverages": [
+          {
+            "coverage_type": "General Liability",
+            "carrier_name": "Century Surety Company",
+            "limit_amount": 2000000.0,
+            "deductible_amount": 1000.0,
+            "expiring_premium": null,
+            "renewal_premium": 28063.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          }
+        ],
+        "expiring_total_premium": null,
+        "renewal_total_premium": 28063.0,
+        "price_per_door_expiring": null,
+        "price_per_door_renewal": null
+      }
+    ],
+    "portfolio_expiring_premium": null,
+    "portfolio_renewal_premium": 28063.0,
+    "portfolio_premium_change": null,
+    "portfolio_premium_change_pct": null,
+    "carriers": [
+      "Century Surety Company"
+    ]
+  },
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nRT\nRYAN\nTURNER\nSPECIALTY\nRT Specialty\nChris Richmond\n\n# Insurance Proposal\n\nNovember 14, 2024\n\nUSI Insurance Services, LLC - Charleston, SC\nAttn: Connor Bergeron\n235 Magrath Darby Blvd., Suite 325 Mount Pleasant, SC 29464\n\nApplicant: Eastman Residential LLC\n651 Old Mt Pleasant Ave\nLivingston, NJ 07039\n\nSubmission #: APP18885231\nPolicy Period: 11/15/2024 12:01 AM To 11/15/2025 12:01 AM\nCoverage: Liability\nIssuing Company: Century Surety Company\n\nWe are pleased to submit our proposal for the above captioned applicant.\n\nPlease read the attached quote carefully as coverage offered may be more limited than coverage requested.\n\nNote:\nMinimum earned premium may apply to this policy. See attached carrier quote for specifics. Please note that all fees are fully earned at inception.\n\nTRIA coverage if applicable is offered on the attached carrier's quote.\n\nPlease review any minimum and deposit, audit, and/or cancellation provisions on the attached carrier quote for details regarding possible return premiums and additional premium charges.\n\nI look forward to hearing from you, and please call if you have any questions.\n\nThank you for your business.\n\nRegards,\nChris Richmond\nRT Specialty\nchris.richmond@rtspecialty.com\n\nB 2.0.0\nAPP18885231 (New) Option 1\n1 of 3\n\n---\n\n<!-- Page 2 -->\nRT\nRYAN\nTURNER\nSPECIALTY\nRT Specialty\nChris Richmond\n\n# Insurance Proposal\n\n## Cost Summary\n|  General Liability Premium | $28,063.00  |\n| --- | --- |\n|  Policy Fee | $250.00  |\n|  Inspection Fee | $125.00  |\n|  CO Surplus Lines Tax | $853.14  |\n|  Total Policy Cost | $29,291.14  |\n\n## Minimum Earned\nNote: There may be a minimum earned on this policy. Please refer to the carrier quote for more details on the minimum earned percentage.\n\n## Disclosures\nRT Specialty is typically compensated through commission from the insurer for the placement of policies in most transactions. The amount of the commission varies by insurance line and by carrier. RT Specialty might also receive additional compensation. In order to place the insurance requested we may charge a reasonable fee for additional services such as performing a risk analysis, comparing policies, processing submissions, communication expenses, inspections, working with underwriters on the coverage proposal, issuing policies, or servicing the policy after issuance. Any fees charged are fully earned at inception of the policy. Third-party inspection or other fees may be separately itemized upon request. Our fees are applied to new policies, renewal policies, and endorsements. Fees applicable to each renewal and endorsement will be set forth in the quotes. It is the insurance carrier's decision whether to offer the insurance quoted, and your client's decision whether to accept the quote. Our fee is not imposed by state law or the Insurer.\n\nDepending upon the Insurer involved with your placement, we might also have an agreement with the Insurer that we are proposing for this placement that might pay us future additional compensation. This compensation could be based on formulas that consider the volume of business placed with the Insurer, the profitability of that business, how much of the business is retained for the Insurer's account each year, and potentially other factors. The agreements frequently consider total eligible premium from all clients placed during a calendar year and any incentive or contingent compensation is often received at a future date. Because of variables in these agreements, we often do not have an accurate means at the time of placement to determine the amount of any additional compensation that might be attributable to any single placement. You, as the retail broker with the direct relationship with the Insured, must comply with all applicable laws and regulations related to disclosure of and consent and agreement to, compensation, and informing the Insured that it may request more information about producer or broker compensation that might be paid in connection with the Insured's placement. If we request a copy of any legally required insured consent or agreement, you will provide us with a copy. If you need additional information about the compensation arrangements for services provided by RT Specialty affiliates, please contact your RT Specialty representative.\n\nRT Specialty is a division of RSG Specialty, LLC. RSG Specialty, LLC is a Delaware limited liability company and a subsidiary of Ryan Specialty, LLC. In California: RSG Specialty Insurance Services, LLC (License # 0G97516).\n\nB 2.0.0\nAPP18885231 (New) Option 1\n2 of 3\n\n---\n\n<!-- Page 3 -->\nRT\nRYAN\nTURNER\nSPECIALTY\nRT Specialty\nChris Richmond\n\n# Insurance Proposal\n\n## Subjectivities\n- Signed and completed Acord Application\n- Signed TRIA form if insured is accepting or rejecting terrorism coverage\n- Completed Surplus Lines Affidavit\n\nThe Subjectivities outlined above are required prior to binding. Please forward all requested information with your bind request. No coverage is considered bound until confirmed in writing and all subjectivities have been addressed.\n\n## Conditions\n- Please provide Inspection Contact Name and Phone Number at binding (email if available). Coverage is subject to a satisfactory inspection.\n\nNote that if we do not receive the required information as outlined above, we will be unable to issue a binder if requested.\n\nB 2.0.0\nAPP18885231 (New) Option 1\n3 of 3\n\n---\n\n<!-- Page 4 -->\nProduct Id: 2023-04-06\nPage 1 of 5\n\n# RSG Specialty, LLC, operating through its division RT Specialty\n5565 Glenridge Connector, Suite 550\nAtlanta, GA 30342\n\n# Chris Richmond\nPhone: ext:\nFax:\nEmail: Chris.richmond@rtspecialty.com\nDATE: 11/14/2024\nCompany: Century Surety Company\nA.M. Best Rating: A Excellent\nAdmitted Status: Non-Admitted\nCOL Reference Number: 5326788\n\nTO:\nAGENCY:\nRE: Eastman Acquisitions LLC\nQuote Reference:\n\n# QUOTE FOR INSURANCE\n\nProposed Policy Effective Dates: 11-13-2024 To: 11-13-2025\n\nWe are pleased to offer you the following quote for coverage. Detailed information on each line of coverage is attached. Please review this quotation in detail to ensure we have fully understood your needs.\n\n|  General Liability | $ 28,063.00  |\n| --- | --- |\n|  |   |\n|  Total Amount | $ 28,063.00  |\n|  Commission | 0.00%  |\n\nThis quote is valid until 2/12/2025. The quote is based on information provided at the time of the quote. Renewal offers are valid until expiration of the current policy term. This is a quote only and is only for the coverages listed above. It may not conform to the application or specifications submitted.\n\nNO FLAT CANCELLATIONS\n\nThis policy premium is 25% earned on inception.\n\nThank you for the opportunity to quote your business.\n\nProduced with Century Insurance Group Where to turn.\n550 Polaris Parkway, Suite 300, Westerville, Ohio 43082\nwww.CenturySurety.com\n\n---\n\n<!-- Page 5 -->\n# RSG Specialty, LLC, operating through its division RT Specialty\n\n5565 Glenridge Connector, Suite 550\nAtlanta, GA 30342\n\nRE: Eastman Acquisitions LLC\n\nDATE: 11/14/2024\n\nCOL Reference Number: 5326788\n\n# General Liability Quote\n\nCoverage Type: Per Occurrence\n\nLimits:\n\nGeneral Aggregate Limit (Other than Products &amp; Completed Operations) $ 2,000,000\n\nProducts/Completed Operations Aggregate Limit Included in the General Aggregate\n\nPersonal and Advertising Injury Limit $ 1,000,000\n\nEach Occurrence Limit $ 1,000,000\n\nDamage to Premises Rented to You Limit $ 100,000\n\nMedical Expense Limit $ 5,000\n\nHired Auto Occurrence Limit: $ 1,000,000\n\nHired Auto Aggregate Limit: $ 1,000,000\n\nNon-Owned Auto Occurrence Limit: $ 1,000,000\n\nNon-Owned Auto Aggregate Limit: $ 1,000,000\n\nDefense: Defense in addition to policy limits\n\nDeductible: $1000 Combined BI/PD - Per Claim\n\nDefense included in Deductible: Yes\n\nDeductible shall reduce policy limits? No\n\n|   |   |   |   | Rate |   | Advanced Premium  |   |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n|  St/Terr | GL Code | Classification | Prem. Basis | Prem. Ops. | Pr/Co | Pr/Co | All Other  |\n|  CO/502 | 60010 | Apartment Buildings | u) 192 | 139.557 | Incl | Incl | $ 26,795  |\n|   | 41667 | Club House (including exercise room) As part of Incidental | a) 1,000 | 10.000 | Incl | Incl | $ 10  |\n|  |   |   |   |   |   |   |   |\n|   | 41665 | Sports Courts-basketball, volleyball, tennis baseball/softball fields As part of Incidental | t) 2 | 75.000 | Incl | Incl | $ 150  |\n|  |   |   |   |   |   |   |   |\n|   | 48925 | Swimming Pools as Part of Incidental | t) 1 | 758.117 | Incl | Incl | $ 758  |\n\nSubtotal General Liability Premium: $ 27,713\n\n|  Other | Notes | Premium  |\n| --- | --- | --- |\n|  Waiver of Transfer of Rights of Recovery Against Others to Us | Any person or organization for whom you are required to waive your right of recovery on this Coverage Part under a written contract or agreement | No Charge  |\n|  Hired Auto Liability |  | $ 175  |\n|  Non-Owned Auto Liability | 3 Employees | $ 175  |\n\nLine Of Business Subtotal Premium: $ 28,063\n\nTRIA Premium: $ 0\n\nMinimum Premium for This Coverage Part: $ 28,063\n\nSubtotal coverage premium shown above may include a coverage type Minimum Premium.\n\n|  Legend | a) Area | c) Cost | m) Admissions | o) Total Operating Expenses | p) Payroll | s) Sales | t) Other | u) Units  |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n\nProduced with Century Insurance Group Where to turn.\n\nwww.CenturySurety.com\n\n550 Polaris Parkway, Suite 300, Westerville, Ohio 43082\n\n---\n\n<!-- Page 6 -->\nRSG Specialty, LLC, operating through its division RT Specialty\n5565 Glenridge Connector, Suite 550\nAtlanta, GA 30342\nRE: Eastman Acuqisitions LLC\nDATE: 11/14/2024\nCOL Reference Number: 5326788\n\n# Policy Forms\n\n## Interline Forms:\n\n### Required\n\n\u2611 CCP 2010 05 08 Service of Suit Clause\n\u2611 CIL 0003 02 20 Calculation of Premium\n\u2611 CIL 1500B 02 02 Schedule of Forms and Endorsements\n\u2611 CSCP 1000 05 19 Century Surety Company Commercial Lines Policy Jacket\n\u2611 CSCP 1001 04 23 Century Surety Company Commercial Lines Policy Common Policy Declarations\n\u2611 IL",
+  "overall_confidence": 1.0
+}

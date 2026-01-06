@@ -1,0 +1,41 @@
+{
+  "classification": {
+    "document_type": "invoice",
+    "document_subtype": null,
+    "policy_type": "unknown",
+    "confidence": 0.9,
+    "carrier_name": "PARAMOUNT PROGRAMS",
+    "policy_number": null,
+    "effective_date": "2024-12-01",
+    "expiration_date": "2025-12-01",
+    "insured_name": "Eastman Acquisitions, LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": {
+    "invoice_number": null,
+    "invoice_date": "2024-11-19",
+    "due_date": null,
+    "vendor_name": "PARAMOUNT PROGRAMS",
+    "vendor_address": null,
+    "subtotal": 994.0,
+    "taxes": null,
+    "fees": null,
+    "total_amount": 994.0,
+    "line_items": [
+      {
+        "description": "Membership Dues Offer",
+        "amount": 994.0,
+        "policy_number": null
+      }
+    ],
+    "policy_numbers": [],
+    "confidence": 1.0
+  },
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nP\n\n# PARAMOUNT\n\nPROGRAMS\n\nwww.paramountprograms.com\n\n# Membership Offer - Annual Dues\n\nDate: 11/19/2024\n\nTo: Eastman Acquisitions, LLC\n3202 11th Ave\nEvans, CO 80620\n\nMember's ID: 3119185\nOffer #: 10220641\n\nMember's Agent: USI of Mt Pleasant\nAgent Contact: Mark Trigonoplos\nAgent Email: mark.trigonoplos@usi.com\n\n|  Member | Member Start Date | Member End Date | Description | Annual Dues  |\n| --- | --- | --- | --- | --- |\n|  Eastman Acquisitions, LLC | 12/1/2024 | 12/1/2025 | Membership Dues Offer | $994.00  |\n\n**THIS IS NOT AN INVOICE**\n\nUPON ACCEPTANCE OF THIS OFFER YOU WILL BE PROVIDED WITH A SEPARATE AND DISTINCT INVOICE WITH PAYMENT INSTRUCTIONS.\n\n**NOTE:**\nA copy of the Membership Agreement, Terms and Conditions of Use and By Laws regarding membership in the Purchasing Group has been provided to your Authorized Representative (\"Members Agent\") listed above.",
+  "overall_confidence": 1.0
+}

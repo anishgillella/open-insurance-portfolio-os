@@ -1,0 +1,115 @@
+{
+  "classification": {
+    "document_type": "proposal",
+    "document_subtype": null,
+    "policy_type": "property",
+    "confidence": 0.95,
+    "carrier_name": "Vantage Risk Specialty Insurance Company",
+    "policy_number": null,
+    "effective_date": "2024-12-01",
+    "expiration_date": "2025-12-01",
+    "insured_name": "Eastman Residential LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": null,
+  "sov": null,
+  "proposal": {
+    "confidence": 1.0,
+    "named_insured": "Eastman Residential LLC",
+    "insured_address": "651 Old West Mount Pleasant Avenue Suite 110\nLivingston, NJ 07039",
+    "effective_date": "2024-12-01",
+    "expiration_date": "2025-12-01",
+    "proposal_title": "QUOTATION SUMMARY",
+    "proposal_type": "new_business",
+    "properties": [
+      {
+        "property_name": null,
+        "property_address": "3202 11TH AVE, GREELEY, CO 80631",
+        "unit_count": 192,
+        "total_insured_value": 32854960.0,
+        "expiring_tiv": null,
+        "renewal_tiv": 32854960.0,
+        "coverages": [
+          {
+            "coverage_type": "Property",
+            "carrier_name": "Vantage Risk Specialty Insurance Company",
+            "limit_amount": null,
+            "deductible_amount": 25000.0,
+            "expiring_premium": null,
+            "renewal_premium": 101697.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Equipment Breakdown",
+            "carrier_name": "Vantage Risk Specialty Insurance Company",
+            "limit_amount": 7500000.0,
+            "deductible_amount": 25000.0,
+            "expiring_premium": null,
+            "renewal_premium": 614.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Loss Control Services Fee",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 450.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Policy Fee",
+            "carrier_name": null,
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 661.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "TRIA (Additional)",
+            "carrier_name": "Vantage Risk Specialty Insurance Company",
+            "limit_amount": null,
+            "deductible_amount": null,
+            "expiring_premium": null,
+            "renewal_premium": 2796.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          },
+          {
+            "coverage_type": "Crime",
+            "carrier_name": "ABIC",
+            "limit_amount": 50000.0,
+            "deductible_amount": 2500.0,
+            "expiring_premium": null,
+            "renewal_premium": 915.0,
+            "premium_change": null,
+            "premium_change_pct": null
+          }
+        ],
+        "expiring_total_premium": null,
+        "renewal_total_premium": 107133.0,
+        "price_per_door_expiring": null,
+        "price_per_door_renewal": 558.0885416666666
+      }
+    ],
+    "portfolio_expiring_premium": null,
+    "portfolio_renewal_premium": 106524.66,
+    "portfolio_premium_change": null,
+    "portfolio_premium_change_pct": null,
+    "carriers": [
+      "Vantage Risk Specialty Insurance Company",
+      "ABIC",
+      "Certain Underwriters at Lloyds"
+    ]
+  },
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nRT\n\nRYAN\n\nTURNER\n\nSPECIALTY\n\n677 King Street, 3rd Floor\n\nCharleston, SC 29403\n\nPh:\n\nwww.rtspecialty.com\n\n024918596B\n\n# QUOTATION SUMMARY\n\nNovember 13, 2024\n\nUSI Insurance Services, LLC - Charleston, SC\n\nConnor Bergeron\n\n235 Magrath Darby Blvd. Suite 325\n\nMount Pleasant, SC 29464\n\nFROM: Ed Doherty for Jeremiah Folkmann\n\nOutlined below is a summary of the attached quotation obtained for the above noted Insured. The full quote terms, conditions, limitations and exclusions can be found on the attached quote. Please pay special attention to those items found on the quote, and note that in the event of any discrepancies between the information found on this summary and the quote itself, the quote supersedes our summary. As the broker with the direct relationship with the Insured, it is your responsibility to carefully review with the Insured all of the terms, conditions, limitations and exclusions in the quote, and to specifically reconcile with the Insured any differences between those quoted and those you requested. RT Specialty expressly disclaims any responsibility for any failure on your part to review or reconcile any such differences with the Insured.\n\nNAMED INSURED: Eastman Residential LLC\n651 Old West Mount Pleasant Avenue Suite 110\nLivingston, NJ 07039\n\nPRIMARY RISK ZIP CODE: 80631\n\nCOVERAGE: All Risk\n\nINSURER: Vantage Risk Specialty Insurance Company - Non-Admitted\n\nPOLICY TERM: 12/1/2024 - 12/1/2025\n\nESTIMATED POLICY PREMIUM: $102,311.00\n\nFEES:\nInspection Fee - Carrier $450.00\nPolicy Fee - Carrier $661.00\nTOTAL FEES: $1,111.00\n\nESTIMATED SURPLUS LINES TAX:\nSurplus Lines Tax $3,102.66\nTOTAL TAXES: $3,102.66\n\nTOTAL WITHOUT TRIA: $106,524.66\n\nTRIA (Additional): $2,796.00 + $83.88 of additional SLT\n\nCRIME (Additional): $915.00 + $27.45 of additional SLT\n\n---\n\n<!-- Page 2 -->\nRT\n\nRYAN\nTURNER SPECIALTY\n\n677 King Street, 3rd Floor\nCharleston, SC 29403\nPh:\nwww.rtspecialty.com\n\n024918596B\n\n# SPECIAL CONDITIONS / OTHER COVERAGES:\n\nNO FLAT CANCELLATIONS\nALL FEES ARE FULLY EARNED AT INCEPTION\n\nFor RT Specialty to file the surplus lines taxes on your behalf, please complete the surplus lines tax document (per the applicable state requirements) and return with your request to bind. Due to state regulations, RT Specialty requires tax documents to be completed within 24 to 48 hours of binding. Please be diligent in returning tax forms.\n\nPLEASE SEE ATTACHED FORMAL QUOTE FROM CARRIER FOR TERMS AND CONDITIONS\n\n---\n\n<!-- Page 3 -->\nRT\n\nRYAN\nTURNER SPECIALTY\n\n677 King Street, 3rd Floor\nCharleston, SC 29403\nPh:\nwww.rtspecialty.com\n\n024918596B\n\n# HOME STATE FOR NON-ADMITTED RISKS\n\nTaxes and governmental fees are estimates and subject to change based upon current rates of the Home State and risk information available at the date of binding. The Home State of the Insured for a non-admitted risk shall be determined in accordance with the Nonadmitted and Reinsurance Act of 2010, 15. U.S.C \u00a78201, etc. (\"NRRA\"). Some states require the producing broker to submit a written verification of the insured's Home State for our records. The applicable law (if any) of the Home State governing cancellation or non-renewal of non-admitted insurance, including whether any such laws apply to non-admitted risks, shall apply to this Policy.\n\n# BINDING INSTRUCTIONS\n\nWe will only bind coverage in writing after we receive a written request from you to bind coverage. If coverage is requested, the following items must be submitted:\n\nThere are subjectivities that:\n\n- must be complied with or resolved before the contract becomes binding\n- apply both before or after inception, compliance with which is a condition of all or part of the coverage; and\n- apply after the formation of the contract as conditions of continued coverage.\n\nFailure to provide or comply with these subjectivities might results in a refusal to bind or cancellation of coverage, at the insurer's option. Please note that this is a quote only, and the Insurer reserves the right to amend or withdraw the quote if new, corrected or updated information is received. You must notify us of any material change in the risk exposure occurring after submission of the application. If the Insurer binds the risk following your written request, the terms of the policy currently in use by the Insurer will supersede the quote.\n\nAny amendments to coverage must be specifically requested in writing or by submitting a policy change request form and then approved by the Insurer. Coverage cannot be affected, amended, extended or altered through the issuance of certificates of insurance. Underlying Insurers must be rated A-VII or better by A.M. Best.\n\nThis quote summary, the quote, the fees quoted and our advice, is confidential. This quote summary and the quote constitutes the entire understanding and supersedes any and all agreements and communications respecting the insurance offered. If you need further information about the quote, our fee or the Insurer that is proposing to provide your insurance, please contact us.\n\n---\n\n<!-- Page 4 -->\nRT\n\nRYAN TURNER SPECIALTY\n\n677 King Street, 3rd Floor Charleston, SC 29403 Ph: www.rtspecialty.com\n\n024918596B\n\nPREMIUM FINANCE (If not included in the quote document)\n\nIf the insured and the insurer agree to bind coverage and the premium will be financed, upon binding, please instruct the premium finance company to send documents to our attention. Premium Finance funds should always be paid to RT Specialty.\n\n# PRODUCER COMPENSATION:\n\nRT Specialty is typically compensated through commission from the insurer for the placement of policies in most transactions. The amount of the commission varies by insurance line and by carrier. RT Specialty might also receive additional compensation. In order to place the insurance requested we may charge a reasonable fee for additional services such as performing a risk analysis, comparing policies, processing submissions, communication expenses, inspections, working with underwriters on the coverage proposal, issuing policies, or servicing the policy after issuance. Any fees charged are fully earned at inception of the policy. Third-party inspection or other fees may be separately itemized upon request. Our fees are applied to new policies, renewal policies, and endorsements. Fees applicable to each renewal and endorsement will be set forth in the quotes. It is the insurance carrier's decision whether to offer the insurance quoted, and your client's decision whether to accept the quote. Our fee is not imposed by state law or the Insurer.\n\nDepending upon the Insurer involved with your placement, we might also have an agreement with the Insurer that we are proposing for this placement that might pay us future additional compensation. This compensation could be based on formulas that consider the volume of business placed with the Insurer, the profitability of that business, how much of the business is retained for the Insurer's account each year, and potentially other factors. The agreements frequently consider total eligible premium from all clients placed during a calendar year and any incentive or contingent compensation is often received at a future date. Because of variables in these agreements, we often do not have an accurate means at the time of placement to determine the amount of any additional compensation that might be attributable to any single placement.\n\nYou, as the retail broker with the direct relationship with the Insured, must comply with all applicable laws and regulations related to disclosure of and consent and agreement to, compensation, and informing the Insured that it may request more information about producer or broker compensation that might be paid in connection with the Insured's placement. If we request a copy of any legally required insured consent or agreement, you will provide us with a copy. If you need additional information about the compensation arrangements for services provided by RT Specialty affiliates, please contact your RT Specialty representative.\n\nRT Specialty is a division of RSG Specialty, LLC. RSG Specialty, LLC is a Delaware limited liability company and a subsidiary of Ryan Specialty, LLC. In California: RSG Specialty Insurance Services, LLC (License # 0G97516).\n\nUnless this quote is amended or withdrawn it is valid for 30 days from the date shown above, or the proposed effective date, whichever is earlier. This quote can be amended or withdrawn at any time prior to acceptance by the insured. If the quote included with this letter provides otherwise, or in any way conflicts with this letter, the terms of the quote shall govern and control.\n\n---\n\n<!-- Page 5 -->\nRT RYAN TURNER SPECIALTY\n\n677 King Street, 3rd Floor Charleston, SC 29403 Ph: www.rtspecialty.com\n\n024918596B\n\n# NOTICE\nOccurrence Limit of Liability (OLLE)\nScheduled Limits\n\nBlanket coverage for first-party property insurance risks has become increasingly difficult to secure and often is not available regardless of price.\n\nPlease note that your quote may not provide coverage on a blanket basis and, based on current market conditions, a blanket coverage option might not be available. Any reference(s) to an Occurrence Limit of Liability Endorsement (OLLE), margin clause, maximum amount payable, and/or scheduled limits indicate that blanket coverage is not provided. Instead, the amount of recovery afforded by the policy is limited in some respect to the amount(s) set forth on the Statement of Values (SOV) provided to the insurer. This potentially can materially reduce the insured's recovery in the event of a loss as compared to blanket coverage. Additionally, the policy language for these clauses may vary by insurer and some insurers limit the amount recoverable for extensions of coverage, additional coverages, and additional covered property to the values as shown on the SOV.\n\nPlease review this quote very carefully to determine if coverage is being offered or provided on a blanket, or some other more limited, basis.\n\nA",
+  "overall_confidence": 1.0
+}

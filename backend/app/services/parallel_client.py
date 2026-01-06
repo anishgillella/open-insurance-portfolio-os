@@ -104,6 +104,9 @@ class ParallelClient:
         processor = processor or self.default_processor
         start_time = time.time()
 
+        logger.info(f"[Parallel AI] Starting research with processor: {processor}")
+        logger.info(f"[Parallel AI] Objective: {objective[:200]}...")
+
         async with httpx.AsyncClient(timeout=max_wait_seconds + 30) as client:
             # Create task run
             # Parallel AI uses x-api-key header and task_spec/input format
@@ -289,7 +292,7 @@ Provide comprehensive information on:
 
 Focus on the most recent data available (2024-2025). Include specific numbers and cite sources."""
 
-        return await self.research(objective, processor="core-fast")
+        return await self.research(objective)  # Uses default processor (lite)
 
     async def research_property_risk(
         self,
@@ -327,7 +330,7 @@ Find the following information from public sources:
 Use official government sources (FEMA, local municipalities, EPA) where possible.
 Include specific data points and source citations."""
 
-        return await self.research(objective, processor="core-fast")
+        return await self.research(objective)  # Uses default processor (lite)
 
     async def research_carrier(
         self,
@@ -364,7 +367,7 @@ Find comprehensive information on:
 
 Provide specific ratings, dates, and source citations."""
 
-        return await self.research(objective, processor="core-fast")
+        return await self.research(objective)  # Uses default processor (lite)
 
     async def research_lender_requirements(
         self,
@@ -402,7 +405,7 @@ Find their requirements for:
 Look for official lender guidelines, seller/servicer guides, or underwriting requirements.
 Include specific numbers, thresholds, and source citations."""
 
-        return await self.research(objective, processor="core-fast")
+        return await self.research(objective)  # Uses default processor (lite)
 
 
 def get_parallel_client() -> ParallelClient:

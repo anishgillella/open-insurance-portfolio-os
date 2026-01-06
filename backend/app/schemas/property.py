@@ -311,6 +311,9 @@ class PropertyDetail(BaseModel):
         default_factory=list, description="Policies associated with property"
     )
 
+    # Documents
+    document_count: int = Field(default=0, description="Number of documents")
+
     # Timestamps
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")

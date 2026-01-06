@@ -32,10 +32,12 @@ Open Insurance is the **operating system for CRE insurance**.
 | **Document Ingestion** | Upload policies, SOVs, dec pages — or forward emails. We handle the rest. |
 | **AI Extraction** | LLMs parse unstructured insurance documents into structured, searchable data. |
 | **Portfolio Dashboard** | See all properties, policies, coverages, and premiums in one place. |
-| **Coverage Analysis** | Identify gaps, redundancies, and underinsurance before it's a problem. |
-| **Premium Benchmarking** | Compare your costs to similar properties. Know if you're overpaying. |
-| **Renewal Intelligence** | Timelines, market conditions, and negotiation leverage — months ahead. |
-| **AI Assistant** | Ask questions in plain English: "Am I covered for flood at 123 Main St?" |
+| **Coverage Gap Detection** | Automatic identification of underinsurance, missing coverages, and expiring policies. |
+| **Health Score** | 0-100 proprietary score with 6 weighted components and LLM-powered analysis. |
+| **Climate Risk Intelligence** | Property-specific risk scoring for flood, wildfire, hurricane, and more. |
+| **Renewal Intelligence** | Premium forecasting, market intelligence, and negotiation leverage. |
+| **Policy Comparison** | Year-over-year program analysis with coverage diffs and LLM insights. |
+| **AI Assistant** | Ask questions in plain English with citation-backed answers. |
 
 ---
 
@@ -61,9 +63,9 @@ Open Insurance is the **operating system for CRE insurance**.
 │   recommendations        decisions                                          │
 │                                                                             │
 │   ┌─────────┐           ┌─────────┐                                         │
-│   │ Alerts  │           │ Renew   │                                         │
-│   │ Gaps    │           │ Optimize│                                         │
-│   │ Savings │           │ Comply  │                                         │
+│   │ Health  │           │ Renew   │                                         │
+│   │ Scores  │           │ Compare │                                         │
+│   │ Gaps    │           │ Comply  │                                         │
 │   └─────────┘           └─────────┘                                         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -71,130 +73,261 @@ Open Insurance is the **operating system for CRE insurance**.
 
 ---
 
-## Key Features
+## Implemented Features
 
 ### 1. Document Intelligence
 
-**Input:** PDFs, Excel files, scanned documents, forwarded emails
+**Input:** PDFs, Excel files, scanned documents, images, forwarded emails
 **Output:** Structured, searchable insurance data
 
-- Declaration pages → Policy details, coverages, premiums
-- Statements of Value (SOV) → Property schedules with values
-- Certificates of Insurance → Compliance tracking
-- Loss runs → Claims history analysis
+#### Supported Document Types
+| Document Type | Description | Data Extracted |
+|---------------|-------------|----------------|
+| **Declaration Pages** | Policy summary | Carrier, policy number, effective/expiration dates, premiums, coverages |
+| **Statements of Value (SOV)** | Property schedules | Building values, locations, construction type, TIV |
+| **Certificates of Insurance (COI)** | Compliance proof | Certificate holder, coverages, limits, additional insureds |
+| **Loss Runs** | Claims history | Claim dates, types, amounts paid/reserved, status |
+| **Invoices** | Premium billing | Premium breakdowns, taxes, fees, due dates |
+| **Proposals/Quotes** | Renewal options | Quoted premiums, coverage options, carrier terms |
+| **Endorsements** | Policy modifications | Coverage changes, effective dates, premium impact |
+| **Program Documents** | Umbrella/excess liability | Layering structure, attachment points, limits |
 
-The AI handles carrier-specific formats, handwritten notes, and messy scans.
+#### Processing Pipeline
+1. **Upload** — User uploads document (PDF, image, Excel) or forwards email
+2. **File Type Detection** — Excel/CSV parsed directly via SheetJS, others go to OCR
+3. **OCR Processing** — Mistral OCR extracts text with table structure preserved
+4. **Document Classification** — LLM auto-detects document type
+5. **Chunked Extraction** — Large documents split into ~50K character chunks for parallel processing
+6. **Structured Extraction** — LLM (Claude/Gemini via OpenRouter) converts to structured JSON using Pydantic schemas
+7. **Validation** — Math checks (premiums sum correctly), date logic, confidence scoring
+8. **Storage & Indexing** — PostgreSQL + vector embeddings in Pinecone for RAG
 
-### 2. Portfolio Dashboard
+---
 
-One view of your entire insurance portfolio:
+### 2. Coverage Gap Detection
 
-- **Property Map** — See all locations with coverage status
-- **Policy Timeline** — Expirations, renewals, key dates
-- **Coverage Matrix** — What's covered, what's not, across all properties
-- **Premium Breakdown** — Where every dollar goes
+**Automatic identification of coverage issues based on industry-standard thresholds.**
 
-### 3. Coverage Gap Detection
+#### Gap Types & Thresholds
 
-Automatic identification of:
+| Gap Type | Severity | Condition | Standard |
+|----------|----------|-----------|----------|
+| **Underinsurance** | 🔴 Critical | Coverage < 80% of building replacement cost | Fannie Mae, NAIOP |
+| **Underinsurance** | 🟡 Warning | Coverage 80-90% of building replacement cost | Industry best practice |
+| **High Deductible** | 🔴 Critical | Deductible > 5% of TIV or > $500,000 flat | Commercial RE standards |
+| **High Deductible** | 🟡 Warning | Deductible > 3% of TIV or > $250,000 flat | Lender requirements |
+| **Policy Expiration** | 🔴 Critical | Policy expires in ≤ 30 days | Immediate action needed |
+| **Policy Expiration** | 🟡 Warning | Policy expires in 31-60 days | Begin renewal process |
+| **Policy Expiration** | 🔵 Info | Policy expires in 61-90 days | Plan ahead |
+| **Missing Coverage** | 🔴 Critical | No property or general liability coverage | Required minimums |
+| **Missing Umbrella** | 🟡 Warning | TIV > $5,000,000 without umbrella/excess | Recommended protection |
+| **Missing Flood** | 🔴 Critical | Property in high-risk flood zone (A, AE, V, VE, etc.) without flood insurance | FEMA/Lender requirement |
+| **Outdated Valuation** | 🔴 Critical | Last valuation > 3 years old | Risk of underinsurance |
+| **Outdated Valuation** | 🟡 Warning | Last valuation > 2 years old | Update recommended |
 
-- **Underinsurance** — Building values below replacement cost
-- **Coinsurance penalties** — Will you get penalized at claim time?
-- **Missing coverages** — Flood in flood zones, ordinance/law, equipment breakdown
-- **Deductible exposure** — Can you absorb a $500K wind deductible?
+#### Compliance Templates
 
-### 4. Premium Benchmarking
+**Standard Commercial Lender:**
+- 100% replacement cost coverage
+- $1M minimum GL limit
+- 5% maximum deductible
+- Flood required if in flood zone
 
-Compare your insurance costs to the market:
+**Fannie Mae Multifamily:**
+- 100% replacement cost coverage
+- $1M minimum GL limit
+- Umbrella based on unit count:
+  - 1-50 units: $1M
+  - 51-100 units: $2M
+  - 101-200 units: $5M
+  - 200+ units: $10M
+- 5% max deductible or $100K, whichever greater
+- 12 months business income required
 
-- **$/unit** — How does your cost per apartment compare?
-- **$/sqft** — Normalized comparison across property sizes
-- **% of NOI** — Insurance as a percentage of net operating income
-- **YoY trend** — Are your increases above or below market?
+**Conservative:**
+- 100% replacement cost
+- $2M GL limit
+- $5M umbrella always required
+- 2% max deductible or $50K
+- Flood, earthquake, terrorism required
 
-Data is anonymized and aggregated across the platform. Every policy uploaded makes the benchmarks smarter.
+---
 
-### 5. Renewal Command Center
+### 3. Insurance Health Score
 
-Stop scrambling 30 days before expiration:
+**Proprietary 0-100 score with 6 weighted components, powered by LLM analysis.**
 
-- **120-day timeline** — Automated reminders and milestones
-- **Market intelligence** — What's happening to rates in your segment?
-- **Document prep** — SOVs, loss runs, and submissions ready to go
-- **Negotiation leverage** — Benchmarks and competing quotes in hand
+#### Component Breakdown
 
-### 6. AI Assistant ("Insurance Buddy")
+| Component | Max Points | What It Measures |
+|-----------|------------|------------------|
+| **Coverage Adequacy** | 25 | Building coverage vs replacement cost, business income adequacy, liability limits |
+| **Policy Currency** | 20 | All policies current, time to expiration, lapse risk |
+| **Deductible Risk** | 15 | Deductibles relative to property value, out-of-pocket exposure |
+| **Coverage Breadth** | 15 | Required coverages (property, GL) + recommended (umbrella, flood, earthquake) |
+| **Lender Compliance** | 15 | Coverage meets lender requirements, mortgagee properly listed |
+| **Documentation Quality** | 10 | Required documents present and current |
 
-Ask questions in plain English:
+#### Grade Thresholds
+| Grade | Score Range | Status |
+|-------|-------------|--------|
+| **A** | 90-100 | Excellent coverage |
+| **B** | 80-89 | Good, minor improvements possible |
+| **C** | 70-79 | Adequate, attention needed |
+| **D** | 60-69 | Below standard, action required |
+| **F** | 0-59 | Critical gaps, immediate attention |
 
+#### Output Includes
+- Per-component scores with detailed reasoning
+- Executive summary for stakeholders
+- Prioritized recommendations with expected impact
+- Risk factors and strengths
+- Trend direction vs previous calculation
+
+---
+
+### 4. Climate Risk Intelligence
+
+**Property-specific risk assessment using Parallel AI web research + Gemini structuring.**
+
+#### Risk Categories Assessed
+
+| Risk Type | Data Points | Risk Levels |
+|-----------|-------------|-------------|
+| **Flood Risk** | FEMA zone (X, A, AE, V, VE), zone description | Low, Moderate, High, Very High |
+| **Fire Protection** | ISO PPC rating (1-10), fire station distance, hydrant distance | Class 1 (best) to 10 (worst) |
+| **Hurricane Risk** | Historical events, coastal exposure | Low to Very High |
+| **Tornado Risk** | Regional corridor analysis | Low to Very High |
+| **Hail Risk** | Historical frequency and severity | Low to Very High |
+| **Wildfire Risk** | Vegetation, terrain, fire history | Low to Very High |
+| **Earthquake Risk** | Fault proximity, soil type | Low to Very High |
+| **Crime Risk** | Crime index (0-100), crime grade (A-F) | Low to Very High |
+| **Environmental Risk** | Superfund sites, industrial proximity | Low to Very High |
+
+#### Additional Data Enrichment
+- Recent building permits
+- Code violations
+- Infrastructure issues
+- Overall risk score (0-100)
+- Insurance implications and recommendations
+- Cited sources
+
+---
+
+### 5. Renewal Intelligence
+
+**Premium forecasting with rule-based estimates + LLM-powered analysis.**
+
+#### Forecasting Components
+
+**Rule-Based Estimate:**
+- Base market trend: +5% (assuming hardening market)
+- Property age adjustment: +0.5% per year over 30 years (max 5%)
+- Claims adjustment: +2% per open claim (max 10%)
+
+**LLM Factor Analysis (weighted):**
+| Factor | Weight | What It Considers |
+|--------|--------|-------------------|
+| Loss History | 30% | Claims in past 3 years, total paid/reserved |
+| Market Trends | 25% | Regional rate movements, carrier behavior |
+| Property Changes | 15% | Valuation updates, risk profile changes |
+| Coverage Changes | 15% | Limit increases, coverage additions |
+| Carrier Appetite | 15% | Carrier's appetite for property type/region |
+
+#### Output Includes
+- Current premium and expiration date
+- Rule-based point estimate with % change
+- LLM predictions: Low / Mid / High range
+- Confidence score (0-100)
+- Factor-by-factor breakdown with reasoning
+- Market context analysis
+- Specific negotiation leverage points
+- Live market intelligence (from Parallel AI)
+
+---
+
+### 6. Market Intelligence
+
+**Real-time market research using Parallel AI + Gemini structuring.**
+
+#### Data Retrieved
+| Category | Information |
+|----------|-------------|
+| **Rate Trends** | YoY rate change %, direction (increasing/decreasing/stable/volatile), confidence level |
+| **Key Factors** | Market drivers affecting the property type/region |
+| **Carrier Appetite** | Per-carrier appetite (expanding/stable/contracting/exiting) |
+| **Forecasts** | 6-month and 12-month predictions |
+| **Regulatory Changes** | Recent or upcoming regulatory impacts |
+| **Market Developments** | Industry news and trends |
+| **Benchmarks** | Premium per $100 TIV, rate per sqft |
+
+---
+
+### 7. Policy & Program Comparison
+
+**Intelligent year-over-year analysis with LLM-generated insights.**
+
+#### Comparison Types
+
+**Policy-to-Policy:**
+- Premium change ($ and %)
+- Coverages added/removed/changed
+- Limit and deductible changes per coverage
+- Total limit change
+- LLM executive summary and recommendations
+
+**Program-to-Program (Year-over-Year):**
+- Total premium change across all policies
+- Total insured value change
+- Policy-level comparisons
+- Policies added or removed
+- Coverage gap identification
+- Strategic recommendations for upcoming renewal
+
+#### Output Format
+```
+Program 2024 vs 2025:
+├── Total Premium: $125,000 → $142,500 (+14%)
+├── Total Insured Value: $15M → $16.2M (+8%)
+├── Policies:
+│   ├── Property: Premium +12%, Wind deductible increased 50%
+│   ├── GL: Premium +8%, Limits unchanged
+│   └── Umbrella: Added new $5M policy
+└── LLM Analysis:
+    ├── Executive Summary
+    ├── Key Changes (with specific numbers)
+    ├── Coverage Gaps Identified
+    └── Recommendations
+```
+
+---
+
+### 8. AI Assistant ("Insurance Buddy")
+
+**RAG-powered Q&A with citation-backed answers.**
+
+#### Capabilities
+- Semantic search across all uploaded documents
+- Vector search via Pinecone (1024 dimensions)
+- Context-aware retrieval using conversation history
+- Citation of specific document pages and snippets
+- Uncertainty flagging when confidence is low
+
+#### Example Questions
 ```
 "What's my total insured value across all properties?"
 "Which properties don't have flood coverage?"
 "What changed between this year and last year's policy?"
 "Am I covered if a pipe bursts and floods three units?"
-"How much am I paying in broker fees?"
+"What are my deductibles for wind damage?"
+"When does my umbrella policy expire?"
 ```
 
-The AI cites specific policy language and flags when it's uncertain.
-
----
-
-## Who It's For
-
-### Property Owners (Primary User)
-
-- Own 5-500+ multifamily units
-- Spend $50K-$5M+ annually on insurance
-- Tired of not understanding what they're paying for
-- Want control over their renewals
-
-### Property Managers
-
-- Manage insurance across multiple owner portfolios
-- Need compliance tracking and COI management
-- Want centralized document storage
-
-### Lenders (Future)
-
-- Require proof of coverage for loan compliance
-- Need to verify insurance meets loan covenants
-- Want automated monitoring of borrower coverage
-
----
-
-## Data Model
-
-```
-Organization (Owner/PM)
-    │
-    ├── Properties
-    │       │
-    │       ├── Address, Type, Units, Sq Ft, Year Built
-    │       ├── Construction, Sprinklers, Protection Class
-    │       ├── Flood Zone, Risk Factors
-    │       └── Building Value, Contents Value, BI Value
-    │
-    ├── Policies
-    │       │
-    │       ├── Policy Number, Carrier, Effective/Expiration
-    │       ├── Coverages (limits, deductibles, premiums)
-    │       ├── Fees (taxes, broker commission, surcharges)
-    │       └── Linked Properties (from SOV)
-    │
-    ├── Documents
-    │       │
-    │       ├── Original file (S3)
-    │       ├── Document type (dec page, SOV, COI, etc.)
-    │       ├── Extracted data (JSON)
-    │       └── Confidence scores
-    │
-    └── Alerts
-            │
-            ├── Coverage gaps
-            ├── Renewal reminders
-            ├── Premium anomalies
-            └── Compliance issues
-```
+#### Retrieval Parameters
+- Top-K chunks retrieved: 5 (configurable)
+- Minimum similarity score threshold: 0.3
+- Filters: property_id, document_type, policy_type, carrier
+- Context window: ~4 chars/token estimation
 
 ---
 
@@ -203,13 +336,15 @@ Organization (Owner/PM)
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         FRONTEND                                │
-│         Next.js 14 · TypeScript · Tailwind · shadcn/ui          │
+│      Next.js 14 · React 19 · TypeScript · Tailwind · shadcn/ui  │
+│              Zustand (state) · React Query (data fetching)      │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                          API LAYER                              │
-│              tRPC or REST · Auth (Clerk) · File Upload          │
+│                          BACKEND                                │
+│              FastAPI · Python 3.11 · SQLAlchemy 2.0             │
+│                  Pydantic v2 · Async/Await                      │
 └─────────────────────────────────────────────────────────────────┘
                                 │
         ┌───────────────────────┼───────────────────────┐
@@ -218,510 +353,311 @@ Organization (Owner/PM)
 │   DOCUMENTS   │       │   DATABASE    │       │   AI/ML       │
 │               │       │               │       │               │
 │ • S3 Storage  │       │ • PostgreSQL  │       │ • Mistral OCR │
-│ • Mistral OCR │       │ • Drizzle ORM │       │ • Claude API  │
-│ • SheetJS     │       │ • Redis       │       │ • pgvector    │
-│ • Queue       │       │               │       │ • RAG         │
+│ • Mistral OCR │       │ • SQLAlchemy  │       │ • OpenRouter  │
+│ • SheetJS     │       │ • pgvector    │       │ • Pinecone    │
+│               │       │ • Alembic     │       │ • Parallel AI │
 └───────────────┘       └───────────────┘       └───────────────┘
 ```
 
 ### Tech Stack
 
-| Layer | Technology | Why |
-|-------|------------|-----|
-| Frontend | Next.js 14 (App Router) | Modern React, great DX, Vercel deploy |
-| Styling | Tailwind + shadcn/ui | Fast iteration, consistent design |
-| API | tRPC | End-to-end type safety |
-| Database | PostgreSQL + pgvector | Relational data + vector embeddings |
-| ORM | Drizzle | Type-safe, lightweight |
-| Auth | Clerk | Fast setup, handles everything |
-| Storage | AWS S3 | Reliable, cheap document storage |
-| Queue | Inngest or Trigger.dev | Serverless background jobs |
-| OCR | Mistral OCR | Universal document extraction |
-| LLM | OpenRouter | $0.50/M input, $3/M output tokens |
-| Spreadsheets | SheetJS | Native Excel/CSV parsing |
-| Hosting | Vercel + Railway | Simple deployment |
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | Next.js 14 (App Router) | Modern React with server components |
+| **UI Components** | shadcn/ui + Tailwind CSS 4 | Consistent, accessible design |
+| **State Management** | Zustand + React Query | Client state + server state |
+| **Visualizations** | Nivo, Recharts, Three.js | Charts, graphs, 3D visualizations |
+| **Backend** | FastAPI (Python 3.11) | Async API with automatic OpenAPI docs |
+| **Database** | PostgreSQL + pgvector | Relational data + vector embeddings |
+| **ORM** | SQLAlchemy 2.0 (async) | Type-safe database access |
+| **Migrations** | Alembic | Database schema versioning |
+| **Vector Search** | Pinecone | Semantic search for RAG |
+| **OCR** | Mistral OCR | Universal document extraction |
+| **LLM** | OpenRouter (Claude/Gemini) | Extraction, analysis, chat |
+| **Web Research** | Parallel AI | Market intelligence, property risk |
+| **Storage** | AWS S3 | Document storage |
+| **Spreadsheets** | SheetJS | Native Excel/CSV parsing |
 
 ---
 
-## Document Processing Pipeline
-
-We use a **unified extraction pipeline** powered by Mistral OCR that handles all document types — PDFs, scanned documents, images, complex tables, and handwritten content.
+## Data Model
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       DOCUMENT PROCESSING PIPELINE                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   ┌──────────┐                                                              │
-│   │  UPLOAD  │                                                              │
-│   │  (Any    │                                                              │
-│   │  Format) │                                                              │
-│   └────┬─────┘                                                              │
-│        │                                                                    │
-│        ▼                                                                    │
-│   ┌─────────────────┐     Is Excel/CSV?     ┌─────────────────┐             │
-│   │  FILE TYPE      │─────── YES ──────────▶│    SheetJS      │             │
-│   │  DETECTION      │                       │  (Direct Parse) │             │
-│   └────────┬────────┘                       └────────┬────────┘             │
-│            │ NO                                      │                      │
-│            ▼                                         │                      │
-│   ┌─────────────────┐                                │                      │
-│   │   MISTRAL OCR   │                                │                      │
-│   │                 │                                │                      │
-│   │  Handles:       │                                │                      │
-│   │  • Native PDFs  │                                │                      │
-│   │  • Scanned PDFs │                                │                      │
-│   │  • Images       │                                │                      │
-│   │  • Tables       │                                │                      │
-│   │  • Handwriting  │                                │                      │
-│   │                 │                                │                      │
-│   │  Output:        │                                │                      │
-│   │  Markdown +     │                                │                      │
-│   │  HTML Tables    │                                │                      │
-│   └────────┬────────┘                                │                      │
-│            │                                         │                      │
-│            └──────────────────┬───────────────────────                      │
-│                               │                                             │
-│                               ▼                                             │
-│                      ┌─────────────────┐                                    │
-│                      │   OPENROUTER    │                                    │
-│                      │      LLM        │                                    │
-│                      │  Structured     │                                    │
-│                      │  Extraction     │                                    │
-│                      │  (Zod Schema)   │                                    │
-│                      └────────┬────────┘                                    │
-│                               │                                             │
-│                               ▼                                             │
-│                      ┌─────────────────┐                                    │
-│                      │    VALIDATE     │                                    │
-│                      │                 │                                    │
-│                      │  • Math checks  │                                    │
-│                      │  • Date logic   │                                    │
-│                      │  • Confidence   │                                    │
-│                      │    scoring      │                                    │
-│                      └────────┬────────┘                                    │
-│                               │                                             │
-│                               ▼                                             │
-│                      ┌─────────────────┐                                    │
-│                      │     STORE       │                                    │
-│                      │                 │                                    │
-│                      │  PostgreSQL +   │                                    │
-│                      │  pgvector       │                                    │
-│                      └─────────────────┘                                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+Organization (Owner/PM)
+    │
+    ├── Properties (31 models total)
+    │       │
+    │       ├── Core: address, type, units, sq_ft, year_built
+    │       ├── Construction: construction_type, sprinklers, protection_class
+    │       ├── Risk: flood_zone, risk factors (from Parallel AI)
+    │       ├── Buildings: individual building records with values
+    │       └── Valuations: building_value, contents_value, bi_value
+    │
+    ├── Insurance Programs (per policy year)
+    │       │
+    │       ├── Policies
+    │       │       │
+    │       │       ├── Policy details: number, carrier, dates, premium
+    │       │       ├── Coverages: limits, deductibles, sublimits
+    │       │       └── Endorsements: modifications
+    │       │
+    │       └── Aggregate: total_premium, total_insured_value
+    │
+    ├── Documents
+    │       │
+    │       ├── Original file (S3 storage)
+    │       ├── Document type (classified)
+    │       ├── Extracted data (JSON)
+    │       ├── Document chunks (for RAG)
+    │       └── Confidence scores
+    │
+    ├── Coverage Gaps
+    │       │
+    │       ├── Gap type, severity, description
+    │       ├── Current vs recommended values
+    │       ├── LLM enrichment (recommendations)
+    │       └── Resolution status
+    │
+    ├── Health Scores
+    │       │
+    │       ├── Total score (0-100) and grade (A-F)
+    │       ├── Component breakdown (6 components)
+    │       ├── Executive summary
+    │       └── Recommendations
+    │
+    ├── Renewal Forecasts
+    │       │
+    │       ├── Rule-based and LLM predictions
+    │       ├── Factor breakdown
+    │       ├── Market context
+    │       └── Negotiation points
+    │
+    ├── Claims
+    │       │
+    │       ├── Claim details, dates, amounts
+    │       └── Status tracking
+    │
+    └── Conversations
+            │
+            ├── Chat history for AI assistant
+            └── Message threading
 ```
-
-### Why Mistral OCR?
-
-| Capability | Mistral OCR |
-|------------|-------------|
-| Native PDFs | ✅ |
-| Scanned PDFs | ✅ |
-| Complex tables (merged cells, colspan/rowspan) | ✅ |
-| Handwritten content | ✅ |
-| Low-quality scans | ✅ |
-| Forms and invoices | ✅ |
-| Output format | Markdown + HTML tables |
-| Pricing | $1-2 per 1,000 pages |
-
-One tool handles everything except native spreadsheets (Excel/CSV), which we parse directly with SheetJS.
-
-### Extraction Steps
-
-1. **Upload** — User uploads document (PDF, image, Excel) or forwards email
-2. **Detect** — Determine if it's a spreadsheet (direct parse) or document (OCR)
-3. **OCR** — Mistral OCR extracts text with table structure preserved
-4. **Structure** — LLM (via OpenRouter) converts markdown to structured JSON using Zod schemas
-5. **Validate** — Cross-check extracted data (premiums add up, dates logical)
-6. **Store** — Save structured data linked to original document
 
 ---
 
-## Cost Projections & Scaling
+## API Endpoints
 
-### Documents Per Property
-
-A typical multifamily property generates these insurance documents annually:
-
-| Document Type | Frequency | Pages (Avg) | Purpose |
-|---------------|-----------|-------------|---------|
-| Declaration Page | 1/year | 5 | Policy summary |
-| Full Policy | 1/year | 50 | Complete terms (optional upload) |
-| Statement of Values (SOV) | 1-2/year | 2 | Property schedule |
-| Certificate of Insurance (COI) | 5-20/year | 1 | Lender/tenant compliance |
-| Loss Run | 1/year | 3 | Claims history |
-| Endorsements | 2-5/year | 2 | Policy modifications |
-| Renewal Quote Comparisons | 3-5/year | 5 | Shopping quotes |
-
-**Estimated documents per property per year:** 15-35 documents
-**Estimated pages per property per year:** 50-150 pages
-
-### Processing Cost Breakdown
-
-| Service | Cost | Notes |
-|---------|------|-------|
-| **Mistral OCR** | $1/1,000 pages (batch) | $2/1,000 real-time |
-| **LLM (via OpenRouter)** | $0.50/M input, $3/M output | Claude Sonnet for extraction |
-| **S3 Storage** | $0.023/GB/month | Document storage |
-| **pgvector/PostgreSQL** | ~$20-50/month | Managed database |
-| **Vercel/Hosting** | $20-50/month | Pro tier |
-
-### Cost Per Property Per Year
-
-Assuming 100 pages/property/year and average extraction complexity:
-
-| Component | Calculation | Cost/Property/Year |
-|-----------|-------------|-------------------|
-| Mistral OCR | 100 pages × $0.001 | $0.10 |
-| LLM extraction (~2K input, ~1K output per doc) | 30 docs × ~$0.004 | $0.12 |
-| LLM assistant queries (~500 input, ~300 output) | 50 queries × ~$0.001 | $0.05 |
-| **Total AI/Processing** | | **$0.27** |
-
-### Scaling Projections
-
-| Scale | Properties | Units (est.) | Pages/Month | Monthly AI Cost | Monthly Infra | Total Monthly |
-|-------|------------|--------------|-------------|-----------------|---------------|---------------|
-| **MVP** | 50 | 2,500 | 400 | $1 | $50 | **$51** |
-| **Seed** | 500 | 25,000 | 4,000 | $10 | $100 | **$110** |
-| **Series A** | 5,000 | 250,000 | 40,000 | $100 | $300 | **$400** |
-| **Growth** | 25,000 | 1,250,000 | 200,000 | $500 | $1,000 | **$1,500** |
-| **Scale** | 100,000 | 5,000,000 | 800,000 | $2,000 | $3,000 | **$5,000** |
-
-### Detailed Cost Model by Scale
-
-#### MVP (50 Properties / ~2,500 Units)
+### Core Resources
 ```
-Monthly Documents: ~75 (1.5/property)
-Monthly Pages: ~400
+Documents:
+  POST   /v1/documents/upload           Upload insurance document
+  GET    /v1/documents                  List documents
+  GET    /v1/documents/{id}             Get document details
+  DELETE /v1/documents/{id}             Delete document
 
-Mistral OCR:        $0.40   (400 pages × $0.001)
-LLM Extraction:     $0.30   (75 docs × ~$0.004)
-LLM Assistant:      $0.20   (~200 queries × ~$0.001)
-S3 Storage:         $0.50   (~20MB new docs)
-Database:           $25.00  (Railway/Neon starter)
-Hosting:            $20.00  (Vercel Pro)
-Auth (Clerk):       $0.00   (free tier)
-────────────────────────────
-Total:              ~$46/month
-Per Property:       ~$0.92/month
+Properties:
+  GET    /v1/properties                 List properties
+  POST   /v1/properties                 Create property
+  GET    /v1/properties/{id}            Get property details
+  GET    /v1/properties/{id}/overview   Property overview metrics
+  GET    /v1/properties/{id}/health     Property health score
+  DELETE /v1/properties/{id}            Delete with cascade
 ```
 
-#### Seed Stage (500 Properties / ~25,000 Units)
+### Intelligence & Analysis
 ```
-Monthly Documents: ~750
-Monthly Pages: ~4,000
+Gaps:
+  GET    /v1/gaps                       List coverage gaps
+  GET    /v1/gaps/by-property           Gaps grouped by property
+  POST   /v1/gaps/{id}/resolve          Resolve a gap
 
-Mistral OCR:        $4.00
-LLM Extraction:     $3.00   (750 docs × ~$0.004)
-LLM Assistant:      $2.00   (~2,000 queries)
-S3 Storage:         $2.00
-Database:           $50.00  (managed PostgreSQL)
-Hosting:            $50.00
-Auth (Clerk):       $25.00
-Redis Cache:        $20.00
-────────────────────────────
-Total:              ~$156/month
-Per Property:       ~$0.31/month
-```
+Health Score:
+  GET    /v1/health-score/properties    All property health scores
+  POST   /v1/health-score/calculate     Calculate health score
 
-#### Series A (5,000 Properties / ~250,000 Units)
-```
-Monthly Documents: ~7,500
-Monthly Pages: ~40,000
+Renewals:
+  GET    /v1/renewals                   List renewal timeline
+  GET    /v1/renewals/forecast          Forecast renewals
+  POST   /v1/renewals/{id}/compare      Compare quotes
 
-Mistral OCR:        $40.00
-LLM Extraction:     $30.00  (7,500 docs × ~$0.004)
-LLM Assistant:      $20.00  (~20,000 queries)
-S3 Storage:         $15.00
-Database:           $200.00 (production PostgreSQL)
-Hosting:            $200.00
-Auth (Clerk):       $100.00
-Redis/Queue:        $50.00
-Monitoring:         $50.00
-────────────────────────────
-Total:              ~$705/month
-Per Property:       ~$0.14/month
+Enrichment:
+  POST   /v1/enrichment/property-risk   Get property risk data
+  POST   /v1/enrichment/market-intel    Get market intelligence
 ```
 
-#### Growth (25,000 Properties / ~1.25M Units)
+### Chat & Dashboard
 ```
-Monthly Documents: ~37,500
-Monthly Pages: ~200,000
+Chat:
+  POST   /v1/chat/query                 Ask AI assistant
+  GET    /v1/chat/conversations         List conversations
+  GET    /v1/chat/conversations/{id}    Get conversation history
 
-Mistral OCR:        $200.00  (batch pricing)
-LLM Extraction:     $150.00  (37,500 docs × ~$0.004)
-LLM Assistant:      $100.00  (~100,000 queries)
-S3 Storage:         $50.00
-Database:           $500.00
-Hosting:            $500.00
-Auth:               $300.00
-Queue/Workers:      $200.00
-Monitoring/Ops:     $200.00
-────────────────────────────
-Total:              ~$2,200/month
-Per Property:       ~$0.09/month
+Dashboard:
+  GET    /v1/dashboard/summary          Dashboard summary stats
+  GET    /v1/dashboard/expirations      Upcoming expirations
 ```
-
-### Cost Per Unit Economics
-
-| Scale | Properties | Units | Monthly Cost | Cost/Unit/Month | Cost/Unit/Year |
-|-------|------------|-------|--------------|-----------------|----------------|
-| MVP | 50 | 2,500 | $46 | $0.018 | $0.22 |
-| Seed | 500 | 25,000 | $156 | $0.006 | $0.07 |
-| Series A | 5,000 | 250,000 | $705 | $0.003 | $0.03 |
-| Growth | 25,000 | 1,250,000 | $2,200 | $0.002 | $0.02 |
-
-**At scale, platform cost is ~$0.02/unit/year** — negligible compared to insurance premiums of $1,000-5,000/unit/year.
-
-### Revenue vs Cost (Phase 2+)
-
-Assuming Cost + 10% model with average premium of $1,500/unit/year:
-
-| Scale | Units | Insurance Premium | Platform Fee (10%) | Platform Cost | Gross Margin |
-|-------|-------|-------------------|-------------------|---------------|--------------|
-| Seed | 25,000 | $37.5M | $3.75M | $1.9K/yr | **99.9%** |
-| Series A | 250,000 | $375M | $37.5M | $8.5K/yr | **99.9%** |
-| Growth | 1,250,000 | $1.875B | $187.5M | $26K/yr | **99.9%** |
-
-The platform cost is essentially a rounding error compared to potential revenue. This is a **software-like margin business**.
-
-### Burst Capacity Planning
-
-Renewal season creates predictable spikes:
-
-| Period | Normal Load | Renewal Season Peak |
-|--------|-------------|---------------------|
-| Documents/day | X | 5-10X |
-| When | Year-round | Q4 + Q1 (most policies renew Jan 1) |
-
-**Mitigation:**
-- Use Mistral OCR batch API ($1/1000 vs $2/1000) for non-urgent processing
-- Queue-based architecture handles spikes gracefully
-- Pre-warm capacity for known renewal dates
 
 ---
 
-## Roadmap
+## Services Architecture
 
-### Phase 1: Owner Portal ("Insurance Buddy")
+### Backend Services (33 modules)
 
-**Goal:** Give owners visibility into their insurance portfolio.
+**Document Processing:**
+- `extraction_service.py` — LLM-based structured data extraction
+- `ocr_service.py` — Mistral OCR integration
+- `classification_service.py` — Document type classification
+- `chunking_service.py` — Document chunking for large files
+- `ingestion_service.py` — End-to-end document pipeline
+- `merge_service.py` — Merging extracted data from chunks
 
-- [ ] Document upload and storage
-- [ ] AI extraction of dec pages and SOVs
-- [ ] Portfolio dashboard with property/policy views
-- [ ] Coverage gap detection
-- [ ] Basic premium benchmarking
-- [ ] AI Q&A assistant
-- [ ] Renewal timeline and alerts
+**AI & Intelligence:**
+- `gap_detection_service.py` — Automated gap detection (6 gap types)
+- `gap_analysis_service.py` — Gap enrichment and recommendations
+- `health_score_service.py` — 6-component health scoring
+- `compliance_service.py` — Lender requirement checking
+- `conflict_detection_service.py` — Coverage conflict detection
 
-**Success metric:** Owners can answer "What am I paying and what am I covered for?" in under 60 seconds.
+**Renewals & Forecasting:**
+- `renewal_forecast_service.py` — Premium predictions
+- `renewal_readiness_service.py` — Renewal preparation status
+- `renewal_timeline_service.py` — Timeline management
+- `policy_comparison_service.py` — Policy/program comparison
 
-### Phase 2: Insurer Sandbox + MGA Layer
+**Market & Risk:**
+- `market_intelligence_service.py` — Live market research
+- `market_context_service.py` — Market context enrichment
+- `property_risk_service.py` — Climate/property risk scoring
+- `carrier_research_service.py` — Carrier rate trends
 
-**Goal:** Enable carriers to underwrite directly on the platform.
-
-- [ ] Carrier-facing portal
-- [ ] Submission workflow
-- [ ] Quote comparison
-- [ ] Bind/issue integration
-- [ ] Continuous underwriting signals
-- [ ] MGA partnerships
-
-**Success metric:** Renewals placed through platform with transparent pricing.
-
-### Phase 3: Open Insurance Marketplace
-
-**Goal:** Become the infrastructure layer for CRE insurance.
-
-- [ ] API for third-party access
-- [ ] Risk capital connections
-- [ ] Industry-wide data standards
-- [ ] Marketplace dynamics (bidding, competition)
-
-**Success metric:** Platform is the default system of record for CRE insurance.
-
----
-
-## Business Model
-
-**Cost + 10%**
-
-```
-┌─────────────────────────────────────────┐
-│                                         │
-│   Insurer Risk Cost                     │
-│   + 10% Platform Fee                    │
-│   ─────────────────                     │
-│   = Total Premium                       │
-│                                         │
-│   No hidden fees. No layers.            │
-│   Transparent pricing.                  │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-This mirrors the Cost Plus Drugs model for healthcare — eliminate the middlemen markup and pass savings to the customer.
-
-**Phase 1 (MVP):** Free for owners. Build the dataset.
-**Phase 2+:** Platform fee on bound policies.
-
----
-
-## Why Now?
-
-1. **Premiums have exploded** — Multifamily insurance up 200-300% since 2021
-2. **Owners are demanding change** — The industry is openly calling for transparency
-3. **AI can finally read policies** — LLMs make document understanding viable
-4. **Data network effects** — Every policy uploaded makes the platform smarter
-5. **Incumbent inertia** — $300B+ market cap built on opacity won't self-disrupt
-
----
-
-## Competitive Landscape
-
-| Player | What They Do | Why We're Different |
-|--------|--------------|---------------------|
-| **Brokers** (Marsh, AON, etc.) | Traditional intermediaries | We're transparent; they profit from opacity |
-| **Insurtech MGAs** | Tech-enabled underwriting | We're platform-first; they're carriers with apps |
-| **Policy management tools** | Document storage | We extract intelligence; they just store files |
-| **Vertical SaaS** (Yardi, RealPage) | Property management | Insurance is an afterthought; it's our core |
-
-**Our moat:** Data. Every policy uploaded trains our models, improves benchmarks, and makes the platform more valuable. Network effects compound over time.
+**RAG & Embeddings:**
+- `embedding_pipeline_service.py` — Vector embedding generation
+- `rag_query_service.py` — RAG retrieval implementation
+- `answer_generation_service.py` — LLM answer generation
+- `pinecone_service.py` — Pinecone vector DB integration
 
 ---
 
 ## Getting Started (Development)
 
-```bash
-# Clone the repository
-git clone https://github.com/open-insurance/platform.git
-cd platform
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 15+ with pgvector extension
+- Redis (optional, for caching)
 
-# Install dependencies
-pnpm install
+### Running the Backend
 
-# Set up environment variables
-cp .env.example .env.local
-# Add your API keys (Clerk, AWS, Anthropic, Database)
-
-# Run database migrations
-pnpm db:migrate
-
-# Start development server
-pnpm dev
-```
-
-### Running Frontend & Backend
-
-**Frontend (Next.js):**
-```bash
-cd frontend
-npm install
-npm run dev
-# Frontend runs at http://localhost:3000
-```
-
-**Backend (FastAPI):**
 ```bash
 cd backend
 
-# Create virtual environment (first time)
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
-# Run the backend server
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run database migrations
+alembic upgrade head
+
+# Start the server
 uvicorn app.main:app --reload --port 8000
-# Backend runs at http://localhost:8000
+
 # API docs at http://localhost:8000/docs
 ```
 
-**Run Both (from project root):**
-```bash
-# Terminal 1 - Backend
-cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
+### Running the Frontend
 
-# Terminal 2 - Frontend
-cd frontend && npm run dev
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Frontend at http://localhost:3000
 ```
 
 ### Environment Variables
 
 ```bash
-# Auth
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-
 # Database
-DATABASE_URL=
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/open_insurance
 
 # AWS (Document Storage)
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-AWS_REGION=
-AWS_S3_BUCKET=
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=open-insurance-docs
 
-# AI - Document Processing
-MISTRAL_API_KEY=              # Mistral OCR for document extraction
-OPENROUTER_API_KEY=           # LLM for structured data extraction ($0.50/M in, $3/M out)
+# AI Services
+MISTRAL_API_KEY=              # Mistral OCR
+OPENROUTER_API_KEY=           # LLM (Claude/Gemini)
+PINECONE_API_KEY=             # Vector search
+PARALLEL_API_KEY=             # Market intelligence
 
-# Optional: Redis (caching/queues)
-REDIS_URL=
+# Optional
+REDIS_URL=                    # Caching
 ```
 
 ---
 
-## Project Structure
+## Cost Projections
 
-```
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── (auth)/             # Auth pages (sign-in, sign-up)
-│   │   ├── (dashboard)/        # Protected dashboard routes
-│   │   │   ├── properties/     # Property management
-│   │   │   ├── policies/       # Policy management
-│   │   │   ├── documents/      # Document upload & viewer
-│   │   │   ├── analytics/      # Benchmarking & insights
-│   │   │   └── assistant/      # AI chat interface
-│   │   └── api/                # API routes
-│   │
-│   ├── components/             # React components
-│   │   ├── ui/                 # shadcn/ui primitives
-│   │   ├── dashboard/          # Dashboard-specific components
-│   │   ├── documents/          # Document upload & display
-│   │   └── chat/               # AI assistant components
-│   │
-│   ├── lib/                    # Shared utilities
-│   │   ├── db/                 # Database client & schema
-│   │   ├── ai/                 # AI/LLM utilities
-│   │   ├── extraction/         # Document extraction pipeline
-│   │   └── storage/            # S3 file handling
-│   │
-│   ├── server/                 # Server-side code
-│   │   ├── routers/            # tRPC routers
-│   │   └── services/           # Business logic
-│   │
-│   └── types/                  # TypeScript types & schemas
-│
-├── drizzle/                    # Database migrations
-├── public/                     # Static assets
-└── tests/                      # Test files
-```
+### Processing Costs Per Property Per Year
+
+| Component | Calculation | Cost |
+|-----------|-------------|------|
+| Mistral OCR | 100 pages × $0.001 | $0.10 |
+| LLM extraction | 30 docs × ~$0.004 | $0.12 |
+| LLM assistant | 50 queries × ~$0.001 | $0.05 |
+| **Total AI/Processing** | | **$0.27** |
+
+### Scaling Projections
+
+| Scale | Properties | Monthly AI Cost | Monthly Infra | Total Monthly |
+|-------|------------|-----------------|---------------|---------------|
+| **MVP** | 50 | $1 | $50 | **$51** |
+| **Seed** | 500 | $10 | $100 | **$110** |
+| **Series A** | 5,000 | $100 | $300 | **$400** |
+| **Growth** | 25,000 | $500 | $1,000 | **$1,500** |
+
+**At scale, platform cost is ~$0.02/unit/year** — negligible compared to insurance premiums.
 
 ---
 
-## Contributing
+## Roadmap
 
-This is an early-stage project. If you're interested in contributing:
+### Phase 1: Owner Portal ✅ (Current)
+- [x] Document upload and AI extraction
+- [x] Portfolio dashboard
+- [x] Coverage gap detection (6 gap types)
+- [x] Health score (6 components)
+- [x] Climate risk intelligence
+- [x] Renewal forecasting
+- [x] Policy/program comparison
+- [x] AI Q&A assistant (RAG)
+- [x] Market intelligence
 
-1. Check the issues for open tasks
-2. Read the technical architecture docs
-3. Set up your local environment
-4. Pick an issue and submit a PR
+### Phase 2: Advanced Intelligence (Planned)
+- [ ] Fraud/anomaly detection
+- [ ] Agentic AI claims assistant
+- [ ] IoT integration layer
+- [ ] Real-time underwriting copilot
+- [ ] Portfolio-wide benchmarking
+
+### Phase 3: Marketplace (Future)
+- [ ] Carrier-facing portal
+- [ ] Quote comparison and binding
+- [ ] API for third-party access
+- [ ] Industry-wide data standards
 
 ---
 
@@ -737,4 +673,3 @@ Proprietary. All rights reserved.
 
 - Website: [openinsurance.com](https://openinsurance.com)
 - Email: hello@openinsurance.com
-- Founder: Zach Schofel (zach@openinsurance.com)
