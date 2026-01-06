@@ -45,11 +45,6 @@ export function ChatWidget() {
   const propertyIdMatch = pathname.match(/\/properties\/([^/]+)/);
   const currentPropertyId = propertyIdMatch ? propertyIdMatch[1] : undefined;
 
-  // Don't show widget on the chat page itself
-  if (pathname === '/chat') {
-    return null;
-  }
-
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -63,6 +58,11 @@ export function ChatWidget() {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Don't show widget on the chat page itself
+  if (pathname === '/chat') {
+    return null;
+  }
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -320,7 +320,7 @@ function WidgetMessage({ message }: { message: Message }) {
             'inline-block rounded-xl px-3 py-2 text-xs',
             isUser
               ? 'bg-[var(--color-primary-500)] text-white rounded-tr-sm'
-              : 'bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] rounded-tl-sm'
+              : 'bg-white dark:bg-[var(--color-surface-raised)] text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-sm'
           )}
         >
           {message.error ? (
@@ -333,7 +333,7 @@ function WidgetMessage({ message }: { message: Message }) {
               {isUser ? (
                 <div className="whitespace-pre-wrap">{message.content}</div>
               ) : (
-                <div className="prose prose-xs dark:prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-li:my-0 prose-headings:my-1 prose-strong:text-[var(--color-text-primary)]">
+                <div className="prose prose-xs dark:prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-li:my-0 prose-headings:my-1 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 [&_*]:text-gray-900 dark:[&_*]:text-gray-100">
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
               )}

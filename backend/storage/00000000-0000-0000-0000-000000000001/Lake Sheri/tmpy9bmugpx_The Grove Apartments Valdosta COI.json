@@ -1,0 +1,315 @@
+{
+  "classification": {
+    "document_type": "coi",
+    "document_subtype": null,
+    "policy_type": "general_liability",
+    "confidence": 1.0,
+    "carrier_name": "James River Insurance Company",
+    "policy_number": "00142148-1",
+    "effective_date": "2024-04-01",
+    "expiration_date": "2025-04-01",
+    "insured_name": "Sako and Partners Lower Holdings LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": {
+    "certificate_number": "21227071",
+    "revision_number": "XXXXXXX",
+    "issue_date": "2024-12-27",
+    "producer_name": "Lockton Companies, LLC",
+    "producer_address": "8110 E Union Avenue, Suite 100\nDenver CO 80237",
+    "producer_phone": "(303) 414-6000",
+    "producer_email": null,
+    "producer_reference": null,
+    "insured_name": "Sako and Partners Lower Holdings LLC",
+    "insured_address": "945 Bunker Hill Road, Floor 14\nHouston, TX 77024",
+    "holder_name": "KHRE SMA Funding, LLC ISAOA, ATIMA",
+    "holder_address": "c/o Knighthead Funding, LLC\n777 West Putnam Avenue\n3rd Floor, Suite B-2\nGreenwich, CT 06830",
+    "insurers": {
+      "A": {
+        "name": "James River Insurance Company",
+        "naic": "12203"
+      },
+      "B": {
+        "name": "Underwriters at Lloyds of London",
+        "naic": "10736"
+      },
+      "C": {
+        "name": "Arch Insurance (UK) Limited",
+        "naic": "11150"
+      },
+      "D": {
+        "name": "--- SEE ATTACHMENT ---",
+        "naic": null
+      },
+      "E": {
+        "name": null,
+        "naic": null
+      },
+      "F": {
+        "name": null,
+        "naic": null
+      }
+    },
+    "policies": [
+      {
+        "insurer_letter": "A",
+        "policy_type": "unknown",
+        "policy_number": "00142148-1",
+        "carrier_name": "James River Insurance Company",
+        "naic_number": "12203",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": "occurrence",
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": "policy",
+        "limits": {
+          "EACH OCCURRENCE": 1000000.0,
+          "DAMAGE TO RENTED PREMISES (Ea occurrence)": 50000.0,
+          "MED EXP (Any one person)": null,
+          "PERSONAL & ADV INJURY": 1000000.0,
+          "GENERAL AGGREGATE": 2000000.0,
+          "PRODUCTS - COMP/OP AGG": 2000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "A",
+        "policy_type": "auto",
+        "policy_number": "00142148-1",
+        "carrier_name": "James River Insurance Company",
+        "naic_number": "12203",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "COMBINED SINGLE LIMIT (Ea accident)": 1000000.0,
+          "BODILY INJURY (Per person)": null,
+          "BODILY INJURY (Per accident)": null,
+          "PROPERTY DAMAGE (Per accident)": null,
+          "STATUTY": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "A",
+        "policy_type": "umbrella",
+        "policy_number": "00123606-3",
+        "carrier_name": "James River Insurance Company",
+        "naic_number": "12203",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": "occurrence",
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "EACH OCCURRENCE": 5000000.0,
+          "AGGREGATE": 5000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "B",
+        "policy_type": "unknown",
+        "policy_number": "CMTRB2400496",
+        "carrier_name": "Underwriters at Lloyds of London",
+        "naic_number": "10736",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Terrorism Liab": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "B",
+        "policy_type": "unknown",
+        "policy_number": "CMTRO2400336",
+        "carrier_name": "Underwriters at Lloyds of London",
+        "naic_number": "10736",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Active Assailant": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "B",
+        "policy_type": "unknown",
+        "policy_number": "See Attached",
+        "carrier_name": "Underwriters at Lloyds of London",
+        "naic_number": "10736",
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liab": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "D",
+        "policy_type": "unknown",
+        "policy_number": "03133359",
+        "carrier_name": "Allied World Assurance Company (U.S.) Inc",
+        "naic_number": null,
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liability": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "D",
+        "policy_type": "unknown",
+        "policy_number": "CXS-032039-00",
+        "carrier_name": "Homesite Insurance Company of Florida",
+        "naic_number": null,
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liability": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "D",
+        "policy_type": "unknown",
+        "policy_number": "JTI24XANN-03229-01",
+        "carrier_name": "Texas Insurance Company",
+        "naic_number": null,
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liability": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "D",
+        "policy_type": "unknown",
+        "policy_number": "7036695896",
+        "carrier_name": "Continental Insurance Company",
+        "naic_number": null,
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liability": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "D",
+        "policy_type": "unknown",
+        "policy_number": "93651560",
+        "carrier_name": "Federal Insurance Company",
+        "naic_number": null,
+        "effective_date": "2024-04-01",
+        "expiration_date": "2025-04-01",
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "Excess Liability": null
+        },
+        "confidence": 1.0
+      }
+    ],
+    "gl_each_occurrence": 1000000.0,
+    "gl_damage_to_rented": 50000.0,
+    "gl_medical_expense": null,
+    "gl_personal_advertising": 1000000.0,
+    "gl_general_aggregate": 2000000.0,
+    "gl_products_completed": 2000000.0,
+    "gl_coverage_form": "occurrence",
+    "gl_aggregate_limit_applies_per": "policy",
+    "auto_combined_single": 1000000.0,
+    "auto_bodily_injury_per_person": null,
+    "auto_bodily_injury_per_accident": null,
+    "auto_property_damage": null,
+    "auto_types": [
+      "any auto"
+    ],
+    "umbrella_limit": 5000000.0,
+    "umbrella_aggregate": 5000000.0,
+    "umbrella_deductible": null,
+    "umbrella_retention": null,
+    "umbrella_coverage_form": "occurrence",
+    "workers_comp_per_statute": false,
+    "workers_comp_other": false,
+    "workers_comp_each_accident": null,
+    "workers_comp_disease_ea_employee": null,
+    "workers_comp_disease_policy_limit": null,
+    "workers_comp_excluded_partners": false,
+    "property_limit": null,
+    "description_of_operations": "RE: The Grove Apartments Valdosta - 2201 Baytree Road; Valdosta, GA 31602. Additional Named Insured includes: Grove at Valdosta Apartments, LLC. 30 day notice of Cancellation and 10 Day Notice of Cancellation for Non-Payment. Umbrella follows form. Coverage effective upon closing. Certificate Holder and Knighthead Funding, LLC are included as Additional Insured where required by written contract for GL/Umbrella/Excess/Active Assailant policies. GL/Umbrella/Excess/Active Assailant insurance is primary and non-contributory in favor of the Certificate Holder and Knighthead Funding, LLC when required by written contract.\nA waiver of subrogation if provided in favor of Certificate Holder and Knighthead Funding, LLC for GL/Umbrella/Excess/ Active Assailant when required by written contract.",
+    "additional_insureds": [
+      "Grove at Valdosta Apartments, LLC",
+      "Certificate Holder",
+      "Knighthead Funding, LLC",
+      "Asset Plus USA, LLC",
+      "Asset Campus USA, LLC",
+      "Asset Living Corporation",
+      "Asset Living IP, LLC",
+      "Asset Living, LLC f/k/a Shelton Residential, LLC",
+      "Asset Living Southeast, LLC f/k/a JMG Realty, LLC",
+      "Asset Living Risk Management, LLC",
+      "Asset Campus International, LLC",
+      "Asset Receiver USA, LLC",
+      "Alpha Barnes Real Estate Services, LLC",
+      "Alpha Barnes Real Estate Services II, LLC",
+      "Sako and Partners Holdings, LLC",
+      "Sako and Partners Intermediate Holdings LLC",
+      "Alpha Creek Services, LLC"
+    ],
+    "subrogation_waiver_applies": true,
+    "cancellation_notice_days": 30,
+    "cancellation_terms": "SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.",
+    "authorized_representative": null,
+    "loan_number": null,
+    "mortgagee_clause": null,
+    "loss_payee_clause": null,
+    "confidence": 1.0
+  },
+  "invoice": null,
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nACORD\n\nCERTIFICATE OF LIABILITY INSURANCE\n\n4/1/2025\n\nDATE (MM/DD/YYYY)\n\n12/27/2024\n\n|  THIS CERTIFICATE IS ISSUED AS A MATTER OF INFORMATION ONLY AND CONFERS NO RIGHTS UPON THE CERTIFICATE HOLDER. THIS CERTIFICATE DOES NOT AFFIRMATIVELY OR NEGATIVELY AMEND, EXTEND OR ALTER THE COVERAGE AFFORDED BY THE POLICIES BELOW. THIS CERTIFICATE OF INSURANCE DOES NOT CONSTITUTE A CONTRACT BETWEEN THE ISSUING INSURER(S), AUTHORIZED REPRESENTATIVE OR PRODUCER, AND THE CERTIFICATE HOLDER.  |   |   |\n| --- | --- | --- |\n|  IMPORTANT: If the certificate holder is an ADDITIONAL INSURED, the policy(ies) must have ADDITIONAL INSURED provisions or be endorsed. If SUBROGATION IS WAIVED, subject to the terms and conditions of the policy, certain policies may require an endorsement. A statement on this certificate does not confer rights to the certificate holder in lieu of such endorsement(s).  |   |   |\n|  PRODUCER | Lockton Companies, LLC\n8110 E Union Avenue, Suite 100\nCA License #0B99399\nDenver CO 80237\n(303) 414-6000 | CONTACT\nNAME:  |\n|   |   |  PHONE\n(A/C, No, Ext):\nFAX\n(A/C, No):  |\n|   |   |  E-MAIL\nADDRESS:  |\n|   |   |  INSURER(S) AFFORDING COVERAGE\nNAIC #  |\n|   |   |  INSURER A : James River Insurance Company\n12203  |\n|  INSURED\n1507472 | Sako and Partners Lower Holdings LLC\nAsset Plus USA LLC; Asset Campus USA, LLC\n945 Bunker Hill Road, Floor 14\nHouston, TX 77024 | INSURER B : Underwriters at Lloyds of London\n10736  |\n|   |   |  INSURER C : Arch Insurance (UK) Limited\n11150  |\n|   |   |  INSURER D : --- SEE ATTACHMENT ---  |\n|   |   |  INSURER E :  |\n|   |   |  INSURER F :  |\n\nCOVERAGES\nCERTIFICATE NUMBER: 21227071\nREVISION NUMBER: XXXXXXX\n\n|  THIS IS TO CERTIFY THAT THE POLICIES OF INSURANCE LISTED BELOW HAVE BEEN ISSUED TO THE INSURED NAMED ABOVE FOR THE POLICY PERIOD INDICATED. NOTWITHSTANDING ANY REQUIREMENT, TERM OR CONDITION OF ANY CONTRACT OR OTHER DOCUMENT WITH RESPECT TO WHICH THIS CERTIFICATE MAY BE ISSUED OR MAY PERTAIN, THE INSURANCE AFFORDED BY THE POLICIES DESCRIBED HEREIN IS SUBJECT TO ALL THE TERMS, EXCLUSIONS AND CONDITIONS OF SUCH POLICIES. LIMITS SHOWN MAY HAVE BEEN REDUCED BY PAID CLAIMS.  |   |   |   |   |   |   |   |   |   |   |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n|  INSR LTR | TYPE OF INSURANCE |   |   | ADDL INSD | SUBR WVD | POLICY NUMBER | POLICY EFF (MM/DD/YYYY) | POLICY EXP (MM/DD/YYYY) | LIMITS  |   |\n|  A | X | COMMERCIAL GENERAL LIABILITY |   | Y | Y | 00142148-1 | 4/1/2024 | 4/1/2025 | EACH OCCURRENCE | $ 1,000,000  |\n|   |   | CLAIMS-MADE X OCCUR |   |   |   |   |   |   | DAMAGE TO RENTED PREMISES (Ea occurrence) | $ 50,000  |\n|   |  X | $50K SIR |   |   |   |   |   |   | MED EXP (Any one person) | $ Excluded  |\n|   |  X | $10M Policy Agg. |   |   |   |   |   |   | PERSONAL & ADV INJURY | $ 1,000,000  |\n|   |  GENL AGGREGATE LIMIT APPLIES PER:\nPOLICY \u2610 PROJ \u2610 JECT \u2610 LOC \u2610 OTHER: | GENERAL AGGREGATE | $ 2,000,000  |   |   |   |   |   |   |   |\n|   |   |   |   |   |   |   |   |   |  PRODUCTS - COMP/OP AGG | $ 2,000,000  |\n|   |   |   |   |   |   |   |   |   |   | $  |\n|  A | AUTOMOBILE LIABILITY |   |   | N | N | 00142148-1 | 4/1/2024 | 4/1/2025 | COMBINED SINGLE LIMIT (Ea accident) | $ 1,000,000  |\n|   |  ANY AUTO\nOWNED AUTOS ONLY \u2610 SCHEDULED AUTOS \u2610 NON-OWNED AUTOS ONLY \u2610 |   |   |   |   |   |   |   | BODILY INJURY (Per person) | $ XXXXXXX  |\n|   |  X | $ |   |   |   |   |   |   | BODILY INJURY (Per accident) | $ XXXXXXX  |\n|   |  X | $ |   |   |   |   |   |   | PROPERTY DAMAGE (Per accident) | $ XXXXXXX  |\n|   |  X | $ |   |   |   |   |   |   | STATUTY | $ XXXXXXX  |\n|  A | X | UMBRELLA LIAB \u2610 OCCUR \u2610 EXCESS LIAB \u2610 CLAIMS-MADE \u2610 |   | Y | Y | 00123606-3 | 4/1/2024 | 4/1/2025 | EACH OCCURRENCE | $ 5,000,000  |\n|   |  X | DED RETENTION $ |   |   |   |   |   |   | AGGREGATE | $ 5,000,000  |\n|   |  X | $ |   |   |   |   |   |   |  | $ XXXXXXX  |\n|   | WORKERS COMPENSATION AND EMPLOYERS' LIABILITY\nANY PROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER EXCLUDED? (Mandatory in NH)\nIf yes, describe under DESCRIPTION OF OPERATIONS below | N / A |  | NOT APPLICABLE |  |  | PER STATUTE OTHER |   |   |   |\n|   |   |   |   |   |   |   |  E.L. EACH ACCIDENT | $ XXXXXXX  |   |   |\n|   |   |   |   |   |   |   |  E.L. DISEASE - EA EMPLOYEE | $ XXXXXXX  |   |   |\n|   |   |   |   |   |   |   |  E.L. DISEASE - POLICY LIMIT | $ XXXXXXX  |   |   |\n|  B | Terrorism Liab\nActive Assailant\nExcess Liab | Y | Y | CMTRB2400496\nCMTRO2400336\nSee Attached | 4/1/2024\n4/1/2024\n4/1/2024 | 4/1/2025\n4/1/2025\n4/1/2025 | $50M per occ./agg.\n$2M/$10M\nSee attached |   |   |   |\n|  C |   |   |   |   |   |   |   |   |   |   |\n|  D |   |   |   |   |   |   |   |   |   |   |\n|  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required)\nRE: The Grove Apartments Valdosta - 2201 Baytree Road; Valdosta, GA 31602. Additional Named Insured includes: Grove at Valdosta Apartments, LLC. 30 day notice of Cancellation and 10 Day Notice of Cancellation for Non-Payment. Umbrella follows form. Coverage effective upon closing. Certificate Holder and Knighthead Funding, LLC are included as Additional Insured where required by written contract for GL/Umbrella/Excess/Active Assailant policies. GL/Umbrella/Excess/Active Assailant insurance is primary and non-contributory in favor of the Certificate Holder and Knighthead Funding, LLC when required by written contract.  |   |   |   |   |   |   |   |   |   |   |\n\nCERTIFICATE HOLDER\nCANCELLATION See Attachment\n\n|  21227071\nKHRE SMA Funding, LLC ISAOA, ATIMA\nc/o Knighthead Funding, LLC\n777 West Putnam Avenue\n3rd Floor, Suite B-2\nGreenwich, CT 06830 | SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.  |\n| --- | --- |\n|   |  AUTHORIZED REPRESENTATIVE\n\n_________________________\n\u00a9 1988-2015 ACORD CORPORATION. All rights reserved.  |\n\nACORD 25 (2016/03)\n\nThe ACORD name and logo are registered marks of ACORD\n\n---\n\n<!-- Page 2 -->\nCONTINUATION DESCRIPTION OF OPERATIONS/LOCATIONS/VEHICLES/EXCLUSIONS ADDED BY ENDORSEMENT/SPECIAL PROVISIONS (Use only if more space is required)\n\nA waiver of subrogation if provided in favor of Certificate Holder and Knighthead Funding, LLC for GL/Umbrella/Excess/ Active Assailant when required by written contract.\n\nACORD 25 (2016/03)\n\nCertificate Holder ID: 21227071\n\n---\n\n<!-- Page 3 -->\nAttachment Code: D589631 Master ID: 1507472, Certificate ID: 21227071\n\n## Excess Liability Schedule\n\n|  Insurance Company | Policy Number | Policy Term | Limits  |\n| --- | --- | --- | --- |\n|  Allied World Assurance Company (U.S.) Inc | 03133359 | 4/1/2024 - 4/1/2025 | $5,000,000 xs $5,000,000  |\n|  Homesite Insurance Company of Florida | CXS-032039-00 | 4/1/2024 - 4/1/2025 | $10,000,000 xs $10,000,000  |\n|  Texas Insurance Company | JTI24XANN-03229-01 | 4/1/2024 - 4/1/2025 | $10,000,000 xs $20,000,000  |\n|  Continental Insurance Company | 7036695896 | 4/1/2024 - 4/1/2025 | $10,000,000 xs $30,000,000  |\n|  Federal Insurance Company | 93651560 | 4/1/2024 - 4/1/2025 | $10,000,000 xs $40,000,000  |\n\n## Named Insured Includes:\n\n- Asset Plus USA, LLC\n- Asset Campus USA, LLC\n- Asset Living Corporation\n- Asset Living IP, LLC\n- Asset Living, LLC f/k/a Shelton Residential, LLC\n- Asset Living Southeast, LLC f/k/a JMG Realty, LLC\n- Asset Living Risk Management, LLC\n- Asset Campus International, LLC\n- Asset Receiver USA, LLC\n- Alpha Barnes Real Estate Services, LLC\n- Alpha Barnes Real Estate Services II, LLC\n- Sako and Partners Holdings, LLC\n- Sako and Partners Intermediate Holdings LLC\n- Alpha Creek Services, LLC",
+  "overall_confidence": 1.0
+}

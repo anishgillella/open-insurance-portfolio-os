@@ -179,10 +179,10 @@ async def chat(
     context = await rag_service.retrieve_with_context(
         query=request.message,
         conversation_history=history_messages,
-        top_k=5,
+        top_k=10,
         property_id=request.property_id,
         document_type=request.document_type,
-        min_score=0.3,
+        min_score=0.15,
     )
 
     if request.stream:
