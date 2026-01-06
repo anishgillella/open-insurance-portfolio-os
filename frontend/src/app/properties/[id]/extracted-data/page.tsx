@@ -36,7 +36,7 @@ interface PageProps {
 
 // Category icons and colors
 const categoryConfig: Record<string, { icon: LucideIcon; color: string; label: string }> = {
-  property: { icon: Building2, color: 'text-blue-500', label: 'Property Details' },
+  property: { icon: Building2, color: 'text-teal-500', label: 'Property Details' },
   valuation: { icon: DollarSign, color: 'text-green-500', label: 'Valuation' },
   coverage: { icon: Shield, color: 'text-purple-500', label: 'Coverage' },
   policy: { icon: FileText, color: 'text-orange-500', label: 'Policy' },

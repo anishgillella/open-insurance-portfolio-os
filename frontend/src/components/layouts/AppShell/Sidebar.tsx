@@ -15,6 +15,7 @@ import {
   Shield,
   FileText,
 } from 'lucide-react';
+import { Logo, LogoIcon } from '@/components/shared/Logo';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -55,18 +56,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Logo */}
       <div className="h-[72px] flex items-center px-4 border-b border-[var(--color-border-subtle)]">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          {!collapsed && (
-            <motion.span
-              className="font-semibold text-lg text-[var(--color-text-primary)]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              Open Insurance
-            </motion.span>
+          {collapsed ? (
+            <LogoIcon size={40} />
+          ) : (
+            <Logo size="md" />
           )}
         </Link>
       </div>

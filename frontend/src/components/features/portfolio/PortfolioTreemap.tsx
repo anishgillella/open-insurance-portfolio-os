@@ -110,7 +110,7 @@ export function PortfolioTreemap({
                 <span className="text-gray-300">{node.data?.city}</span>
               </div>
             </div>
-            <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-blue-400">
+            <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-teal-400">
               Click to view details
             </div>
           </div>

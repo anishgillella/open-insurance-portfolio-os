@@ -9,63 +9,63 @@
 :root {
   /* ============ COLORS ============ */
 
-  /* Primary - Deep Ocean Blue (Trust, Stability) */
-  --color-primary-50: #E6F4FF;
-  --color-primary-100: #BAE0FF;
-  --color-primary-200: #91CAFF;
-  --color-primary-300: #69B4FF;
-  --color-primary-400: #4096FF;
-  --color-primary-500: #1677FF;
-  --color-primary-600: #0958D9;
-  --color-primary-700: #003EB3;
-  --color-primary-800: #002C8C;
-  --color-primary-900: #001D66;
+  /* Primary - Teal (Brand Color from Logo) */
+  --color-primary-50: #F0FDFA;
+  --color-primary-100: #CCFBF1;
+  --color-primary-200: #99F6E4;
+  --color-primary-300: #5EEAD4;
+  --color-primary-400: #2DD4BF;
+  --color-primary-500: #14B8A6;
+  --color-primary-600: #0D9488;
+  --color-primary-700: #0F766E;
+  --color-primary-800: #115E59;
+  --color-primary-900: #134E4A;
 
-  /* Critical - Coral Red */
-  --color-critical-50: #FFF1F0;
-  --color-critical-100: #FFCCC7;
-  --color-critical-200: #FFA39E;
-  --color-critical-300: #FF7875;
-  --color-critical-400: #FF4D4F;
-  --color-critical-500: #F5222D;
-  --color-critical-600: #CF1322;
-  --color-critical-700: #A8071A;
+  /* Critical - Red */
+  --color-critical-50: #FEF2F2;
+  --color-critical-100: #FEE2E2;
+  --color-critical-200: #FECACA;
+  --color-critical-300: #FCA5A5;
+  --color-critical-400: #F87171;
+  --color-critical-500: #EF4444;
+  --color-critical-600: #DC2626;
+  --color-critical-700: #B91C1C;
 
   /* Warning - Amber */
-  --color-warning-50: #FFFBE6;
-  --color-warning-100: #FFF1B8;
-  --color-warning-200: #FFE58F;
-  --color-warning-300: #FFD666;
-  --color-warning-400: #FFC53D;
-  --color-warning-500: #FAAD14;
-  --color-warning-600: #D48806;
-  --color-warning-700: #AD6800;
+  --color-warning-50: #FFFBEB;
+  --color-warning-100: #FEF3C7;
+  --color-warning-200: #FDE68A;
+  --color-warning-300: #FCD34D;
+  --color-warning-400: #FBBF24;
+  --color-warning-500: #F59E0B;
+  --color-warning-600: #D97706;
+  --color-warning-700: #B45309;
 
-  /* Success - Emerald */
-  --color-success-50: #F6FFED;
-  --color-success-100: #D9F7BE;
-  --color-success-200: #B7EB8F;
-  --color-success-300: #95DE64;
-  --color-success-400: #73D13D;
-  --color-success-500: #52C41A;
-  --color-success-600: #389E0D;
-  --color-success-700: #237804;
+  /* Success - Teal (Same as Primary for brand consistency) */
+  --color-success-50: #F0FDFA;
+  --color-success-100: #CCFBF1;
+  --color-success-200: #99F6E4;
+  --color-success-300: #5EEAD4;
+  --color-success-400: #2DD4BF;
+  --color-success-500: #14B8A6;
+  --color-success-600: #0D9488;
+  --color-success-700: #0F766E;
 
-  /* Info - Blue */
-  --color-info-50: #E6F4FF;
-  --color-info-100: #BAE0FF;
-  --color-info-200: #91CAFF;
-  --color-info-300: #69B4FF;
-  --color-info-400: #4096FF;
-  --color-info-500: #1677FF;
-  --color-info-600: #0958D9;
-  --color-info-700: #003EB3;
+  /* Info - Teal (Same as Primary) */
+  --color-info-50: #F0FDFA;
+  --color-info-100: #CCFBF1;
+  --color-info-200: #99F6E4;
+  --color-info-300: #5EEAD4;
+  --color-info-400: #2DD4BF;
+  --color-info-500: #14B8A6;
+  --color-info-600: #0D9488;
+  --color-info-700: #0F766E;
 
   /* Surfaces */
-  --color-background: #F5F7FA;
+  --color-background: #F8FAFB;
   --color-surface: #FFFFFF;
   --color-surface-elevated: #FFFFFF;
-  --color-surface-sunken: #EEF2F6;
+  --color-surface-sunken: #F1F5F9;
 
   /* Text */
   --color-text-primary: #1A1A2E;
@@ -101,10 +101,10 @@
   --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
   --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 32px rgba(0, 0, 0, 0.1);
   --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.12);
-  --shadow-glow-primary: 0 0 24px rgba(22, 119, 255, 0.35);
-  --shadow-glow-success: 0 0 24px rgba(82, 196, 26, 0.35);
-  --shadow-glow-warning: 0 0 24px rgba(250, 173, 20, 0.35);
-  --shadow-glow-critical: 0 0 24px rgba(255, 77, 79, 0.35);
+  --shadow-glow-primary: 0 0 24px rgba(20, 184, 166, 0.35);
+  --shadow-glow-success: 0 0 24px rgba(20, 184, 166, 0.35);
+  --shadow-glow-warning: 0 0 24px rgba(245, 158, 11, 0.35);
+  --shadow-glow-critical: 0 0 24px rgba(239, 68, 68, 0.35);
 
   /* ============ RADII ============ */
   --radius-sm: 6px;
@@ -118,57 +118,57 @@
 
 /* ============ DARK MODE ============ */
 .dark {
-  /* Primary - Brighter for dark mode */
-  --color-primary-50: #001D66;
-  --color-primary-100: #002C8C;
-  --color-primary-200: #003EB3;
-  --color-primary-300: #0958D9;
-  --color-primary-400: #1677FF;
-  --color-primary-500: #4096FF;
-  --color-primary-600: #69B4FF;
-  --color-primary-700: #91CAFF;
-  --color-primary-800: #BAE0FF;
-  --color-primary-900: #E6F4FF;
+  /* Primary - Teal brighter for dark mode */
+  --color-primary-50: #134E4A;
+  --color-primary-100: #115E59;
+  --color-primary-200: #0F766E;
+  --color-primary-300: #0D9488;
+  --color-primary-400: #14B8A6;
+  --color-primary-500: #2DD4BF;
+  --color-primary-600: #5EEAD4;
+  --color-primary-700: #99F6E4;
+  --color-primary-800: #CCFBF1;
+  --color-primary-900: #F0FDFA;
 
   /* Critical - Brighter for dark */
-  --color-critical-50: #2A0608;
-  --color-critical-100: #5C0A0E;
-  --color-critical-200: #A8071A;
-  --color-critical-300: #CF1322;
-  --color-critical-400: #F5222D;
-  --color-critical-500: #FF4D4F;
-  --color-critical-600: #FF7875;
-  --color-critical-700: #FFA39E;
+  --color-critical-50: #450A0A;
+  --color-critical-100: #7F1D1D;
+  --color-critical-200: #B91C1C;
+  --color-critical-300: #DC2626;
+  --color-critical-400: #EF4444;
+  --color-critical-500: #F87171;
+  --color-critical-600: #FCA5A5;
+  --color-critical-700: #FECACA;
 
   /* Warning - Brighter for dark */
-  --color-warning-50: #2B1D00;
-  --color-warning-100: #5C3D00;
-  --color-warning-200: #AD6800;
-  --color-warning-300: #D48806;
-  --color-warning-400: #FAAD14;
-  --color-warning-500: #FFC53D;
-  --color-warning-600: #FFD666;
-  --color-warning-700: #FFE58F;
+  --color-warning-50: #451A03;
+  --color-warning-100: #78350F;
+  --color-warning-200: #B45309;
+  --color-warning-300: #D97706;
+  --color-warning-400: #F59E0B;
+  --color-warning-500: #FBBF24;
+  --color-warning-600: #FCD34D;
+  --color-warning-700: #FDE68A;
 
-  /* Success - Brighter for dark */
-  --color-success-50: #0A2410;
-  --color-success-100: #135200;
-  --color-success-200: #237804;
-  --color-success-300: #389E0D;
-  --color-success-400: #52C41A;
-  --color-success-500: #73D13D;
-  --color-success-600: #95DE64;
-  --color-success-700: #B7EB8F;
+  /* Success - Teal brighter for dark */
+  --color-success-50: #134E4A;
+  --color-success-100: #115E59;
+  --color-success-200: #0F766E;
+  --color-success-300: #0D9488;
+  --color-success-400: #14B8A6;
+  --color-success-500: #2DD4BF;
+  --color-success-600: #5EEAD4;
+  --color-success-700: #99F6E4;
 
   /* Info - Same as primary for dark */
-  --color-info-50: #001D66;
-  --color-info-100: #002C8C;
-  --color-info-200: #003EB3;
-  --color-info-300: #0958D9;
-  --color-info-400: #1677FF;
-  --color-info-500: #4096FF;
-  --color-info-600: #69B4FF;
-  --color-info-700: #91CAFF;
+  --color-info-50: #134E4A;
+  --color-info-100: #115E59;
+  --color-info-200: #0F766E;
+  --color-info-300: #0D9488;
+  --color-info-400: #14B8A6;
+  --color-info-500: #2DD4BF;
+  --color-info-600: #5EEAD4;
+  --color-info-700: #99F6E4;
 
   /* Dark Surfaces */
   --color-background: #0A0A0F;
@@ -192,10 +192,10 @@
   --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4);
   --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.5), 0 16px 32px rgba(0, 0, 0, 0.4);
   --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-glow-primary: 0 0 24px rgba(64, 150, 255, 0.4);
-  --shadow-glow-success: 0 0 24px rgba(115, 209, 61, 0.4);
-  --shadow-glow-warning: 0 0 24px rgba(255, 197, 61, 0.4);
-  --shadow-glow-critical: 0 0 24px rgba(255, 77, 79, 0.4);
+  --shadow-glow-primary: 0 0 24px rgba(45, 212, 191, 0.4);
+  --shadow-glow-success: 0 0 24px rgba(45, 212, 191, 0.4);
+  --shadow-glow-warning: 0 0 24px rgba(251, 191, 36, 0.4);
+  --shadow-glow-critical: 0 0 24px rgba(248, 113, 113, 0.4);
 }
 
 /* ============ TAILWIND THEME EXTENSION ============ */

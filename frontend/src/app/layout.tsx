@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
-import { AppShell } from '@/components/layouts/AppShell';
+import { AuthProvider } from '@/lib/auth-context';
+import { ConditionalAppShell } from '@/components/layouts/ConditionalAppShell';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <AuthProvider>
+            <ConditionalAppShell>{children}</ConditionalAppShell>
+          </AuthProvider>
         </Providers>
       </body>
     </html>

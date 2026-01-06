@@ -14,7 +14,7 @@ function GradientMesh() {
       uniforms: {
         uTime: { value: 0 },
         uMouse: { value: new THREE.Vector2(0, 0) },
-        uColor1: { value: new THREE.Color('#1677FF') },
+        uColor1: { value: new THREE.Color('#14B8A6') },
         uColor2: { value: new THREE.Color('#10B981') },
         uColor3: { value: new THREE.Color('#F59E0B') },
         uOpacity: { value: 0.06 },
