@@ -18,6 +18,11 @@ import { GapCard } from './GapCard';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
 import type { Gap, GapType, Severity, GapStatus } from '@/types/api';
 
+interface PropertyOption {
+  id: string;
+  name: string;
+}
+
 interface GapListProps {
   gaps: Gap[];
   onGapClick?: (gap: Gap) => void;
@@ -25,6 +30,8 @@ interface GapListProps {
   compact?: boolean;
   maxItems?: number;
   propertyFilter?: string;
+  properties?: PropertyOption[];
+  onPropertyFilterChange?: (propertyId: string | null) => void;
 }
 
 type SortField = 'severity' | 'created_at' | 'property_name' | 'gap_type';
@@ -55,20 +62,32 @@ export function GapList({
   compact = false,
   maxItems,
   propertyFilter,
+  properties = [],
+  onPropertyFilterChange,
 }: GapListProps) {
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'all'>('all');
   const [selectedType, setSelectedType] = useState<GapType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<GapStatus | 'all'>('all');
+  const [selectedProperty, setSelectedProperty] = useState<string | 'all'>(propertyFilter || 'all');
   const [sortField, setSortField] = useState<SortField>('severity');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
+  // Handle property filter changes
+  const handlePropertyChange = (value: string) => {
+    setSelectedProperty(value);
+    if (onPropertyFilterChange) {
+      onPropertyFilterChange(value === 'all' ? null : value);
+    }
+  };
+
   const filteredAndSortedGaps = useMemo(() => {
     let result = [...gaps];
 
-    // Apply property filter if provided
-    if (propertyFilter) {
-      result = result.filter((g) => g.property_id === propertyFilter);
+    // Apply property filter (use external prop or internal state)
+    const effectivePropertyFilter = propertyFilter || (selectedProperty !== 'all' ? selectedProperty : null);
+    if (effectivePropertyFilter) {
+      result = result.filter((g) => g.property_id === effectivePropertyFilter);
     }
 
     // Apply severity filter
@@ -114,14 +133,17 @@ export function GapList({
     }
 
     return result;
-  }, [gaps, selectedSeverity, selectedType, selectedStatus, sortField, sortDirection, maxItems, propertyFilter]);
+  }, [gaps, selectedSeverity, selectedType, selectedStatus, selectedProperty, sortField, sortDirection, maxItems, propertyFilter]);
 
-  const hasActiveFilters = selectedSeverity !== 'all' || selectedType !== 'all' || selectedStatus !== 'all';
+  const hasActiveFilters = selectedSeverity !== 'all' || selectedType !== 'all' || selectedStatus !== 'all' || (selectedProperty !== 'all' && !propertyFilter);
 
   const clearFilters = () => {
     setSelectedSeverity('all');
     setSelectedType('all');
     setSelectedStatus('all');
+    if (!propertyFilter) {
+      handlePropertyChange('all');
+    }
   };
 
   const toggleSort = (field: SortField) => {
@@ -140,6 +162,12 @@ export function GapList({
     const types = new Set(gaps.map((g) => g.gap_type));
     return Array.from(types);
   }, [gaps]);
+
+  // Get properties that have gaps (for smarter filtering)
+  const propertiesWithGaps = useMemo(() => {
+    const propertyIdsWithGaps = new Set(gaps.map((g) => g.property_id));
+    return properties.filter((p) => propertyIdsWithGaps.has(p.id));
+  }, [gaps, properties]);
 
   return (
     <div className="space-y-4">
@@ -199,7 +227,8 @@ export function GapList({
                 <Badge variant="primary" size="sm" className="ml-1">
                   {(selectedSeverity !== 'all' ? 1 : 0) +
                     (selectedType !== 'all' ? 1 : 0) +
-                    (selectedStatus !== 'all' ? 1 : 0)}
+                    (selectedStatus !== 'all' ? 1 : 0) +
+                    (selectedProperty !== 'all' && !propertyFilter ? 1 : 0)}
                 </Badge>
               )}
             </Button>
@@ -227,7 +256,28 @@ export function GapList({
                 className="overflow-hidden"
               >
                 <Card padding="md" className="bg-[var(--color-surface-sunken)]">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Property Filter */}
+                    {propertiesWithGaps.length > 0 && !propertyFilter && (
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                          Property
+                        </label>
+                        <select
+                          value={selectedProperty}
+                          onChange={(e) => handlePropertyChange(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface)] text-[var(--color-text-primary)]"
+                        >
+                          <option value="all">All Properties</option>
+                          {propertiesWithGaps.map((property) => (
+                            <option key={property.id} value={property.id}>
+                              {property.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Type Filter */}
                     <div>
                       <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
@@ -333,6 +383,7 @@ export function GapList({
         </Card>
       ) : (
         <motion.div
+          key={`gap-list-${selectedProperty}-${selectedSeverity}-${selectedType}-${selectedStatus}`}
           variants={staggerContainer}
           initial="initial"
           animate="animate"

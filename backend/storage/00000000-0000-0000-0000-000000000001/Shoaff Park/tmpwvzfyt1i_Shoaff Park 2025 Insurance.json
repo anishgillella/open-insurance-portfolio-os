@@ -1,0 +1,54 @@
+{
+  "classification": {
+    "document_type": "invoice",
+    "document_subtype": null,
+    "policy_type": "umbrella",
+    "confidence": 1.0,
+    "carrier_name": "Oakbridge Insurance",
+    "policy_number": "10258108B",
+    "effective_date": "2025-07-02",
+    "expiration_date": "2026-07-02",
+    "insured_name": "Grand At Fort Wayne Apartments LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": null,
+  "invoice": {
+    "invoice_number": "62549",
+    "invoice_date": "2025-07-02",
+    "due_date": "2025-07-02",
+    "vendor_name": "Oakbridge INSURANCE",
+    "vendor_address": "P.O. Box 4635 Houston, TX 77210-4635",
+    "subtotal": null,
+    "taxes": null,
+    "fees": 1320.0,
+    "total_amount": 145501.0,
+    "line_items": [
+      {
+        "description": "Commercial Umbrella; Grand At Fort Wayne New Policy Effective 7/2/2025",
+        "amount": 7765.0,
+        "policy_number": "10258108B"
+      },
+      {
+        "description": "Policy Fee",
+        "amount": 1320.0,
+        "policy_number": "10258108B"
+      },
+      {
+        "description": "Prop, GL, Terr.: Grand At Fort Wayne Renewal Effective",
+        "amount": 136416.0,
+        "policy_number": "Q-0000943695"
+      }
+    ],
+    "policy_numbers": [
+      "10258108B",
+      "Q-0000943695"
+    ],
+    "confidence": 0.9
+  },
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nOakbridge INSURANCE\n\nKeith Reiss\n\nkeith@pittgrouplc.com\n\n|  Invoice # 62549 | Page 1 of 1  |\n| --- | --- |\n|  Account Number | Date  |\n|  EASTMAN-01 | 7/2/2025  |\n|  BALANCE DUE ON  |   |\n|  7/2/2025  |   |\n|  AMOUNT PAID | Amount Due  |\n|   | $145,501.00  |\n\nGrand At Fort Wayne Apartments LLC; ABR Grand At Fo\n\nc/o Eastman Residential\n\n651 Old Mount Pleasant Ave\n\nSuite 110\n\nLivingston, NJ 07039\n\nCommercial Umbrella\n\nPolicyNumber: 10258108B\n\nEffective: 7/2/2025 to 7/2/2026\n\n|  Item # | Trans Eff Date | Due DateTrans | Description | Amount  |\n| --- | --- | --- | --- | --- |\n|  1827370 | 7/2/2025 | 7/2/2025 NEWB | Commercial Umbrella; Grand At Fort Wayne New Policy Effective 7/2/2025 | $7,765.00  |\n|  1827371 | 7/2/2025 | 7/2/2025 PFEE | Policy Fee | $1,320.00  |\n|  Commercial Package |  | PolicyNumber: Q-0000943695 | Effective: 7/2/2025 to 7/2/2026 |   |\n|  Item # | Trans Eff Date | Due DateTrans | Description | Amount  |\n| --- | --- | --- | --- | --- |\n|  1827668 | 7/2/2025 | 7/2/2025 RENB | Prop, GL, Terr.: Grand At Fort Wayne Renewal Effective | $136,416.00  |\n\nTotal Invoice Balance: $145,501.00\n\nPlease make check payable to Oakbridge. Overnight mailing address is: 200 Broad Street, LaGrange, GA 30240\n\nMake your payment online today! https://oakbridgeinsurance.com\n\nOur payment address has changed!\n\nChecks should be made out to Oakbridge Insurance Agency LLC\n\n7/2/2025\n\nMail to P.O. Box 4635 Houston, TX 77210-4635",
+  "overall_confidence": 0.9
+}

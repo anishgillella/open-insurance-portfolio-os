@@ -33,6 +33,9 @@ class PropertyRepository(BaseRepository[Property]):
     ) -> Property | None:
         """Find a property by name and organization.
 
+        Uses case-insensitive matching and trims whitespace to prevent
+        duplicate properties with minor name variations.
+
         Args:
             name: Property name.
             organization_id: Organization ID.
@@ -40,11 +43,15 @@ class PropertyRepository(BaseRepository[Property]):
         Returns:
             Property or None if not found.
         """
+        # Normalize the input name
+        normalized_name = name.strip()
+
+        # Use case-insensitive matching with trimmed comparison
         stmt = (
             select(self.model)
             .where(
                 self.model.deleted_at.is_(None),
-                self.model.name == name,
+                func.lower(func.trim(self.model.name)) == normalized_name.lower(),
                 self.model.organization_id == organization_id,
             )
             .limit(1)
@@ -59,6 +66,12 @@ class PropertyRepository(BaseRepository[Property]):
     ) -> tuple[Property, bool]:
         """Get existing property or create new one.
 
+        Normalizes the property name (trimmed) before lookup and creation
+        to prevent duplicate properties with whitespace variations.
+
+        Handles race conditions gracefully - if a concurrent request creates
+        the property first (unique constraint violation), retries the lookup.
+
         Args:
             name: Property name.
             organization_id: Organization ID.
@@ -66,19 +79,36 @@ class PropertyRepository(BaseRepository[Property]):
         Returns:
             Tuple of (Property, is_new).
         """
-        existing = await self.find_by_name_and_org(name, organization_id)
+        from sqlalchemy.exc import IntegrityError
+
+        # Normalize the name
+        normalized_name = name.strip()
+
+        existing = await self.find_by_name_and_org(normalized_name, organization_id)
         if existing:
-            logger.info(f"Found existing property: {name} (id: {existing.id})")
+            logger.info(f"Found existing property: {normalized_name} (id: {existing.id})")
             return existing, False
 
-        # Create new property
-        property = await self.create(
-            name=name,
-            organization_id=organization_id,
-            status="active",
-        )
-        logger.info(f"Created new property: {name} (id: {property.id})")
-        return property, True
+        # Try to create new property with normalized name
+        # Handle race condition: another request may have created it simultaneously
+        try:
+            property = await self.create(
+                name=normalized_name,
+                organization_id=organization_id,
+                status="active",
+            )
+            logger.info(f"Created new property: {normalized_name} (id: {property.id})")
+            return property, True
+        except IntegrityError:
+            # Race condition: another request created the property first
+            # Roll back and retry the lookup
+            await self.session.rollback()
+            logger.info(f"Race condition detected for property: {normalized_name}, retrying lookup")
+            existing = await self.find_by_name_and_org(normalized_name, organization_id)
+            if existing:
+                return existing, False
+            # If still not found, re-raise the error
+            raise
 
     async def get_by_organization(
         self,

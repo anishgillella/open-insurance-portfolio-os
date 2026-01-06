@@ -199,13 +199,15 @@ function GapsPageContent() {
               All Gaps
             </h2>
             <span className="text-sm text-[var(--color-text-muted)]">
-              {filteredGaps.length} gap{filteredGaps.length !== 1 ? 's' : ''} found
+              {gaps.length} gap{gaps.length !== 1 ? 's' : ''} total
             </span>
           </div>
           <GapList
-            gaps={filteredGaps}
+            gaps={gaps}
             onGapClick={handleGapClick}
             showFilters
+            properties={properties}
+            propertyFilter={propertyFilter}
           />
         </Card>
       </motion.div>

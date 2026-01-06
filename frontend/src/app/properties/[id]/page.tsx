@@ -218,34 +218,58 @@ export default function PropertyDetailPage({ params }: PageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Health Score */}
             <Card padding="lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                  Health Score
-                </h2>
-                <Link href={`/properties/${property.id}/health-score`}>
-                  <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
-                    Details
-                  </Button>
-                </Link>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+                Health Score
+              </h2>
+
+              <div className="flex justify-center mb-6">
+                <ScoreRing score={healthScoreValue} size={180} strokeWidth={14} />
               </div>
 
-              <div className="flex justify-center mb-4">
-                <ScoreRing score={healthScoreValue} size={120} />
-              </div>
-
-              {healthScore?.components && Array.isArray(healthScore.components) && (
-                <div className="space-y-2">
-                  {healthScore.components.slice(0, 3).map((component) => (
-                    <div key={component.name}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[var(--color-text-secondary)]">{component.name}</span>
-                        <span className="font-medium text-[var(--color-text-primary)]">
+              {/* Score Reasoning */}
+              {healthScore?.components && Array.isArray(healthScore.components) && healthScore.components.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">
+                    Score Breakdown
+                  </h3>
+                  {healthScore.components.slice(0, 4).map((component) => (
+                    <div key={component.name} className="p-3 rounded-lg bg-[var(--color-surface-sunken)]">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                          {component.name}
+                        </span>
+                        <span className={cn(
+                          'text-sm font-bold',
+                          component.percentage >= 80 ? 'text-[var(--color-success-500)]' :
+                          component.percentage >= 60 ? 'text-[var(--color-warning-500)]' :
+                          'text-[var(--color-critical-500)]'
+                        )}>
                           {component.percentage}%
                         </span>
                       </div>
                       <GradientProgress value={component.percentage} size="sm" />
+                      {component.issues && component.issues.length > 0 && (
+                        <ul className="mt-2 space-y-1">
+                          {component.issues.slice(0, 2).map((issue, idx) => (
+                            <li key={idx} className="text-xs text-[var(--color-text-muted)] flex items-start gap-1.5">
+                              <span className="text-[var(--color-critical-500)] mt-0.5">•</span>
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-sm text-[var(--color-text-muted)]">
+                  <p>Score is calculated based on:</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>• Coverage completeness</li>
+                    <li>• Document availability</li>
+                    <li>• Policy expiration status</li>
+                    <li>• Risk factor assessment</li>
+                  </ul>
                 </div>
               )}
             </Card>
