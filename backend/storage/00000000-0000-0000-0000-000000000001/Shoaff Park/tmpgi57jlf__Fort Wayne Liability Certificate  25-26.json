@@ -1,0 +1,160 @@
+{
+  "classification": {
+    "document_type": "coi",
+    "document_subtype": null,
+    "policy_type": "unknown",
+    "confidence": 1.0,
+    "carrier_name": "Seneca Insurance Company",
+    "policy_number": "CMP 4999288",
+    "effective_date": "2025-07-02",
+    "expiration_date": "2026-07-02",
+    "insured_name": "Grand At Fort Wayne Apartments LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": {
+    "certificate_number": null,
+    "revision_number": null,
+    "issue_date": "2025-07-02",
+    "producer_name": "Oakbridge Insurance Agency",
+    "producer_address": "4011 Westchase Blvd. Suite 120 Raleigh, NC 27607",
+    "producer_phone": "(919) 659-2888",
+    "producer_email": "Keith@pittgrouplc.com",
+    "producer_reference": null,
+    "insured_name": "Grand At Fort Wayne Apartments LLC c/o Eastman Residential",
+    "insured_address": "651 Old Mount Pleasant Ave Suite 110 Livingston, NJ 07039",
+    "holder_name": "Grand at Fort Wayne Apartments LLC",
+    "holder_address": "651 Old Mt. Pleasant Ave. suite 110 Livingston, NJ 07039",
+    "insurers": {
+      "A": {
+        "name": "Seneca Insurance Company",
+        "naic": "10936"
+      },
+      "B": {
+        "name": "Midvale Identity Company",
+        "naic": "27138"
+      },
+      "C": {
+        "name": null,
+        "naic": null
+      },
+      "D": {
+        "name": null,
+        "naic": null
+      },
+      "E": {
+        "name": null,
+        "naic": null
+      },
+      "F": {
+        "name": null,
+        "naic": null
+      }
+    },
+    "policies": [
+      {
+        "insurer_letter": "A",
+        "policy_type": "general_liability",
+        "policy_number": "CMP 4999288",
+        "carrier_name": "Seneca Insurance Company",
+        "naic_number": "10936",
+        "effective_date": "2025-07-02",
+        "expiration_date": "2026-07-02",
+        "coverage_form": "occurrence",
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": "policy",
+        "limits": {
+          "EACH OCCURRENCE": 1000000.0,
+          "DAMAGE TO RENTED PREMISES (Ea occurrence)": 100000.0,
+          "MED EXP (Any one person)": 5000.0,
+          "PERSONAL & ADV INJURY": 1000000.0,
+          "GENERAL AGGREGATE": 2000000.0,
+          "PRODUCTS - COMP/OP AGG": 1000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "A",
+        "policy_type": "auto",
+        "policy_number": "CMP 4999288",
+        "carrier_name": "Seneca Insurance Company",
+        "naic_number": "10936",
+        "effective_date": "2025-07-02",
+        "expiration_date": "2026-07-02",
+        "coverage_form": null,
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "COMBINED SINGLE LIMIT (Ea accident)": 1000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "B",
+        "policy_type": "umbrella",
+        "policy_number": "10258108B",
+        "carrier_name": "Midvale Identity Company",
+        "naic_number": "27138",
+        "effective_date": "2025-07-02",
+        "expiration_date": "2026-07-02",
+        "coverage_form": "occurrence",
+        "is_additional_insured": true,
+        "is_subrogation_waived": true,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "EACH OCCURRENCE": 10000000.0,
+          "AGGREGATE": 10000000.0
+        },
+        "confidence": 1.0
+      }
+    ],
+    "gl_each_occurrence": 1000000.0,
+    "gl_damage_to_rented": 100000.0,
+    "gl_medical_expense": 5000.0,
+    "gl_personal_advertising": 1000000.0,
+    "gl_general_aggregate": 2000000.0,
+    "gl_products_completed": 1000000.0,
+    "gl_coverage_form": "occurrence",
+    "gl_aggregate_limit_applies_per": "policy",
+    "auto_combined_single": 1000000.0,
+    "auto_bodily_injury_per_person": null,
+    "auto_bodily_injury_per_accident": null,
+    "auto_property_damage": null,
+    "auto_types": [
+      "hired"
+    ],
+    "umbrella_limit": 10000000.0,
+    "umbrella_aggregate": 10000000.0,
+    "umbrella_deductible": null,
+    "umbrella_retention": 0.0,
+    "umbrella_coverage_form": "occurrence",
+    "workers_comp_per_statute": false,
+    "workers_comp_other": false,
+    "workers_comp_each_accident": null,
+    "workers_comp_disease_ea_employee": null,
+    "workers_comp_disease_policy_limit": null,
+    "workers_comp_excluded_partners": false,
+    "property_limit": null,
+    "description_of_operations": "Property location: 6225 Saint Joe Road, Fort Wayne, IN 46835.Named Insureds:Grand At Fort Wayne Apartments LLCABR Grand At Fort Wayne Investor, LLCABR Capital Partners, LLC",
+    "additional_insureds": [
+      "ABR Grand At Fort Wayne Investor, LLC",
+      "ABR Capital Partners, LLC"
+    ],
+    "subrogation_waiver_applies": true,
+    "cancellation_notice_days": null,
+    "cancellation_terms": "SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.",
+    "authorized_representative": "Keith Reiss",
+    "loan_number": null,
+    "mortgagee_clause": null,
+    "loss_payee_clause": null,
+    "confidence": 1.0
+  },
+  "invoice": null,
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nACORD\n\nEASTMAN-01\n\nKREISS\n\n# CERTIFICATE OF LIABILITY INSURANCE\n\nDATE (MM/DD/YYYY)\n\n7/2/2025\n\n|  THIS CERTIFICATE IS ISSUED AS A MATTER OF INFORMATION ONLY AND CONFERS NO RIGHTS UPON THE CERTIFICATE HOLDER. THIS CERTIFICATE DOES NOT AFFIRMATIVELY OR NEGATIVELY AMEND, EXTEND OR ALTER THE COVERAGE AFFORDED BY THE POLICIES BELOW. THIS CERTIFICATE OF INSURANCE DOES NOT CONSTITUTE A CONTRACT BETWEEN THE ISSUING INSURER(S), AUTHORIZED REPRESENTATIVE OR PRODUCER, AND THE CERTIFICATE HOLDER.  |   |   |\n| --- | --- | --- |\n|  IMPORTANT: If the certificate holder is an ADDITIONAL INSURED, the policy(ies) must have ADDITIONAL INSURED provisions or be endorsed. If SUBROGATION IS WAIVED, subject to the terms and conditions of the policy, certain policies may require an endorsement. A statement on this certificate does not confer rights to the certificate holder in lieu of such endorsement(s).  |   |   |\n|  PRODUCER Oakbridge Insurance Agency 4011 Westchase Blvd. Suite 120 Raleigh, NC 27607 | CONTACT Keith Reiss NAME PHONE (A/C, No, Ext): (919) 659-2888 FAX (A/C, No): |   |\n|   |  E-MAIL Keith@pittgrouplc.com ADDRESS: |   |\n|   |  INSURER(S) AFFORDING COVERAGE | NAIC #  |\n|  INSURED Grand At Fort Wayne Apartments LLC c/o Eastman Residential 651 Old Mount Pleasant Ave Suite 110 Livingston, NJ 07039 | INSURER A: Seneca Insurance Company | 10936  |\n|   |  INSURER B: Midvale Identity Company | 27138  |\n|   |  INSURER C: |   |\n|   |  INSURER D: |   |\n|   |  INSURER E: |   |\n\nCOVERAGES\nCERTIFICATE NUMBER:\nREVISION NUMBER:\n\n|  THIS IS TO CERTIFY THAT THE POLICIES OF INSURANCE LISTED BELOW HAVE BEEN ISSUED TO THE INSURED NAMED ABOVE FOR THE POLICY PERIOD INDICATED. NOTWITHSTANDING ANY REQUIREMENT, TERM OR CONDITION OF ANY CONTRACT OR OTHER DOCUMENT WITH RESPECT TO WHICH THIS CERTIFICATE MAY BE ISSUED OR MAY PERTAIN, THE INSURANCE AFFORDED BY THE POLICIES DESCRIBED HEREIN IS SUBJECT TO ALL THE TERMS, EXCLUSIONS AND CONDITIONS OF SUCH POLICIES. LIMITS SHOWN MAY HAVE BEEN REDUCED BY PAID CLAIMS.  |   |   |   |   |   |   |   |   |   |   |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n|  INSR LTR | TYPE OF INSURANCE |   |   | ADDL SUBR INSD WVD | POLICY NUMBER | POLICY EFF (MM/DD/YYYY) | POLICY EXP (MM/DD/YYYY) | LIMITS  |   |   |\n|  A | X COMMERCIAL GENERAL LIABILITY |   |   | X X CMP 4999288 | 7/2/2025 | 7/2/2026 | EACH OCCURRENCE | $ | 1,000,000  |   |\n|   |   | CLAIMS-MADE | X OCCUR |   |   |   | DAMAGE TO RENTED PREMISES (Ea occurrence) | $ | 100,000  |   |\n|   |   |  |  |   |   |   | MED EXP (Any one person) | $ | 5,000  |   |\n|   |   |  |  |   |   |   | PERSONAL & ADV INJURY | $ | 1,000,000  |   |\n|   |   |  |  |   |   |   | GENERAL AGGREGATE | $ | 2,000,000  |   |\n|   |   |  |  |   |   |   | PRODUCTS - COMP/OP AGG | $ | 1,000,000  |   |\n|   |   |  |  |   |   |   |  | $ |  |   |\n|  GEN'L AGGREGATE LIMIT APPLIES PER: |   |   |   |  |  |  |  |  |  |   |\n|  X POLICY |   | PROJ | X LOC |  |  |  |  |  |  |   |\n|  X OTHER |   | No/$0 SIR/deductible |   |  |  |  |  |  |  |   |\n|  A | AUTOMOBILE LIABILITY |   |   | X X CMP 4999288 | 7/2/2025 | 7/2/2026 | COMBINED SINGLE LIMIT (Ea accident) | $ | 1,000,000  |   |\n|   |  ANY AUTO |   |  |   |   |   | BODILY INJURY (Per person) | $ |  |   |\n|   |  OWNED AUTOS ONLY |   | SCHEDULED AUTOS |   |   |   | BODILY INJURY (Per accident) | $ |  |   |\n|   |  X HIRED AUTOS ONLY |   | NON-OWNED AUTOS ONLY |   |   |   | PROPERTY DAMAGE (Per accident) | $ |  |   |\n|   |  X No/$0 SIR/deductible |   |  |   |   |   |  | $ |  |   |\n|   |  |   |   |   |   |   |   |   |   |   |\n|  B | X UMBRELLA LIAB |   | X OCCUR | X X 10258108B | 7/2/2025 | 7/2/2026 | EACH OCCURRENCE | $ | 10,000,000  |   |\n|   |  EXCESS LIAB |   | CLAIMS-MADE |   |   |   | AGGREGATE | $ | 10,000,000  |   |\n|   |  DED |   | X RETENTION $ 0 |   |   |   |  |  |  |   |\n|   |  |   |   |   |   |   |   |   |   |   |\n|   | WORKERS COMPENSATION AND EMPLOYERS' LIABILITY |   |   | N/A |  |  | PER STATUTE OTHER |  |  |   |\n|   |  ANY PROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER EXCLUDED? (Mandatory in NH) |  |  |   | E.L. EACH ACCIDENT | $ |  |   |   |   |\n|   |   |   |   |   |   |  | E.L. DISEASE - EA EMPLOYEE | $ |  |   |\n|   |   |   |   |   |   |  | E.L. DISEASE - POLICY LIMIT | $ |  |   |\n|   | If yes, describe under DESCRIPTION OF OPERATIONS below |   |   |  |  |  |  |  |  |   |\n|  |   |   |   |   |   |   |   |   |   |   |\n|  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required)Property location: 6225 Saint Joe Road, Fort Wayne, IN 46835.Named Insureds:Grand At Fort Wayne Apartments LLCABR Grand At Fort Wayne Investor, LLCABR Capital Partners, LLC  |   |   |   |   |   |   |   |   |   |   |\n\nCERTIFICATE HOLDER\nCANCELLATION\n\n|  Grand at Fort Wayne Apartments LLC 651 Old Mt. Pleasant Ave. suite 110 Livingston, NJ 07039 | SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.  |\n| --- | --- |\n|   |  AUTHORIZED REPRESENTATIVE Keith Reiss  |\n\nACORD 25 (2016/03)\n\n\u00a9 1988-2015 ACORD CORPORATION. All rights reserved.\n\nThe ACORD name and logo are registered marks of ACORD",
+  "overall_confidence": 1.0
+}
