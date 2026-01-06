@@ -356,6 +356,9 @@ def _build_property_detail(prop) -> PropertyDetail:
         for b in prop.buildings
     ]
 
+    # Count documents
+    document_count = len(prop.documents) if hasattr(prop, 'documents') and prop.documents else 0
+
     # Calculate insurance summary
     total_premium = Decimal("0")
     total_tiv = Decimal("0")
@@ -527,6 +530,7 @@ def _build_property_detail(prop) -> PropertyDetail:
         compliance_summary=compliance_summary,
         completeness=completeness,
         policies=policies_list,
+        document_count=document_count,
         created_at=prop.created_at,
         updated_at=prop.updated_at,
     )

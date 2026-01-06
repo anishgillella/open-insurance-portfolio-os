@@ -23,6 +23,7 @@ import {
   TemplateSelector,
   CoverageOverview,
 } from '@/components/features/compliance';
+import { LenderRequirementsCard } from '@/components/features/enrichment';
 import { staggerContainer, staggerItem, modalOverlay, modalContent } from '@/lib/motion/variants';
 import {
   complianceApi,
@@ -339,6 +340,9 @@ function CompliancePageContent() {
               )}
             </div>
           </Card>
+
+          {/* Lender Requirements Lookup (AI-Powered) */}
+          <LenderRequirementsCard />
         </motion.div>
 
         {/* Right Column - Property Compliance List */}

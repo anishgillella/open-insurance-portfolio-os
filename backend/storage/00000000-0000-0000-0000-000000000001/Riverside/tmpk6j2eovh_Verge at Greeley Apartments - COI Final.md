@@ -1,0 +1,110 @@
+<!-- Page 1 -->
+Client#: 2069612
+EASTMACQ
+ACORD
+CERTIFICATE OF LIABILITY INSURANCE
+DATE (MM/DD/YYYY)
+12/26/2024
+
+THIS CERTIFICATE IS ISSUED AS A MATTER OF INFORMATION ONLY AND CONFERS NO RIGHTS UPON THE CERTIFICATE HOLDER. THIS CERTIFICATE DOES NOT AFFIRMATIVELY OR NEGATIVELY AMEND, EXTEND OR ALTER THE COVERAGE AFFORDED BY THE POLICIES BELOW. THIS CERTIFICATE OF INSURANCE DOES NOT CONSTITUTE A CONTRACT BETWEEN THE ISSUING INSURER(S), AUTHORIZED REPRESENTATIVE OR PRODUCER, AND THE CERTIFICATE HOLDER.
+
+IMPORTANT: If the certificate holder is an ADDITIONAL INSURED, the policy(ies) must have ADDITIONAL INSURED provisions or be endorsed. If SUBROGATION IS WAIVED, subject to the terms and conditions of the policy, certain policies may require an endorsement. A statement on this certificate does not confer any rights to the certificate holder in lieu of such endorsement(s).
+
+|  PRODUCER
+USI Insurance Services, LLC
+235 Magrath Darby Blvd Ste 325
+Mount Pleasant, SC 29464
+843 573-2600 | CONTACT NAME: Connor Bergeron  |   |   |
+| --- | --- | --- | --- |
+|   |  PHONE (A/C, No, Ext): 843 573-2600 FAX (A/C, No):  |   |   |
+|   |  E-MAIL ADDRESS: connor.bergeron@usi.com  |   |   |
+|   |  INSURER(S) AFFORDING COVERAGE |   | NAIC #  |
+|   |  INSURER A: Century Surety Company |   | 36951  |
+|  INSURED
+Verge at Greely Apartments LLC
+651 Old West Mount Pleasant Avenue
+Suite 110
+Livingston, NJ 07039 | INSURER B: Midvale Indemnity Company |   | 27138  |
+|   |  INSURER C: |   |   |
+|   |  INSURER D: |   |   |
+|   |  INSURER E: |   |   |
+|   |  INSURER F: |   |   |
+
+COVERAGES
+CERTIFICATE NUMBER:
+REVISION NUMBER:
+
+|  THIS IS TO CERTIFY THAT THE POLICIES OF INSURANCE LISTED BELOW HAVE BEEN ISSUED TO THE INSURED NAMED ABOVE FOR THE POLICY PERIOD INDICATED. NOTWITHSTANDING ANY REQUIREMENT, TERM OR CONDITION OF ANY CONTRACT OR OTHER DOCUMENT WITH RESPECT TO WHICH THIS CERTIFICATE MAY BE ISSUED OR MAY PERTAIN, THE INSURANCE AFFORDED BY THE POLICIES DESCRIBED HEREIN IS SUBJECT TO ALL THE TERMS, EXCLUSIONS AND CONDITIONS OF SUCH POLICIES. LIMITS SHOWN MAY HAVE BEEN REDUCED BY PAID CLAIMS.  |   |   |   |   |   |   |   |   |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  INSR LTR | TYPE OF INSURANCE |   | ADDL SUBR INSR | POLICY NUMBER | POLICY EFF (MM/DD/YYYY) | POLICY EXP (MM/DD/YYYY) | LIMITS  |   |
+|   |  X COMMERCIAL GENERAL LIABILITY
+CLAIMS-MADE X OCCUR
+X Deductible: $0
+GEN'L AGGREGATE LIMIT APPLIES PER:
+POLICY ☐ PRO- JECT ☐ LOC ☐ OTHER: |   |  | CPP1280844 | 12/27/2024 | 12/27/2025 | EACH OCCURRENCE
+DAMAGE TO RENTED PREMISES (Ea occurrence)
+MED EXP (Any one person)
+PERSONAL & ADV INJURY
+GENERAL AGGREGATE
+PRODUCTS - COMP/OP AGG
+$1,000,000
+$1,000,000
+$2,000,000
+$Included in A
+$ | $1,000,000
+$100,000
+$5,000
+$1,000,000
+$2,000,000
+$Included in A
+$  |
+|  A | AUTOMOBILE LIABILITY
+ANY AUTO
+OWNED AUTOS ONLY
+SCHEDULED AUTOS
+NON-OWNED AUTOS ONLY |   |  |  |  |  | COMBINED SINGLE LIMIT (Ea accident)
+BODILY INJURY (Per person)
+BODILY INJURY (Per accident)
+PROPERTY DAMAGE (Per accident) | $
+$
+$
+$
+$  |
+|   |  X UMBRELLA LIAB X OCCUR
+X EXCESS LIAB X CLAIMS-MADE |   |  |  | PRP229824000013119185 | 12/27/2024 | 12/27/2025 | EACH OCCURRENCE
+AGGREGATE
+$10,000,000
+$10,000,000  |
+|   |  DED X RETENTION $0 |   |  |  |  |  |  |   |
+|   |  WORKERS COMPENSATION AND EMPLOYERS' LIABILITY Y/N
+ANY PROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER EXCLUDED? (Mandatory in NH)
+If yes, describe under DESCRIPTION OF OPERATIONS below |   | N/A |  |  |  |  | PER STATUTE
+E.L. EACH ACCIDENT
+E.L. DISEASE - EA EMPLOYEE
+E.L. DISEASE - POLICY LIMIT
+$  |
+|   |  |   |   |   |   |   |   |   |
+|   |  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required)
+RE: 3202 11th Ave, Evans, CO 80620
+Certificate holder is additional insured regarding general liability. General Liability coverage includes waiver of subrogation.  |   |   |   |   |   |   |   |
+|   |  |   |   |   |   |   |   |   |
+|   |  |   |   |   |   |   |   |   |
+|   |  |   |   |   |   |   |   |   |
+
+CERTIFICATE HOLDER
+CANCELLATION
+
+|  Inland Mortgage Capital, LLC
+ISAOA/ATIMA
+2901 Butterfield Road
+Oak Brook, IL 60523 | SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.  |
+| --- | --- |
+|   |  AUTHORIZED REPRESENTATIVE
+Paula B. Bulman  |
+
+© 1988-2015 ACORD CORPORATION. All rights reserved.
+ACORD 25 (2016/03)
+#S47533563/M47533248
+1 of 1
+The ACORD name and logo are registered marks of ACORD
+RXJE3

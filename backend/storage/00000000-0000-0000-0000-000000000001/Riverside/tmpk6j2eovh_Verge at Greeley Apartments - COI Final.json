@@ -1,0 +1,182 @@
+{
+  "classification": {
+    "document_type": "coi",
+    "document_subtype": null,
+    "policy_type": "general_liability",
+    "confidence": 1.0,
+    "carrier_name": "Century Surety Company",
+    "policy_number": "CPP1280844",
+    "effective_date": "2024-12-27",
+    "expiration_date": "2025-12-27",
+    "insured_name": "Verge at Greely Apartments LLC"
+  },
+  "policy": null,
+  "program": null,
+  "coi": {
+    "certificate_number": null,
+    "revision_number": null,
+    "issue_date": "2024-12-26",
+    "producer_name": "USI Insurance Services, LLC",
+    "producer_address": "235 Magrath Darby Blvd Ste 325\nMount Pleasant, SC 29464",
+    "producer_phone": "843 573-2600",
+    "producer_email": "connor.bergeron@usi.com",
+    "producer_reference": null,
+    "insured_name": "Verge at Greely Apartments LLC",
+    "insured_address": "651 Old West Mount Pleasant Avenue\nSuite 110\nLivingston, NJ 07039",
+    "holder_name": "Inland Mortgage Capital, LLC",
+    "holder_address": "ISAOA/ATIMA\n2901 Butterfield Road\nOak Brook, IL 60523",
+    "insurers": {
+      "A": {
+        "name": "Century Surety Company",
+        "naic": "36951"
+      },
+      "B": {
+        "name": "Midvale Indemnity Company",
+        "naic": "27138"
+      },
+      "C": {
+        "name": null,
+        "naic": null
+      },
+      "D": {
+        "name": null,
+        "naic": null
+      },
+      "E": {
+        "name": null,
+        "naic": null
+      },
+      "F": {
+        "name": null,
+        "naic": null
+      }
+    },
+    "policies": [
+      {
+        "insurer_letter": null,
+        "policy_type": "general_liability",
+        "policy_number": "CPP1280844",
+        "carrier_name": null,
+        "naic_number": null,
+        "effective_date": "2024-12-27",
+        "expiration_date": "2025-12-27",
+        "coverage_form": "occurrence",
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": "POLICY",
+        "limits": {
+          "EACH OCCURRENCE": 1000000.0,
+          "DAMAGE TO RENTED PREMISES (Ea occurrence)": 100000.0,
+          "MED EXP (Any one person)": 5000.0,
+          "PERSONAL & ADV INJURY": 1000000.0,
+          "GENERAL AGGREGATE": 2000000.0,
+          "PRODUCTS - COMP/OP AGG": 2000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": "A",
+        "policy_type": "unknown",
+        "policy_number": null,
+        "carrier_name": null,
+        "naic_number": null,
+        "effective_date": null,
+        "expiration_date": null,
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "COMBINED SINGLE LIMIT (Ea accident)": null,
+          "BODILY INJURY (Per person)": null,
+          "BODILY INJURY (Per accident)": null,
+          "PROPERTY DAMAGE (Per accident)": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": null,
+        "policy_type": "umbrella",
+        "policy_number": "PRP229824000013119185",
+        "carrier_name": null,
+        "naic_number": null,
+        "effective_date": "2024-12-27",
+        "expiration_date": "2025-12-27",
+        "coverage_form": "occurrence",
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "EACH OCCURRENCE": 10000000.0,
+          "AGGREGATE": 10000000.0
+        },
+        "confidence": 1.0
+      },
+      {
+        "insurer_letter": null,
+        "policy_type": "workers_comp",
+        "policy_number": null,
+        "carrier_name": null,
+        "naic_number": null,
+        "effective_date": null,
+        "expiration_date": null,
+        "coverage_form": null,
+        "is_additional_insured": false,
+        "is_subrogation_waived": false,
+        "aggregate_limit_applies_per": null,
+        "limits": {
+          "PER STATUTE": null,
+          "E.L. EACH ACCIDENT": null,
+          "E.L. DISEASE - EA EMPLOYEE": null,
+          "E.L. DISEASE - POLICY LIMIT": null
+        },
+        "confidence": 1.0
+      }
+    ],
+    "gl_each_occurrence": 1000000.0,
+    "gl_damage_to_rented": 100000.0,
+    "gl_medical_expense": 5000.0,
+    "gl_personal_advertising": 1000000.0,
+    "gl_general_aggregate": 2000000.0,
+    "gl_products_completed": 2000000.0,
+    "gl_coverage_form": "occurrence",
+    "gl_aggregate_limit_applies_per": "POLICY",
+    "auto_combined_single": null,
+    "auto_bodily_injury_per_person": null,
+    "auto_bodily_injury_per_accident": null,
+    "auto_property_damage": null,
+    "auto_types": [
+      "any auto"
+    ],
+    "umbrella_limit": 10000000.0,
+    "umbrella_aggregate": 10000000.0,
+    "umbrella_deductible": 0.0,
+    "umbrella_retention": 0.0,
+    "umbrella_coverage_form": "occurrence",
+    "workers_comp_per_statute": false,
+    "workers_comp_other": false,
+    "workers_comp_each_accident": null,
+    "workers_comp_disease_ea_employee": null,
+    "workers_comp_disease_policy_limit": null,
+    "workers_comp_excluded_partners": false,
+    "property_limit": null,
+    "description_of_operations": "RE: 3202 11th Ave, Evans, CO 80620\nCertificate holder is additional insured regarding general liability. General Liability coverage includes waiver of subrogation.",
+    "additional_insureds": [
+      "Certificate holder"
+    ],
+    "subrogation_waiver_applies": true,
+    "cancellation_notice_days": null,
+    "cancellation_terms": "SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.",
+    "authorized_representative": "Paula B. Bulman",
+    "loan_number": null,
+    "mortgagee_clause": null,
+    "loss_payee_clause": null,
+    "confidence": 1.0
+  },
+  "invoice": null,
+  "sov": null,
+  "proposal": null,
+  "loss_run": null,
+  "raw_text": "<!-- Page 1 -->\nClient#: 2069612\nEASTMACQ\nACORD\nCERTIFICATE OF LIABILITY INSURANCE\nDATE (MM/DD/YYYY)\n12/26/2024\n\nTHIS CERTIFICATE IS ISSUED AS A MATTER OF INFORMATION ONLY AND CONFERS NO RIGHTS UPON THE CERTIFICATE HOLDER. THIS CERTIFICATE DOES NOT AFFIRMATIVELY OR NEGATIVELY AMEND, EXTEND OR ALTER THE COVERAGE AFFORDED BY THE POLICIES BELOW. THIS CERTIFICATE OF INSURANCE DOES NOT CONSTITUTE A CONTRACT BETWEEN THE ISSUING INSURER(S), AUTHORIZED REPRESENTATIVE OR PRODUCER, AND THE CERTIFICATE HOLDER.\n\nIMPORTANT: If the certificate holder is an ADDITIONAL INSURED, the policy(ies) must have ADDITIONAL INSURED provisions or be endorsed. If SUBROGATION IS WAIVED, subject to the terms and conditions of the policy, certain policies may require an endorsement. A statement on this certificate does not confer any rights to the certificate holder in lieu of such endorsement(s).\n\n|  PRODUCER\nUSI Insurance Services, LLC\n235 Magrath Darby Blvd Ste 325\nMount Pleasant, SC 29464\n843 573-2600 | CONTACT NAME: Connor Bergeron  |   |   |\n| --- | --- | --- | --- |\n|   |  PHONE (A/C, No, Ext): 843 573-2600 FAX (A/C, No):  |   |   |\n|   |  E-MAIL ADDRESS: connor.bergeron@usi.com  |   |   |\n|   |  INSURER(S) AFFORDING COVERAGE |   | NAIC #  |\n|   |  INSURER A: Century Surety Company |   | 36951  |\n|  INSURED\nVerge at Greely Apartments LLC\n651 Old West Mount Pleasant Avenue\nSuite 110\nLivingston, NJ 07039 | INSURER B: Midvale Indemnity Company |   | 27138  |\n|   |  INSURER C: |   |   |\n|   |  INSURER D: |   |   |\n|   |  INSURER E: |   |   |\n|   |  INSURER F: |   |   |\n\nCOVERAGES\nCERTIFICATE NUMBER:\nREVISION NUMBER:\n\n|  THIS IS TO CERTIFY THAT THE POLICIES OF INSURANCE LISTED BELOW HAVE BEEN ISSUED TO THE INSURED NAMED ABOVE FOR THE POLICY PERIOD INDICATED. NOTWITHSTANDING ANY REQUIREMENT, TERM OR CONDITION OF ANY CONTRACT OR OTHER DOCUMENT WITH RESPECT TO WHICH THIS CERTIFICATE MAY BE ISSUED OR MAY PERTAIN, THE INSURANCE AFFORDED BY THE POLICIES DESCRIBED HEREIN IS SUBJECT TO ALL THE TERMS, EXCLUSIONS AND CONDITIONS OF SUCH POLICIES. LIMITS SHOWN MAY HAVE BEEN REDUCED BY PAID CLAIMS.  |   |   |   |   |   |   |   |   |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n|  INSR LTR | TYPE OF INSURANCE |   | ADDL SUBR INSR | POLICY NUMBER | POLICY EFF (MM/DD/YYYY) | POLICY EXP (MM/DD/YYYY) | LIMITS  |   |\n|   |  X COMMERCIAL GENERAL LIABILITY\nCLAIMS-MADE X OCCUR\nX Deductible: $0\nGEN'L AGGREGATE LIMIT APPLIES PER:\nPOLICY \u2610 PRO- JECT \u2610 LOC \u2610 OTHER: |   |  | CPP1280844 | 12/27/2024 | 12/27/2025 | EACH OCCURRENCE\nDAMAGE TO RENTED PREMISES (Ea occurrence)\nMED EXP (Any one person)\nPERSONAL & ADV INJURY\nGENERAL AGGREGATE\nPRODUCTS - COMP/OP AGG\n$1,000,000\n$1,000,000\n$2,000,000\n$Included in A\n$ | $1,000,000\n$100,000\n$5,000\n$1,000,000\n$2,000,000\n$Included in A\n$  |\n|  A | AUTOMOBILE LIABILITY\nANY AUTO\nOWNED AUTOS ONLY\nSCHEDULED AUTOS\nNON-OWNED AUTOS ONLY |   |  |  |  |  | COMBINED SINGLE LIMIT (Ea accident)\nBODILY INJURY (Per person)\nBODILY INJURY (Per accident)\nPROPERTY DAMAGE (Per accident) | $\n$\n$\n$\n$  |\n|   |  X UMBRELLA LIAB X OCCUR\nX EXCESS LIAB X CLAIMS-MADE |   |  |  | PRP229824000013119185 | 12/27/2024 | 12/27/2025 | EACH OCCURRENCE\nAGGREGATE\n$10,000,000\n$10,000,000  |\n|   |  DED X RETENTION $0 |   |  |  |  |  |  |   |\n|   |  WORKERS COMPENSATION AND EMPLOYERS' LIABILITY Y/N\nANY PROPRIETOR/PARTNER/EXECUTIVE OFFICER/MEMBER EXCLUDED? (Mandatory in NH)\nIf yes, describe under DESCRIPTION OF OPERATIONS below |   | N/A |  |  |  |  | PER STATUTE\nE.L. EACH ACCIDENT\nE.L. DISEASE - EA EMPLOYEE\nE.L. DISEASE - POLICY LIMIT\n$  |\n|   |  |   |   |   |   |   |   |   |\n|   |  DESCRIPTION OF OPERATIONS / LOCATIONS / VEHICLES (ACORD 101, Additional Remarks Schedule, may be attached if more space is required)\nRE: 3202 11th Ave, Evans, CO 80620\nCertificate holder is additional insured regarding general liability. General Liability coverage includes waiver of subrogation.  |   |   |   |   |   |   |   |\n|   |  |   |   |   |   |   |   |   |\n|   |  |   |   |   |   |   |   |   |\n|   |  |   |   |   |   |   |   |   |\n\nCERTIFICATE HOLDER\nCANCELLATION\n\n|  Inland Mortgage Capital, LLC\nISAOA/ATIMA\n2901 Butterfield Road\nOak Brook, IL 60523 | SHOULD ANY OF THE ABOVE DESCRIBED POLICIES BE CANCELLED BEFORE THE EXPIRATION DATE THEREOF, NOTICE WILL BE DELIVERED IN ACCORDANCE WITH THE POLICY PROVISIONS.  |\n| --- | --- |\n|   |  AUTHORIZED REPRESENTATIVE\nPaula B. Bulman  |\n\n\u00a9 1988-2015 ACORD CORPORATION. All rights reserved.\nACORD 25 (2016/03)\n#S47533563/M47533248\n1 of 1\nThe ACORD name and logo are registered marks of ACORD\nRXJE3",
+  "overall_confidence": 1.0
+}

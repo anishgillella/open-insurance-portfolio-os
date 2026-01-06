@@ -25,6 +25,7 @@ import {
   AlertConfigModal,
   PolicyComparison,
 } from '@/components/features/renewals';
+import { MarketIntelligenceCard } from '@/components/features/enrichment';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
 import {
   mockProperties,
@@ -400,12 +401,18 @@ export default function PropertyRenewalsPage({ params }: PageProps) {
         </motion.div>
       )}
 
-      {activeTab === 'market' && marketContext && (
-        <motion.div variants={staggerItem}>
-          <MarketContextPanel
-            context={marketContext}
-            onRefresh={() => console.log('Refresh market context')}
-          />
+      {activeTab === 'market' && (
+        <motion.div variants={staggerItem} className="space-y-6">
+          {/* Live Market Intelligence from Parallel AI */}
+          <MarketIntelligenceCard propertyId={id} />
+
+          {/* Cached Market Context (from previous research) */}
+          {marketContext && (
+            <MarketContextPanel
+              context={marketContext}
+              onRefresh={() => console.log('Refresh market context')}
+            />
+          )}
         </motion.div>
       )}
 
