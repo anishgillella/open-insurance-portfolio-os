@@ -79,25 +79,25 @@ export function PortfolioTreemap({
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         tooltip={({ node }: any) => (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[var(--color-border-subtle)] p-3 min-w-[180px]">
-            <div className="font-semibold text-[var(--color-text-primary)] mb-2">
+          <div className="bg-gray-900 rounded-lg shadow-lg border border-gray-700 p-3 min-w-[180px]">
+            <div className="font-semibold text-white mb-2">
               {node.data?.name}
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-[var(--color-text-muted)]">TIV:</span>
-                <span className="font-medium text-[var(--color-text-primary)]">
+                <span className="text-gray-400">TIV:</span>
+                <span className="font-medium text-white">
                   {formatCurrency(node.value)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--color-text-muted)]">Premium:</span>
-                <span className="font-medium text-[var(--color-text-primary)]">
+                <span className="text-gray-400">Premium:</span>
+                <span className="font-medium text-white">
                   {formatCurrency(node.data?.premium || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[var(--color-text-muted)]">Health:</span>
+                <span className="text-gray-400">Health:</span>
                 <span
                   className="font-bold"
                   style={{ color: node.data?.color }}
@@ -106,11 +106,11 @@ export function PortfolioTreemap({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--color-text-muted)]">Location:</span>
-                <span className="text-[var(--color-text-secondary)]">{node.data?.city}</span>
+                <span className="text-gray-400">Location:</span>
+                <span className="text-gray-300">{node.data?.city}</span>
               </div>
             </div>
-            <div className="mt-2 pt-2 border-t border-[var(--color-border-subtle)] text-xs text-[var(--color-primary-500)]">
+            <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-blue-400">
               Click to view details
             </div>
           </div>
