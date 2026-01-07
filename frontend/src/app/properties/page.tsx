@@ -16,6 +16,10 @@ import {
   Download,
   Check,
   GripVertical,
+  Pencil,
+  MoreHorizontal,
+  FileText,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/primitives';
@@ -143,6 +147,28 @@ export default function PropertiesPage() {
   const [exportSOV, setExportSOV] = useState(false);
   const [exportDocuments, setExportDocuments] = useState(true);
   const [exportCSV, setExportCSV] = useState(false);
+
+  // Attachments drag-drop state
+  interface UploadedFile {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    uploadedAt: Date;
+  }
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedProperty, setEditedProperty] = useState<PropertyRowData | null>(null);
+
+  // Property export modal state
+  const [showPropertyExportModal, setShowPropertyExportModal] = useState(false);
+  const [propertyExportFormat, setPropertyExportFormat] = useState<'pdf' | 'csv' | 'excel'>('pdf');
+
+  // File input ref for header upload button
+  const headerFileInputRef = useRef<HTMLInputElement>(null);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -353,6 +379,125 @@ export default function PropertiesPage() {
     setExportSOV(false);
     setExportDocuments(true);
     setExportCSV(false);
+  };
+
+  // Drag-drop handlers for attachments
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const newFiles: UploadedFile[] = files.map((file) => ({
+      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date(),
+    }));
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newFiles: UploadedFile[] = files.map((file) => ({
+      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date(),
+    }));
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeUploadedFile = (fileId: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Header upload button handler
+  const handleHeaderUploadClick = () => {
+    headerFileInputRef.current?.click();
+  };
+
+  const handleHeaderFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newFiles: UploadedFile[] = files.map((file) => ({
+      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date(),
+    }));
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    e.target.value = '';
+  };
+
+  // Edit mode handlers
+  const handleEditClick = () => {
+    if (selectedPropertyModal) {
+      setEditedProperty({ ...selectedPropertyModal });
+      setIsEditMode(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (editedProperty) {
+      // For demo purposes, we just update the local state
+      // In a real app, this would call an API
+      setSelectedPropertyModal(editedProperty);
+      setIsEditMode(false);
+      setEditedProperty(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditedProperty(null);
+  };
+
+  const updateEditedField = (field: keyof PropertyRowData, value: string | number | boolean) => {
+    if (editedProperty) {
+      setEditedProperty({ ...editedProperty, [field]: value });
+    }
+  };
+
+  // Property export handlers
+  const handlePropertyExportClick = () => {
+    setShowPropertyExportModal(true);
+  };
+
+  const handlePropertyExport = () => {
+    if (selectedPropertyModal) {
+      // For demo purposes, log the export action
+      console.log('Exporting property:', selectedPropertyModal.propertyName, 'as', propertyExportFormat);
+
+      // Simulate download based on format
+      const filename = `${selectedPropertyModal.propertyName.replace(/\s+/g, '_')}_export`;
+      alert(`Exporting ${filename}.${propertyExportFormat}\n\nIn production, this would download the ${propertyExportFormat.toUpperCase()} file.`);
+
+      setShowPropertyExportModal(false);
+      setPropertyExportFormat('pdf');
+    }
   };
 
   // Close dropdown when clicking outside
@@ -1108,7 +1253,7 @@ export default function PropertiesPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-2xl overflow-hidden flex flex-col"
+              className="absolute right-0 top-0 h-full w-full max-w-6xl bg-white shadow-2xl overflow-hidden flex flex-col"
             >
               {/* Panel Header */}
               <div className="flex-shrink-0 border-b border-gray-200 bg-white">
@@ -1122,25 +1267,81 @@ export default function PropertiesPage() {
                 {/* Title and Actions */}
                 <div className="flex items-start justify-between px-6 py-4">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{selectedPropertyModal.propertyName}</h2>
-                    <p className="text-sm text-gray-500">{selectedPropertyModal.address}</p>
+                    {isEditMode && editedProperty ? (
+                      <input
+                        type="text"
+                        value={editedProperty.propertyName}
+                        onChange={(e) => updateEditedField('propertyName', e.target.value)}
+                        className="text-xl font-semibold text-gray-900 bg-white border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    ) : (
+                      <h2 className="text-xl font-semibold text-gray-900">{selectedPropertyModal.propertyName}</h2>
+                    )}
+                    {isEditMode && editedProperty ? (
+                      <input
+                        type="text"
+                        value={editedProperty.address}
+                        onChange={(e) => updateEditedField('address', e.target.value)}
+                        className="text-sm text-gray-500 bg-white border border-gray-300 rounded-lg px-2 py-1 mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-500">{selectedPropertyModal.address}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
-                      <Upload className="h-4 w-4" />
-                      Upload
-                    </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
-                      <Download className="h-4 w-4" />
-                      Export
-                    </button>
-                    <button className="p-1.5 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg transition-colors">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
+                    {/* Hidden file input for upload */}
+                    <input
+                      type="file"
+                      multiple
+                      ref={headerFileInputRef}
+                      onChange={handleHeaderFileChange}
+                      className="hidden"
+                    />
+                    {isEditMode ? (
+                      <>
+                        <button
+                          onClick={handleSaveEdit}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-teal-500 hover:bg-teal-600 rounded-lg transition-colors"
+                        >
+                          <Check className="h-4 w-4" />
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleHeaderUploadClick}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload
+                        </button>
+                        <button
+                          onClick={handleEditClick}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={handlePropertyExportClick}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          Export
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg transition-colors">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={closePropertyModal}
                       className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ml-2"
@@ -1156,31 +1357,86 @@ export default function PropertiesPage() {
                 <div className="p-6 space-y-8">
                   {/* Details Section */}
                   <section>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-gray-900">Details</h3>
+                      {isEditMode && (
+                        <span className="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded">Editing</span>
+                      )}
+                    </div>
                     <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Units</p>
-                        <p className="text-lg font-semibold text-gray-900">100</p>
+                        {isEditMode ? (
+                          <input
+                            type="number"
+                            defaultValue={100}
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">100</p>
+                        )}
                       </div>
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Deductible</p>
-                        <p className="text-lg font-semibold text-gray-900">10</p>
+                        {isEditMode ? (
+                          <input
+                            type="number"
+                            defaultValue={10}
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">10</p>
+                        )}
                       </div>
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Total Premium</p>
-                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedPropertyModal.premium)}</p>
+                        {isEditMode && editedProperty ? (
+                          <input
+                            type="number"
+                            value={editedProperty.premium}
+                            onChange={(e) => updateEditedField('premium', parseFloat(e.target.value) || 0)}
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedPropertyModal.premium)}</p>
+                        )}
                       </div>
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Ins/U</p>
-                        <p className="text-lg font-semibold text-gray-900">20</p>
+                        {isEditMode ? (
+                          <input
+                            type="number"
+                            defaultValue={20}
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">20</p>
+                        )}
                       </div>
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Renewals Date</p>
-                        <p className="text-lg font-semibold text-gray-900">{selectedPropertyModal.renewalDate}</p>
+                        {isEditMode && editedProperty ? (
+                          <input
+                            type="text"
+                            value={editedProperty.renewalDate}
+                            onChange={(e) => updateEditedField('renewalDate', e.target.value)}
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">{selectedPropertyModal.renewalDate}</p>
+                        )}
                       </div>
-                      <div className="p-3 border border-gray-200 rounded-lg">
+                      <div className={cn('p-3 border rounded-lg', isEditMode ? 'border-teal-200 bg-teal-50/30' : 'border-gray-200')}>
                         <p className="text-xs text-gray-500 mb-1">Claims / Claim $</p>
-                        <p className="text-lg font-semibold text-gray-900">2/~$400k</p>
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            defaultValue="2/~$400k"
+                            className="w-full text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                        ) : (
+                          <p className="text-lg font-semibold text-gray-900">2/~$400k</p>
+                        )}
                       </div>
                       <div className="p-3 border border-gray-200 rounded-lg">
                         <p className="text-xs text-gray-500 mb-1">Policies</p>
@@ -1495,6 +1751,71 @@ export default function PropertiesPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Uploaded Files */}
+                      {uploadedFiles.map((file) => (
+                        <div key={file.id} className="border border-gray-200 rounded-lg">
+                          <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-teal-500" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                                <Download className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => removeUploadedFile(file.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 rounded"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Drag and Drop Zone */}
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={cn(
+                          'border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer',
+                          isDraggingOver
+                            ? 'border-teal-500 bg-teal-50'
+                            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                        )}
+                      >
+                        <input
+                          type="file"
+                          multiple
+                          onChange={handleFileInputChange}
+                          className="hidden"
+                          id="file-upload-input"
+                        />
+                        <label htmlFor="file-upload-input" className="cursor-pointer">
+                          <Upload className={cn(
+                            'h-8 w-8 mx-auto mb-2',
+                            isDraggingOver ? 'text-teal-500' : 'text-gray-400'
+                          )} />
+                          <p className={cn(
+                            'text-sm font-medium',
+                            isDraggingOver ? 'text-teal-600' : 'text-gray-600'
+                          )}>
+                            {isDraggingOver ? 'Drop files here' : 'Drag & drop files here'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            or <span className="text-teal-600 hover:text-teal-700">browse</span> to upload
+                          </p>
+                        </label>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -1629,6 +1950,139 @@ export default function PropertiesPage() {
                   className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Confirm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Property Export Modal */}
+      <AnimatePresence>
+        {showPropertyExportModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowPropertyExportModal(false)}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="relative bg-white rounded-xl shadow-2xl w-full max-w-md z-[10001] overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Export Property</h3>
+                  <p className="text-sm text-gray-500">Choose export format</p>
+                </div>
+                <button
+                  onClick={() => setShowPropertyExportModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-5 space-y-3">
+                {/* PDF Option */}
+                <button
+                  onClick={() => setPropertyExportFormat('pdf')}
+                  className={cn(
+                    'w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left',
+                    propertyExportFormat === 'pdf'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <div className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center',
+                    propertyExportFormat === 'pdf' ? 'bg-teal-500 text-white' : 'bg-gray-100 text-gray-500'
+                  )}>
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">PDF Document</p>
+                    <p className="text-xs text-gray-500">Export as a formatted PDF report</p>
+                  </div>
+                  {propertyExportFormat === 'pdf' && (
+                    <Check className="h-5 w-5 text-teal-500" />
+                  )}
+                </button>
+
+                {/* CSV Option */}
+                <button
+                  onClick={() => setPropertyExportFormat('csv')}
+                  className={cn(
+                    'w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left',
+                    propertyExportFormat === 'csv'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <div className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center',
+                    propertyExportFormat === 'csv' ? 'bg-teal-500 text-white' : 'bg-gray-100 text-gray-500'
+                  )}>
+                    <Download className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">CSV File</p>
+                    <p className="text-xs text-gray-500">Export data as comma-separated values</p>
+                  </div>
+                  {propertyExportFormat === 'csv' && (
+                    <Check className="h-5 w-5 text-teal-500" />
+                  )}
+                </button>
+
+                {/* Excel Option */}
+                <button
+                  onClick={() => setPropertyExportFormat('excel')}
+                  className={cn(
+                    'w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-colors text-left',
+                    propertyExportFormat === 'excel'
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <div className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center',
+                    propertyExportFormat === 'excel' ? 'bg-teal-500 text-white' : 'bg-gray-100 text-gray-500'
+                  )}>
+                    <GripVertical className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Excel Spreadsheet</p>
+                    <p className="text-xs text-gray-500">Export as .xlsx file with formatted tables</p>
+                  </div>
+                  {propertyExportFormat === 'excel' && (
+                    <Check className="h-5 w-5 text-teal-500" />
+                  )}
+                </button>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
+                <button
+                  onClick={() => setShowPropertyExportModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePropertyExport}
+                  className="px-4 py-2 text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 rounded-lg transition-colors"
+                >
+                  Export
                 </button>
               </div>
             </motion.div>
