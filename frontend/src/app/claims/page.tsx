@@ -249,9 +249,11 @@ const mockClaimDetail: ClaimDetail = {
 function ClaimCard({
   claim,
   onClick,
+  onDragStart,
 }: {
   claim: ClaimListItem;
   onClick: () => void;
+  onDragStart: (e: React.DragEvent, claim: ClaimListItem) => void;
 }) {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -261,14 +263,16 @@ function ClaimCard({
 
   return (
     <div
+      draggable
+      onDragStart={(e) => onDragStart(e, claim)}
       onClick={onClick}
-      className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+      className="bg-white rounded-lg p-3 cursor-grab hover:shadow-md transition-shadow shadow-sm active:cursor-grabbing"
     >
-      <div className="mb-2">
-        <h4 className="font-medium text-gray-900">Claim {claim.claim_number}</h4>
+      <div className="mb-3">
+        <h4 className="font-medium text-gray-900 text-sm">Claim {claim.claim_number}</h4>
         <p className="text-sm text-gray-500">{claim.property_name}</p>
       </div>
-      <div className="flex items-center gap-3 text-xs text-gray-400">
+      <div className="flex items-center gap-2 text-xs text-gray-400 pt-2 border-t border-gray-100">
         <span className="flex items-center gap-1">
           <Paperclip className="h-3 w-3" />
           {claim.attachment_count}
@@ -296,21 +300,36 @@ function KanbanColumnComponent({
   claims,
   onClaimClick,
   onAddClick,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  isDragOver,
 }: {
   config: KanbanColumnConfig;
   claims: ClaimListItem[];
   onClaimClick: (claim: ClaimListItem) => void;
   onAddClick: () => void;
+  onDragStart: (e: React.DragEvent, claim: ClaimListItem) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetColumn: KanbanColumn) => void;
+  isDragOver: boolean;
 }) {
   return (
-    <div className="flex-1 min-w-[280px] max-w-[320px]">
+    <div
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, config.id)}
+      className={cn(
+        'bg-gray-200/60 rounded-xl p-3 flex-1 flex flex-col transition-colors',
+        isDragOver && 'bg-gray-300/70 ring-2 ring-teal-400 ring-inset'
+      )}
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium text-gray-900">{config.title}</h3>
+          <h3 className="font-medium text-gray-900 text-sm">{config.title}</h3>
           <span className={cn('text-sm font-medium', config.color)}>{claims.length}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={onAddClick}
             className="p-1 text-gray-400 hover:text-gray-600 rounded"
@@ -324,19 +343,15 @@ function KanbanColumnComponent({
       </div>
 
       {/* Column Content */}
-      <div className="space-y-3 min-h-[400px] bg-gray-50 rounded-lg p-3">
+      <div className="space-y-3 flex-1">
         {claims.map((claim) => (
           <ClaimCard
             key={claim.id}
             claim={claim}
             onClick={() => onClaimClick(claim)}
+            onDragStart={onDragStart}
           />
         ))}
-        {claims.length === 0 && (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            No claims
-          </div>
-        )}
       </div>
     </div>
   );
@@ -362,7 +377,7 @@ function ClaimDetailModal({
       <div className="absolute inset-0 bg-black/20" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-xl bg-white shadow-xl overflow-y-auto">
+      <div className="relative w-1/2 bg-white shadow-xl overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
           <div className="flex items-center justify-between mb-2">
@@ -522,18 +537,18 @@ function Dropdown({
   const selectedOption = options.find((o) => o.value === value);
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+        className="flex items-center justify-between w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
       >
-        <span className="text-gray-700">{selectedOption?.label || placeholder}</span>
-        <ChevronDown className="h-4 w-4 text-gray-400" />
+        <span className="text-gray-700 truncate">{selectedOption?.label || placeholder}</span>
+        <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0 ml-2" />
       </button>
       {isOpen && (
         <>
           <div className="fixed inset-0" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-20">
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-20">
             {options.map((option) => (
               <button
                 key={option.value}
@@ -563,6 +578,10 @@ export default function ClaimsPage() {
   const [selectedClaim, setSelectedClaim] = useState<ClaimDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Drag and drop state
+  const [draggedClaim, setDraggedClaim] = useState<ClaimListItem | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<KanbanColumn | null>(null);
 
   // Filters
   const [propertyFilter, setPropertyFilter] = useState<string>('all');
@@ -620,6 +639,58 @@ export default function ClaimsPage() {
     alert('Add Claim functionality coming soon!');
   }, []);
 
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, claim: ClaimListItem) => {
+    setDraggedClaim(claim);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDragEnter = useCallback((column: KanbanColumn) => {
+    setDragOverColumn(column);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverColumn(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetColumn: KanbanColumn) => {
+    e.preventDefault();
+
+    if (!draggedClaim) return;
+
+    const sourceColumn = draggedClaim.status as KanbanColumn;
+
+    // Don't do anything if dropping in the same column
+    if (sourceColumn === targetColumn) {
+      setDraggedClaim(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    // Update the kanban data
+    setKanbanData((prev) => {
+      const newData = { ...prev };
+
+      // Remove from source column
+      newData[sourceColumn] = prev[sourceColumn].filter((c) => c.id !== draggedClaim.id);
+
+      // Add to target column with updated status
+      const updatedClaim = { ...draggedClaim, status: targetColumn };
+      newData[targetColumn] = [...prev[targetColumn], updatedClaim];
+
+      return newData;
+    });
+
+    // Reset drag state
+    setDraggedClaim(null);
+    setDragOverColumn(null);
+  }, [draggedClaim]);
+
   const propertyOptions = [
     { value: 'all', label: 'All Properties' },
     ...properties.map((p) => ({ value: p.id, label: p.name })),
@@ -641,9 +712,9 @@ export default function ClaimsPage() {
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gray-100 -m-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-gray-900">Claims</h1>
         <div className="flex items-center gap-3">
           <button className="p-2 text-gray-400 hover:text-gray-600">
@@ -656,35 +727,41 @@ export default function ClaimsPage() {
       </div>
 
       {/* Filters Row */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4 w-full">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-[2] min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>
 
         {/* Dropdowns */}
-        <Dropdown
-          value={propertyFilter}
-          options={propertyOptions}
-          onChange={setPropertyFilter}
-        />
-        <Dropdown
-          value={yearFilter}
-          options={yearOptions}
-          onChange={setYearFilter}
-        />
-        <Dropdown
-          value={statusFilter}
-          options={statusOptions}
-          onChange={setStatusFilter}
-        />
+        <div className="flex-1 min-w-0">
+          <Dropdown
+            value={propertyFilter}
+            options={propertyOptions}
+            onChange={setPropertyFilter}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <Dropdown
+            value={yearFilter}
+            options={yearOptions}
+            onChange={setYearFilter}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <Dropdown
+            value={statusFilter}
+            options={statusOptions}
+            onChange={setStatusFilter}
+          />
+        </div>
 
         {/* Actions */}
         <Button
@@ -701,16 +778,26 @@ export default function ClaimsPage() {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-4 min-w-max pb-4">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex gap-4 w-full flex-1">
           {columns.map((column) => (
-            <KanbanColumnComponent
+            <div
               key={column.id}
-              config={column}
-              claims={kanbanData[column.id]}
-              onClaimClick={handleClaimClick}
-              onAddClick={handleAddClaim}
-            />
+              onDragEnter={() => handleDragEnter(column.id)}
+              onDragLeave={handleDragLeave}
+              className="flex-1 min-w-0 flex flex-col h-full"
+            >
+              <KanbanColumnComponent
+                config={column}
+                claims={kanbanData[column.id]}
+                onClaimClick={handleClaimClick}
+                onAddClick={handleAddClaim}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                isDragOver={dragOverColumn === column.id}
+              />
+            </div>
           ))}
         </div>
       </div>
