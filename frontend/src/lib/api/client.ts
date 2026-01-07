@@ -209,6 +209,8 @@ export interface Property {
   id: string;
   name: string;
   address: PropertyAddress;
+  latitude?: number;
+  longitude?: number;
   property_type: string | null;
   total_units: number | null;
   total_buildings: number;

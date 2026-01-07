@@ -85,6 +85,8 @@ export interface Property {
     state: string;
     zip: string;
   };
+  latitude?: number;
+  longitude?: number;
   property_type: string;
   total_units: number;
   total_buildings: number;
