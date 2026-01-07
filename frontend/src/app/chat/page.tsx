@@ -389,10 +389,10 @@ export default function AIAssistantPage() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      Renew Policy #{task.policy_number || 'N/A'}
+                      {task.property_name || 'Unknown Property'}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {task.property_name} &bull; {task.status}
+                      Renew Policy #{task.policy_number || 'N/A'} &bull; {task.status}
                     </p>
                   </div>
                   <button
@@ -444,11 +444,11 @@ export default function AIAssistantPage() {
                   {getDocumentIcon(doc.document_type)}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {doc.document_type || 'Document'}
+                      {doc.file_name || 'Untitled Document'}
                     </p>
                     <p className="text-xs text-gray-500">
                       Uploaded {formatDate(doc.created_at)}
-                      {doc.file_name && ` \u2022 ${doc.file_name}`}
+                      {doc.document_type && ` \u2022 ${doc.document_type}`}
                     </p>
                   </div>
                 </div>
