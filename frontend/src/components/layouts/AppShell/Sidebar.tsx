@@ -16,6 +16,7 @@ import {
   HelpCircle,
   Brain,
   BarChart3,
+  ClipboardList,
 } from 'lucide-react';
 import { Logo, LogoIcon } from '@/components/shared/Logo';
 
@@ -38,6 +39,7 @@ const navigation: Array<{
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
   { name: 'AI Assistant', href: '/chat', icon: Brain },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Claims', href: '/claims', icon: ClipboardList },
   { name: 'Help Center', href: '/help-center', icon: HelpCircle },
 ];
 

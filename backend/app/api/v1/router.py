@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     admin,
     chat,
+    claims,
     completeness,
     compliance,
     conflicts,
@@ -35,4 +36,5 @@ api_router.include_router(health_score.router, prefix="/health-score", tags=["he
 api_router.include_router(conflicts.router, prefix="/conflicts", tags=["conflicts"])
 api_router.include_router(renewals.router, prefix="/renewals", tags=["renewals"])
 api_router.include_router(enrichment.router, prefix="/enrichment", tags=["enrichment"])
+api_router.include_router(claims.router, prefix="/claims", tags=["claims"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
