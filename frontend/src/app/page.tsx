@@ -1,15 +1,13 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   Building2,
   AlertTriangle,
   RefreshCw,
   Loader2,
-  ChevronRight,
-  Sparkles,
   MapPin,
   FileText,
   DollarSign,
@@ -21,14 +19,19 @@ import {
   Users,
   ChevronDown,
   X,
+  Upload,
+  CheckCircle,
+  XCircle,
+  Trash2,
 } from 'lucide-react';
-import { Button, Card, Badge } from '@/components/primitives';
+import { Button, Card } from '@/components/primitives';
 import { DynamicPropertyMap } from '@/components/features/map';
 import { staggerContainer, staggerItem } from '@/lib/motion/variants';
 import {
   dashboardApi,
   propertiesApi,
   gapsApi,
+  documentsApi,
   type DashboardSummary,
   type ExpirationItem,
   type DashboardAlert,
@@ -37,6 +40,16 @@ import {
 } from '@/lib/api';
 import { enrichPropertiesWithCoordinates } from '@/lib/geocoding';
 import { getDemoPropertiesForMap } from '@/lib/demo-properties';
+
+// Upload file type with metadata for display
+interface UploadFileItem {
+  file: File;
+  id: string;
+  propertyName: string;
+  documentType: 'SOV' | 'COI' | 'Binder' | 'Policy' | 'Other';
+  status: 'pending' | 'uploading' | 'confirmed' | 'error';
+  progress?: number;
+}
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +63,16 @@ export default function Dashboard() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [mapProperties, setMapProperties] = useState<Property[]>([]);
   const [gaps, setGaps] = useState<Gap[]>([]);
+
+  // Upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState<UploadFileItem[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; currentFile?: string } | null>(null);
+  const [uploadResults, setUploadResults] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
+  const [isDragging, setIsDragging] = useState(false);
+  const [documentTypePopup, setDocumentTypePopup] = useState<{ fileId: string; position: { x: number; y: number } } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -114,6 +137,145 @@ export default function Dashboard() {
     return value.toString();
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
+  // Upload handlers
+  const handleOpenUploadModal = () => {
+    setUploadFiles([]);
+    setUploadResults({ success: 0, failed: 0, errors: [] });
+    setUploadProgress(null);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleCloseUploadModal = () => {
+    if (!isUploading) {
+      setIsUploadModalOpen(false);
+      setUploadFiles([]);
+      setIsDragging(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    addFiles(files);
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const addFiles = (files: File[]) => {
+    const newFiles: UploadFileItem[] = files.map((file) => ({
+      file,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      propertyName: 'Property Name',
+      documentType: 'SOV' as const,
+      status: 'pending' as const,
+    }));
+    setUploadFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (!isUploading) {
+      const files = Array.from(e.dataTransfer.files);
+      addFiles(files);
+    }
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setUploadFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const handleUpdateFileType = (fileId: string, documentType: UploadFileItem['documentType']) => {
+    setUploadFiles((prev) =>
+      prev.map((f) => (f.id === fileId ? { ...f, documentType } : f))
+    );
+  };
+
+  const handleConfirmFile = (fileId: string) => {
+    setUploadFiles((prev) =>
+      prev.map((f) => (f.id === fileId ? { ...f, status: 'confirmed' } : f))
+    );
+  };
+
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: uploadFiles.length });
+    setUploadResults({ success: 0, failed: 0, errors: [] });
+
+    const results = { success: 0, failed: 0, errors: [] as string[] };
+    const CONCURRENCY_LIMIT = 3;
+    let completed = 0;
+
+    const uploadFile = async (fileItem: UploadFileItem) => {
+      try {
+        setUploadFiles((prev) =>
+          prev.map((f) => (f.id === fileItem.id ? { ...f, status: 'uploading' } : f))
+        );
+        await documentsApi.uploadAsync(
+          fileItem.file,
+          fileItem.propertyName,
+          undefined,
+          undefined
+        );
+        results.success++;
+        setUploadFiles((prev) =>
+          prev.map((f) => (f.id === fileItem.id ? { ...f, status: 'confirmed' } : f))
+        );
+      } catch (err) {
+        results.failed++;
+        results.errors.push(`${fileItem.file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`);
+        setUploadFiles((prev) =>
+          prev.map((f) => (f.id === fileItem.id ? { ...f, status: 'error' } : f))
+        );
+      }
+      completed++;
+      setUploadProgress({ current: completed, total: uploadFiles.length, currentFile: fileItem.file.name });
+    };
+
+    // Process files with concurrency limit
+    const chunks = [];
+    for (let i = 0; i < uploadFiles.length; i += CONCURRENCY_LIMIT) {
+      chunks.push(uploadFiles.slice(i, i + CONCURRENCY_LIMIT));
+    }
+
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map(uploadFile));
+    }
+
+    setUploadResults(results);
+    setIsUploading(false);
+    setUploadProgress(null);
+
+    // Refresh data if any uploads succeeded
+    if (results.success > 0) {
+      fetchData();
+    }
+  };
+
   // Filter open gaps for coverage gaps section
   const openGaps = gaps.filter((g) => g.status === 'open');
   const criticalGaps = openGaps.filter((g) => g.severity === 'critical');
@@ -160,10 +322,31 @@ export default function Dashboard() {
         <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
           Dashboard
         </h1>
-        <Button variant="ghost" size="icon-sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleOpenUploadModal}
+            leftIcon={<Upload className="h-4 w-4" />}
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          >
+            Upload
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </motion.div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
       {/* Two-Row Metrics Cards */}
       <motion.div variants={staggerItem} className="space-y-3">
@@ -539,15 +722,272 @@ export default function Dashboard() {
               <p className="text-[var(--color-text-muted)] mb-4 max-w-md mx-auto">
                 Upload your insurance documents to get started. Properties will be automatically created from your folder structure.
               </p>
-              <Link href="/documents">
-                <Button variant="primary">
-                  Upload Documents
-                </Button>
-              </Link>
+              <Button variant="primary" onClick={handleOpenUploadModal}>
+                Upload Documents
+              </Button>
             </div>
           </Card>
         </motion.div>
       )}
+
+      {/* Upload Documents Modal */}
+      <AnimatePresence>
+        {isUploadModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 z-[9999]"
+              onClick={handleCloseUploadModal}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-xl shadow-2xl w-full max-w-md z-[10000]"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900">Upload Documents</h3>
+                <button
+                  onClick={handleCloseUploadModal}
+                  disabled={isUploading}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <X className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-4">
+                {/* Drop Zone */}
+                <div
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                    isDragging
+                      ? 'border-teal-500 bg-teal-50'
+                      : isUploading
+                      ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 font-medium">
+                    Drag & drop or choose files to upload
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Max file size: 100MB</p>
+                </div>
+
+                {/* Upload Progress */}
+                {isUploading && uploadProgress && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Uploading...</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                        className="h-full bg-teal-500 rounded-full"
+                        style={{ borderColor: '#14B8A6' }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {formatFileSize(uploadFiles.reduce((acc, f) => acc + (f.status === 'uploading' ? f.file.size * (uploadProgress.current / uploadProgress.total) : f.status === 'confirmed' ? f.file.size : 0), 0))} of {formatFileSize(uploadFiles.reduce((acc, f) => acc + f.file.size, 0))}
+                    </p>
+                  </div>
+                )}
+
+                {/* File List */}
+                {uploadFiles.length > 0 && (
+                  <div className="space-y-2 max-h-[240px] overflow-y-auto">
+                    {uploadFiles.map((fileItem) => (
+                      <div
+                        key={fileItem.id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                      >
+                        {/* File Icon */}
+                        <div className="p-2 bg-white rounded-lg border border-gray-100">
+                          <FileText className="h-4 w-4 text-gray-400" />
+                        </div>
+
+                        {/* File Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {fileItem.file.name}
+                          </p>
+                          <p className="text-xs text-gray-400">{formatFileSize(fileItem.file.size)}</p>
+                        </div>
+
+                        {/* Property Name Badge */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-1 text-xs font-medium bg-teal-100 text-teal-700 rounded">
+                            {fileItem.propertyName}
+                          </span>
+
+                          {/* Document Type Button (opens popup) */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isUploading) {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setDocumentTypePopup(
+                                    documentTypePopup?.fileId === fileItem.id
+                                      ? null
+                                      : { fileId: fileItem.id, position: { x: rect.left, y: rect.bottom + 4 } }
+                                  );
+                                }
+                              }}
+                              disabled={isUploading}
+                              className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {fileItem.documentType}
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Status / Actions */}
+                        <div className="flex items-center gap-1">
+                          {fileItem.status === 'confirmed' ? (
+                            <span className="text-xs text-gray-500">Confirmed</span>
+                          ) : fileItem.status === 'uploading' ? (
+                            <Loader2 className="h-4 w-4 text-teal-500 animate-spin" />
+                          ) : fileItem.status === 'error' ? (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <button
+                              onClick={() => handleConfirmFile(fileItem.id)}
+                              disabled={isUploading}
+                              className="text-xs text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50"
+                            >
+                              Confirm
+                            </button>
+                          )}
+
+                          {/* Delete Button */}
+                          {!isUploading && (
+                            <button
+                              onClick={() => handleRemoveFile(fileItem.id)}
+                              className="p-1 hover:bg-gray-200 rounded transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4 text-gray-400" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Document Type Popup */}
+                <AnimatePresence>
+                  {documentTypePopup && (
+                    <>
+                      {/* Backdrop to close popup */}
+                      <div
+                        className="fixed inset-0 z-[10001]"
+                        onClick={() => setDocumentTypePopup(null)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed z-[10002] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[120px]"
+                        style={{
+                          left: documentTypePopup.position.x,
+                          top: documentTypePopup.position.y,
+                        }}
+                      >
+                        {(['SOV', 'COI', 'Binder', 'Policy', 'Other'] as const).map((type) => {
+                          const currentFile = uploadFiles.find((f) => f.id === documentTypePopup.fileId);
+                          const isSelected = currentFile?.documentType === type;
+                          return (
+                            <button
+                              key={type}
+                              onClick={() => {
+                                handleUpdateFileType(documentTypePopup.fileId, type);
+                                setDocumentTypePopup(null);
+                              }}
+                              className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                                isSelected ? 'text-teal-600 font-medium' : 'text-gray-700'
+                              }`}
+                            >
+                              {type}
+                              {isSelected && <CheckCircle className="h-4 w-4 text-teal-600" />}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+
+                {/* Upload Results */}
+                {!isUploading && (uploadResults.success > 0 || uploadResults.failed > 0) && (
+                  <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                    {uploadResults.success > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>{uploadResults.success} file{uploadResults.success !== 1 ? 's' : ''} uploaded successfully</span>
+                      </div>
+                    )}
+                    {uploadResults.failed > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm text-red-600">
+                          <XCircle className="h-4 w-4" />
+                          <span>{uploadResults.failed} file{uploadResults.failed !== 1 ? 's' : ''} failed</span>
+                        </div>
+                        {uploadResults.errors.length > 0 && (
+                          <div className="text-xs text-red-500 pl-6 space-y-0.5">
+                            {uploadResults.errors.slice(0, 3).map((err, i) => (
+                              <div key={i}>{err}</div>
+                            ))}
+                            {uploadResults.errors.length > 3 && (
+                              <div>...and {uploadResults.errors.length - 3} more errors</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100">
+                <button
+                  onClick={handleCloseUploadModal}
+                  disabled={isUploading}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading || uploadFiles.length === 0}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
