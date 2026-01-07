@@ -15,6 +15,7 @@ import {
   FileText,
   HelpCircle,
   Brain,
+  BarChart3,
 } from 'lucide-react';
 import { Logo, LogoIcon } from '@/components/shared/Logo';
 
@@ -35,8 +36,9 @@ const navigation: Array<{
   { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
-  { name: 'Help Center', href: '/help-center', icon: HelpCircle },
   { name: 'AI Assistant', href: '/chat', icon: Brain },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Help Center', href: '/help-center', icon: HelpCircle },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
