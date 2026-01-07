@@ -9,17 +9,27 @@
 :root {
   /* ============ COLORS ============ */
 
-  /* Primary - Teal (Brand Color from Logo) */
-  --color-primary-50: #F0FDFA;
-  --color-primary-100: #CCFBF1;
-  --color-primary-200: #99F6E4;
-  --color-primary-300: #5EEAD4;
-  --color-primary-400: #2DD4BF;
-  --color-primary-500: #14B8A6;
-  --color-primary-600: #0D9488;
-  --color-primary-700: #0F766E;
-  --color-primary-800: #115E59;
-  --color-primary-900: #134E4A;
+  /* Primary - Emerald #10B981 (Brand Color) */
+  --color-primary-50: #ECFDF5;
+  --color-primary-100: #D1FAE5;
+  --color-primary-200: #A7F3D0;
+  --color-primary-300: #6EE7B7;
+  --color-primary-400: #34D399;
+  --color-primary-500: #10B981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065F46;
+  --color-primary-900: #064E3B;
+
+  /* Secondary - Blue #0EA5E9 */
+  --color-secondary-50: #F0F9FF;
+  --color-secondary-100: #E0F2FE;
+  --color-secondary-200: #BAE6FD;
+  --color-secondary-300: #7DD3FC;
+  --color-secondary-400: #38BDF8;
+  --color-secondary-500: #0EA5E9;
+  --color-secondary-600: #0284C7;
+  --color-secondary-700: #0369A1;
 
   /* Critical - Red */
   --color-critical-50: #FEF2F2;
@@ -31,35 +41,35 @@
   --color-critical-600: #DC2626;
   --color-critical-700: #B91C1C;
 
-  /* Warning - Amber */
-  --color-warning-50: #FFFBEB;
-  --color-warning-100: #FEF3C7;
-  --color-warning-200: #FDE68A;
-  --color-warning-300: #FCD34D;
-  --color-warning-400: #FBBF24;
-  --color-warning-500: #F59E0B;
-  --color-warning-600: #D97706;
-  --color-warning-700: #B45309;
+  /* Warning - Yellow #EAB308 (Brand Secondary) */
+  --color-warning-50: #FEFCE8;
+  --color-warning-100: #FEF9C3;
+  --color-warning-200: #FEF08A;
+  --color-warning-300: #FDE047;
+  --color-warning-400: #FACC15;
+  --color-warning-500: #EAB308;
+  --color-warning-600: #CA8A04;
+  --color-warning-700: #A16207;
 
-  /* Success - Teal (Same as Primary for brand consistency) */
-  --color-success-50: #F0FDFA;
-  --color-success-100: #CCFBF1;
-  --color-success-200: #99F6E4;
-  --color-success-300: #5EEAD4;
-  --color-success-400: #2DD4BF;
-  --color-success-500: #14B8A6;
-  --color-success-600: #0D9488;
-  --color-success-700: #0F766E;
+  /* Success - Emerald (Same as Primary for brand consistency) */
+  --color-success-50: #ECFDF5;
+  --color-success-100: #D1FAE5;
+  --color-success-200: #A7F3D0;
+  --color-success-300: #6EE7B7;
+  --color-success-400: #34D399;
+  --color-success-500: #10B981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
 
-  /* Info - Teal (Same as Primary) */
-  --color-info-50: #F0FDFA;
-  --color-info-100: #CCFBF1;
-  --color-info-200: #99F6E4;
-  --color-info-300: #5EEAD4;
-  --color-info-400: #2DD4BF;
-  --color-info-500: #14B8A6;
-  --color-info-600: #0D9488;
-  --color-info-700: #0F766E;
+  /* Info - Blue (Same as Secondary) */
+  --color-info-50: #F0F9FF;
+  --color-info-100: #E0F2FE;
+  --color-info-200: #BAE6FD;
+  --color-info-300: #7DD3FC;
+  --color-info-400: #38BDF8;
+  --color-info-500: #0EA5E9;
+  --color-info-600: #0284C7;
+  --color-info-700: #0369A1;
 
   /* Surfaces */
   --color-background: #F8FAFB;
@@ -101,10 +111,11 @@
   --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
   --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 32px rgba(0, 0, 0, 0.1);
   --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.12);
-  --shadow-glow-primary: 0 0 24px rgba(20, 184, 166, 0.35);
-  --shadow-glow-success: 0 0 24px rgba(20, 184, 166, 0.35);
-  --shadow-glow-warning: 0 0 24px rgba(245, 158, 11, 0.35);
+  --shadow-glow-primary: 0 0 24px rgba(16, 185, 129, 0.35);
+  --shadow-glow-success: 0 0 24px rgba(16, 185, 129, 0.35);
+  --shadow-glow-warning: 0 0 24px rgba(234, 179, 8, 0.35);
   --shadow-glow-critical: 0 0 24px rgba(239, 68, 68, 0.35);
+  --shadow-glow-secondary: 0 0 24px rgba(14, 165, 233, 0.35);
 
   /* ============ RADII ============ */
   --radius-sm: 6px;
@@ -118,17 +129,27 @@
 
 /* ============ DARK MODE ============ */
 .dark {
-  /* Primary - Teal brighter for dark mode */
-  --color-primary-50: #134E4A;
-  --color-primary-100: #115E59;
-  --color-primary-200: #0F766E;
-  --color-primary-300: #0D9488;
-  --color-primary-400: #14B8A6;
-  --color-primary-500: #2DD4BF;
-  --color-primary-600: #5EEAD4;
-  --color-primary-700: #99F6E4;
-  --color-primary-800: #CCFBF1;
-  --color-primary-900: #F0FDFA;
+  /* Primary - Emerald brighter for dark mode */
+  --color-primary-50: #064E3B;
+  --color-primary-100: #065F46;
+  --color-primary-200: #047857;
+  --color-primary-300: #059669;
+  --color-primary-400: #10B981;
+  --color-primary-500: #34D399;
+  --color-primary-600: #6EE7B7;
+  --color-primary-700: #A7F3D0;
+  --color-primary-800: #D1FAE5;
+  --color-primary-900: #ECFDF5;
+
+  /* Secondary - Blue brighter for dark */
+  --color-secondary-50: #0C4A6E;
+  --color-secondary-100: #075985;
+  --color-secondary-200: #0369A1;
+  --color-secondary-300: #0284C7;
+  --color-secondary-400: #0EA5E9;
+  --color-secondary-500: #38BDF8;
+  --color-secondary-600: #7DD3FC;
+  --color-secondary-700: #BAE6FD;
 
   /* Critical - Brighter for dark */
   --color-critical-50: #450A0A;
@@ -140,35 +161,35 @@
   --color-critical-600: #FCA5A5;
   --color-critical-700: #FECACA;
 
-  /* Warning - Brighter for dark */
-  --color-warning-50: #451A03;
-  --color-warning-100: #78350F;
-  --color-warning-200: #B45309;
-  --color-warning-300: #D97706;
-  --color-warning-400: #F59E0B;
-  --color-warning-500: #FBBF24;
-  --color-warning-600: #FCD34D;
-  --color-warning-700: #FDE68A;
+  /* Warning - Yellow brighter for dark */
+  --color-warning-50: #713F12;
+  --color-warning-100: #854D0E;
+  --color-warning-200: #A16207;
+  --color-warning-300: #CA8A04;
+  --color-warning-400: #EAB308;
+  --color-warning-500: #FACC15;
+  --color-warning-600: #FDE047;
+  --color-warning-700: #FEF08A;
 
-  /* Success - Teal brighter for dark */
-  --color-success-50: #134E4A;
-  --color-success-100: #115E59;
-  --color-success-200: #0F766E;
-  --color-success-300: #0D9488;
-  --color-success-400: #14B8A6;
-  --color-success-500: #2DD4BF;
-  --color-success-600: #5EEAD4;
-  --color-success-700: #99F6E4;
+  /* Success - Emerald brighter for dark */
+  --color-success-50: #064E3B;
+  --color-success-100: #065F46;
+  --color-success-200: #047857;
+  --color-success-300: #059669;
+  --color-success-400: #10B981;
+  --color-success-500: #34D399;
+  --color-success-600: #6EE7B7;
+  --color-success-700: #A7F3D0;
 
-  /* Info - Same as primary for dark */
-  --color-info-50: #134E4A;
-  --color-info-100: #115E59;
-  --color-info-200: #0F766E;
-  --color-info-300: #0D9488;
-  --color-info-400: #14B8A6;
-  --color-info-500: #2DD4BF;
-  --color-info-600: #5EEAD4;
-  --color-info-700: #99F6E4;
+  /* Info - Blue brighter for dark */
+  --color-info-50: #0C4A6E;
+  --color-info-100: #075985;
+  --color-info-200: #0369A1;
+  --color-info-300: #0284C7;
+  --color-info-400: #0EA5E9;
+  --color-info-500: #38BDF8;
+  --color-info-600: #7DD3FC;
+  --color-info-700: #BAE6FD;
 
   /* Dark Surfaces */
   --color-background: #0A0A0F;
@@ -192,10 +213,11 @@
   --shadow-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4);
   --shadow-elevation-4: 0 8px 16px rgba(0, 0, 0, 0.5), 0 16px 32px rgba(0, 0, 0, 0.4);
   --shadow-glass: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-glow-primary: 0 0 24px rgba(45, 212, 191, 0.4);
-  --shadow-glow-success: 0 0 24px rgba(45, 212, 191, 0.4);
-  --shadow-glow-warning: 0 0 24px rgba(251, 191, 36, 0.4);
+  --shadow-glow-primary: 0 0 24px rgba(52, 211, 153, 0.4);
+  --shadow-glow-success: 0 0 24px rgba(52, 211, 153, 0.4);
+  --shadow-glow-warning: 0 0 24px rgba(250, 204, 21, 0.4);
   --shadow-glow-critical: 0 0 24px rgba(248, 113, 113, 0.4);
+  --shadow-glow-secondary: 0 0 24px rgba(56, 189, 248, 0.4);
 }
 
 /* ============ TAILWIND THEME EXTENSION ============ */
@@ -211,6 +233,15 @@
   --color-primary-700: var(--color-primary-700);
   --color-primary-800: var(--color-primary-800);
   --color-primary-900: var(--color-primary-900);
+
+  --color-secondary-50: var(--color-secondary-50);
+  --color-secondary-100: var(--color-secondary-100);
+  --color-secondary-200: var(--color-secondary-200);
+  --color-secondary-300: var(--color-secondary-300);
+  --color-secondary-400: var(--color-secondary-400);
+  --color-secondary-500: var(--color-secondary-500);
+  --color-secondary-600: var(--color-secondary-600);
+  --color-secondary-700: var(--color-secondary-700);
 
   --color-critical-50: var(--color-critical-50);
   --color-critical-100: var(--color-critical-100);
@@ -444,5 +475,5 @@ body {
 
 .dark ::selection {
   background: var(--color-primary-500);
-  color: white;
+  color: #000000;
 }

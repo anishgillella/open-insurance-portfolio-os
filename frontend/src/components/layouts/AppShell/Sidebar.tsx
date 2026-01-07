@@ -29,7 +29,7 @@ const navigation: Array<{
   badge?: string | number;
 }> = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Properties', href: '/properties', icon: Building2 },
+  { name: 'Properties & Policies', href: '/properties', icon: Building2 },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
