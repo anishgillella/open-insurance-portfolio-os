@@ -42,7 +42,7 @@ interface ColumnConfig {
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
-  { key: 'expand', label: '', width: 40, minWidth: 40 },
+  { key: 'checkbox', label: '', width: 40, minWidth: 40 },
   { key: 'property', label: 'Property', width: 180, minWidth: 120, sortable: true, sortField: 'property' },
   { key: 'policyNumber', label: 'Policy #', width: 120, minWidth: 80, sortable: true, sortField: 'policyNumber' },
   { key: 'owner', label: 'Owner', width: 140, minWidth: 100, sortable: true, sortField: 'owner' },
@@ -67,7 +67,10 @@ interface PropertyRowData {
   owner: string;
   policyType: string;
   address: string;
+  city: string;
+  state: string;
   renewalDate: string;
+  renewalDateObj: Date;
   status: 'Active' | 'Expiring' | 'Expired';
   premium: number;
   broker: string;
@@ -120,6 +123,26 @@ export default function PropertiesPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPropertyModal, setSelectedPropertyModal] = useState<PropertyRowData | null>(null);
+
+  // Active filters - each filter has a field, operator, and value
+  interface ActiveFilter {
+    id: string;
+    field: string;
+    operator: 'is' | 'contains';
+    value: string;
+  }
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Selection state
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSOV, setExportSOV] = useState(false);
+  const [exportDocuments, setExportDocuments] = useState(true);
+  const [exportCSV, setExportCSV] = useState(false);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,14 +212,21 @@ export default function PropertiesPage() {
         { policyType: 'General', limitType: 'Business Income', dedSir: premium, premium: premium, premiumV: premium },
       ];
 
+      const city = property.address?.city || 'New York';
+      const state = property.address?.state || 'NY';
+      const renewalDateObj = property.next_expiration ? new Date(property.next_expiration) : new Date('2026-03-09');
+
       return {
         id: property.id,
         propertyName: property.name || 'Property Name',
         policyNumber: generatePolicyNumber(seed),
         owner: 'Channel Capital',
         policyType: 'Property',
-        address: `${property.address?.city || 'New York'}, ${property.address?.state || 'NY'}`,
+        address: `${city}, ${state}`,
+        city,
+        state,
         renewalDate,
+        renewalDateObj,
         status,
         premium,
         broker: getRandomItem(DEMO_BROKERS, seed + 'broker'),
@@ -209,6 +239,132 @@ export default function PropertiesPage() {
       };
     });
   }, [properties]);
+
+  // Filter field definitions
+  const FILTER_FIELDS = [
+    { key: 'property', label: 'Property', type: 'select' as const },
+    { key: 'owner', label: 'Owner', type: 'select' as const },
+    { key: 'policyType', label: 'Policy Type', type: 'select' as const },
+    { key: 'city', label: 'City', type: 'select' as const },
+    { key: 'state', label: 'State', type: 'select' as const },
+    { key: 'expirationDate', label: 'Expiration Date', type: 'range' as const },
+    { key: 'status', label: 'Status', type: 'select' as const },
+    { key: 'premium', label: 'Premium', type: 'range' as const },
+    { key: 'broker', label: 'Broker', type: 'select' as const },
+    { key: 'consultant', label: 'Consultant', type: 'select' as const },
+    { key: 'carrier', label: 'Carrier', type: 'select' as const },
+    { key: 'management', label: 'Management Company', type: 'select' as const },
+    { key: 'compliance', label: 'Compliance Status', type: 'select' as const },
+    { key: 'captive', label: 'Captive Participation', type: 'select' as const },
+  ];
+
+  // Extract unique filter options from data
+  const filterValueOptions = useMemo(() => {
+    return {
+      property: [...new Set(rowData.map((r) => r.propertyName))].sort(),
+      owner: [...new Set(rowData.map((r) => r.owner))].sort(),
+      policyType: [...new Set(rowData.map((r) => r.policyType))].sort(),
+      city: [...new Set(rowData.map((r) => r.city))].sort(),
+      state: [...new Set(rowData.map((r) => r.state))].sort(),
+      expirationDate: [
+        { value: 'expired', label: 'Expired' },
+        { value: '30days', label: 'Within 30 Days' },
+        { value: '60days', label: 'Within 60 Days' },
+        { value: '90days', label: 'Within 90 Days' },
+        { value: '6months', label: 'Within 6 Months' },
+        { value: '1year', label: 'Within 1 Year' },
+      ],
+      status: ['Active', 'Expiring', 'Expired'],
+      premium: [
+        { value: 'under25k', label: 'Under $25,000' },
+        { value: '25k-50k', label: '$25,000 - $50,000' },
+        { value: '50k-100k', label: '$50,000 - $100,000' },
+        { value: '100k-250k', label: '$100,000 - $250,000' },
+        { value: 'over250k', label: 'Over $250,000' },
+      ],
+      broker: [...new Set(rowData.map((r) => r.broker))].sort(),
+      consultant: [...new Set(rowData.map((r) => r.consultant))].sort(),
+      carrier: [...new Set(rowData.map((r) => r.carrier))].sort(),
+      management: [...new Set(rowData.map((r) => r.management))].sort(),
+      compliance: [
+        { value: 'compliant', label: 'Compliant' },
+        { value: 'non-compliant', label: 'Non-Compliant' },
+        { value: 'pending', label: 'Pending Review' },
+      ],
+      captive: [...new Set(rowData.map((r) => r.captive))].sort(),
+    };
+  }, [rowData]);
+
+  // Check if any filters are active
+  const hasActiveFilters = activeFilters.length > 0;
+  const activeFilterCount = activeFilters.length;
+
+  // Add a new filter
+  const addFilter = (fieldKey: string) => {
+    const newFilter: ActiveFilter = {
+      id: `${fieldKey}-${Date.now()}`,
+      field: fieldKey,
+      operator: 'is',
+      value: '',
+    };
+    setActiveFilters([...activeFilters, newFilter]);
+    setShowFilterDropdown(false);
+  };
+
+  // Update a filter value
+  const updateFilter = (filterId: string, updates: Partial<ActiveFilter>) => {
+    setActiveFilters(activeFilters.map((f) =>
+      f.id === filterId ? { ...f, ...updates } : f
+    ));
+  };
+
+  // Remove a filter
+  const removeFilter = (filterId: string) => {
+    setActiveFilters(activeFilters.filter((f) => f.id !== filterId));
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setActiveFilters([]);
+  };
+
+  // Selection handlers
+  const toggleRowSelection = (id: string) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedRows(newSelected);
+  };
+
+  // Export handler
+  const handleExport = () => {
+    // For now, just close the modal - actual export logic would go here
+    console.log('Exporting...', {
+      selectedRows: Array.from(selectedRows),
+      exportSOV,
+      exportDocuments,
+      exportCSV,
+    });
+    setShowExportModal(false);
+    // Reset export options
+    setExportSOV(false);
+    setExportDocuments(true);
+    setExportCSV(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
@@ -225,6 +381,69 @@ export default function PropertiesPage() {
           row.carrier.toLowerCase().includes(query)
       );
     }
+
+    // Apply active filters
+    activeFilters.forEach((filter) => {
+      if (!filter.value) return; // Skip filters without values
+
+      result = result.filter((row) => {
+        const today = new Date();
+        switch (filter.field) {
+          case 'property':
+            return row.propertyName === filter.value;
+          case 'owner':
+            return row.owner === filter.value;
+          case 'policyType':
+            return row.policyType === filter.value;
+          case 'city':
+            return row.city === filter.value;
+          case 'state':
+            return row.state === filter.value;
+          case 'expirationDate': {
+            const daysUntil = Math.ceil((row.renewalDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            switch (filter.value) {
+              case 'expired': return daysUntil < 0;
+              case '30days': return daysUntil >= 0 && daysUntil <= 30;
+              case '60days': return daysUntil >= 0 && daysUntil <= 60;
+              case '90days': return daysUntil >= 0 && daysUntil <= 90;
+              case '6months': return daysUntil >= 0 && daysUntil <= 180;
+              case '1year': return daysUntil >= 0 && daysUntil <= 365;
+              default: return true;
+            }
+          }
+          case 'status':
+            return row.status === filter.value;
+          case 'premium':
+            switch (filter.value) {
+              case 'under25k': return row.premium < 25000;
+              case '25k-50k': return row.premium >= 25000 && row.premium < 50000;
+              case '50k-100k': return row.premium >= 50000 && row.premium < 100000;
+              case '100k-250k': return row.premium >= 100000 && row.premium < 250000;
+              case 'over250k': return row.premium >= 250000;
+              default: return true;
+            }
+          case 'broker':
+            return row.broker === filter.value;
+          case 'consultant':
+            return row.consultant === filter.value;
+          case 'carrier':
+            return row.carrier === filter.value;
+          case 'management':
+            return row.management === filter.value;
+          case 'compliance':
+            switch (filter.value) {
+              case 'compliant': return row.compliant === true;
+              case 'non-compliant': return row.compliant === false;
+              case 'pending': return row.compliant === null;
+              default: return true;
+            }
+          case 'captive':
+            return row.captive === filter.value;
+          default:
+            return true;
+        }
+      });
+    });
 
     // Sort
     result.sort((a, b) => {
@@ -259,7 +478,7 @@ export default function PropertiesPage() {
     });
 
     return result;
-  }, [rowData, searchQuery, sortField, sortDirection]);
+  }, [rowData, searchQuery, sortField, sortDirection, activeFilters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
@@ -267,6 +486,18 @@ export default function PropertiesPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // Selection computed values (must be after paginatedData)
+  const toggleSelectAll = () => {
+    if (selectedRows.size === paginatedData.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(paginatedData.map((row) => row.id)));
+    }
+  };
+
+  const isAllSelected = paginatedData.length > 0 && selectedRows.size === paginatedData.length;
+  const isSomeSelected = selectedRows.size > 0 && selectedRows.size < paginatedData.length;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -460,18 +691,163 @@ export default function PropertiesPage() {
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-lg transition-colors',
-              showFilters ? 'text-teal-600 border-teal-300' : 'text-gray-600 hover:text-gray-900'
+              showFilters ? 'text-teal-600 border-teal-300 bg-teal-50' : 'text-gray-600 hover:text-gray-900'
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-teal-500 text-white rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors"
+          >
             <Download className="h-4 w-4" />
-            Export
+            Download
           </button>
         </div>
       </motion.div>
+
+      {/* Filter Panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-visible"
+          >
+            <div className="bg-white rounded-xl border border-gray-200 p-4 relative z-20">
+              {/* Header with title and clear all */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-gray-700">Filters</span>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Active Filters */}
+              <div className="space-y-3">
+                {activeFilters.map((filter) => {
+                  const fieldDef = FILTER_FIELDS.find((f) => f.key === filter.field);
+                  const options = filterValueOptions[filter.field as keyof typeof filterValueOptions] || [];
+
+                  return (
+                    <div key={filter.id} className="flex items-center gap-2">
+                      {/* Field Name */}
+                      <select
+                        value={filter.field}
+                        onChange={(e) => updateFilter(filter.id, { field: e.target.value, value: '' })}
+                        className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent min-w-[160px]"
+                      >
+                        {FILTER_FIELDS.map((f) => (
+                          <option key={f.key} value={f.key}>{f.label}</option>
+                        ))}
+                      </select>
+
+                      {/* Operator */}
+                      <select
+                        value={filter.operator}
+                        onChange={(e) => updateFilter(filter.id, { operator: e.target.value as 'is' | 'contains' })}
+                        className="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent w-24"
+                      >
+                        <option value="is">is</option>
+                      </select>
+
+                      {/* Value */}
+                      <select
+                        value={filter.value}
+                        onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
+                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent min-w-[200px]"
+                      >
+                        <option value="">Select value...</option>
+                        {Array.isArray(options) && options.map((opt) => {
+                          if (typeof opt === 'string') {
+                            return <option key={opt} value={opt}>{opt}</option>;
+                          } else if (typeof opt === 'object' && opt !== null && 'value' in opt) {
+                            return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+                          }
+                          return null;
+                        })}
+                      </select>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => removeFilter(filter.id)}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Select Filter Dropdown */}
+                <div className="relative" ref={filterDropdownRef}>
+                  <button
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                    className={cn(
+                      'flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white min-w-[180px] transition-colors',
+                      showFilterDropdown ? 'border-teal-500 ring-2 ring-teal-500' : 'hover:border-gray-300'
+                    )}
+                  >
+                    <span className="text-gray-500">Select Filter</span>
+                    <ChevronDown className={cn(
+                      'h-4 w-4 text-gray-400 transition-transform',
+                      showFilterDropdown && 'rotate-180'
+                    )} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showFilterDropdown && (
+                    <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg border border-gray-200 shadow-xl z-[100] py-1 max-h-80 overflow-y-auto">
+                      {FILTER_FIELDS.map((field) => (
+                        <button
+                          key={field.key}
+                          onClick={() => addFilter(field.key)}
+                          className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          {field.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* + Add Filter link */}
+                {activeFilters.length > 0 && (
+                  <button
+                    onClick={() => setShowFilterDropdown(true)}
+                    className="flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-700 font-medium py-2"
+                  >
+                    <span className="text-lg leading-none">+</span>
+                    Add Filter
+                  </button>
+                )}
+              </div>
+
+              {/* Results count */}
+              {hasActiveFilters && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <span className="text-sm text-gray-500">
+                    Showing {filteredAndSortedData.length} of {rowData.length} results
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Table */}
       <motion.div variants={staggerItem} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -485,25 +861,39 @@ export default function PropertiesPage() {
                     className="relative text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap select-none"
                     style={{ width: columnWidths[col.key], minWidth: col.minWidth }}
                   >
-                    <div
-                      className={cn(
-                        'px-4 py-3 flex items-center gap-1',
-                        col.sortable && 'cursor-pointer hover:bg-gray-100'
-                      )}
-                      onClick={() => col.sortField && handleSort(col.sortField)}
-                    >
-                      {col.label}
-                      {col.sortable && (
-                        <span className={cn(
-                          'text-gray-400',
-                          sortField === col.sortField && 'text-gray-600'
-                        )}>
-                          ↑↓
-                        </span>
-                      )}
-                    </div>
+                    {col.key === 'checkbox' ? (
+                      <div className="px-4 py-3 flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = isSomeSelected;
+                          }}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          'px-4 py-3 flex items-center gap-1',
+                          col.sortable && 'cursor-pointer hover:bg-gray-100'
+                        )}
+                        onClick={() => col.sortField && handleSort(col.sortField)}
+                      >
+                        {col.label}
+                        {col.sortable && (
+                          <span className={cn(
+                            'text-gray-400',
+                            sortField === col.sortField && 'text-gray-600'
+                          )}>
+                            ↑↓
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {/* Resize handle */}
-                    {colIndex < DEFAULT_COLUMNS.length - 1 && (
+                    {colIndex < DEFAULT_COLUMNS.length - 1 && col.key !== 'checkbox' && (
                       <div
                         className={cn(
                           'absolute right-0 top-0 bottom-0 w-1 cursor-col-resize group hover:bg-teal-500 transition-colors',
@@ -524,11 +914,27 @@ export default function PropertiesPage() {
               {paginatedData.map((row) => (
                 <tr
                   key={row.id}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className={cn(
+                    'hover:bg-gray-50 cursor-pointer transition-colors',
+                    selectedRows.has(row.id) && 'bg-teal-50'
+                  )}
                   onClick={() => handleRowClick(row)}
                 >
-                  {/* Spacer column */}
-                  <td className="px-4 py-3" style={{ width: columnWidths.expand }} />
+                  {/* Checkbox column */}
+                  <td
+                    className="px-4 py-3"
+                    style={{ width: columnWidths.checkbox }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(row.id)}
+                        onChange={() => toggleRowSelection(row.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                      />
+                    </div>
+                  </td>
                   {/* Property */}
                   <td className="px-4 py-3" style={{ width: columnWidths.property }}>
                     <div className="flex items-center gap-2">
@@ -683,17 +1089,432 @@ export default function PropertiesPage() {
         </motion.div>
       )}
 
-      {/* Coverage Details Modal */}
+      {/* Property Details Slide-Over Panel */}
       <AnimatePresence>
         {selectedPropertyModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            {/* Blurred Backdrop */}
+          <div className="fixed inset-0 z-[9999]">
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[9999]"
+              className="absolute inset-0 bg-black/40"
               onClick={closePropertyModal}
+            />
+
+            {/* Slide-over Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-2xl overflow-hidden flex flex-col"
+            >
+              {/* Panel Header */}
+              <div className="flex-shrink-0 border-b border-gray-200 bg-white">
+                {/* Last Updated Badge */}
+                <div className="px-6 pt-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                    Last Updated {new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                  </span>
+                </div>
+
+                {/* Title and Actions */}
+                <div className="flex items-start justify-between px-6 py-4">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">{selectedPropertyModal.propertyName}</h2>
+                    <p className="text-sm text-gray-500">{selectedPropertyModal.address}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
+                      <Upload className="h-4 w-4" />
+                      Upload
+                    </button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
+                      <Download className="h-4 w-4" />
+                      Export
+                    </button>
+                    <button className="p-1.5 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg transition-colors">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={closePropertyModal}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ml-2"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-6 space-y-8">
+                  {/* Details Section */}
+                  <section>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Details</h3>
+                    <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Units</p>
+                        <p className="text-lg font-semibold text-gray-900">100</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Deductible</p>
+                        <p className="text-lg font-semibold text-gray-900">10</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Total Premium</p>
+                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedPropertyModal.premium)}</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Ins/U</p>
+                        <p className="text-lg font-semibold text-gray-900">20</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Renewals Date</p>
+                        <p className="text-lg font-semibold text-gray-900">{selectedPropertyModal.renewalDate}</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Claims / Claim $</p>
+                        <p className="text-lg font-semibold text-gray-900">2/~$400k</p>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Policies</p>
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-teal-500 text-white text-sm font-semibold">03</span>
+                      </div>
+                      <div className="p-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Carriers</p>
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-teal-500 text-white text-sm font-semibold">03</span>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Coverage Section */}
+                  <section>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-gray-900">Coverage (3 Policies)</h3>
+                      <div className="flex gap-2">
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-teal-700 bg-white border-2 border-teal-500 rounded-full">
+                          <Check className="h-4 w-4" />
+                          General - {selectedPropertyModal.policyNumber}
+                        </button>
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-gray-300">
+                          Equipment - 12313124123
+                        </button>
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:border-gray-300">
+                          Umbrella - 12313124
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Policy Details */}
+                    <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Policy Type</p>
+                        <p className="font-medium text-gray-900">General</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Policy Number</p>
+                        <p className="font-medium text-gray-900">{selectedPropertyModal.policyNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Broker</p>
+                        <p className="font-medium text-gray-900">{selectedPropertyModal.broker}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Carrier</p>
+                        <p className="font-medium text-gray-900">{selectedPropertyModal.carrier}</p>
+                      </div>
+                    </div>
+
+                    {/* Coverage Table */}
+                    <div className="overflow-hidden rounded-lg border border-gray-200">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Limit Type ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Limits ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiration ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">DED/SIR ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Premium ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Premium/U ↑↓</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {selectedPropertyModal.coverages.map((coverage, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-gray-900">{coverage.limitType}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.premium)}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{selectedPropertyModal.renewalDate}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.dedSir)}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.premium)}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.premiumV)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  {/* SOV Section */}
+                  <section>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">SOV</h3>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Bldg # ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Address ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">County ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Building Description ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap"># of MF Units ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Area / SQFT ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Total Building Area ↑↓</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">1</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">100 East Road, New York, NY 10000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Kings County</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Multi-unit</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">12</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Yes</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">17,500</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">2</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">100 East Road, New York, NY 10000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Kings County</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Multi-unit</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">12</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">-</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">17,500</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">3</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">100 East Road, New York, NY 10000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Kings County</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Multi-unit</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">12</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">-</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">17,500</td>
+                          </tr>
+                          <tr className="bg-gray-50 font-medium">
+                            <td className="px-4 py-3 text-sm text-gray-900" colSpan={4}>Totals</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">36</td>
+                            <td className="px-4 py-3 text-sm text-gray-900"></td>
+                            <td className="px-4 py-3 text-sm text-gray-900">50,000</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  {/* Additional Info Section */}
+                  <section>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Additional Info</h3>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Bldg # ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Roof Type ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Roof Year Last Replaced ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Roof Material ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Plumbing Year ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Electrical Year ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">HVAC Year ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Fire Alarm Type ↑↓</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">1</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Flat</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2020</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">TPO</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Manual</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">2</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Pitched</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2020</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Ashphalt</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Automatic</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">3</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Gable</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2020</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Metal</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">2000</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Monitored</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  {/* Non-Indoor Amenities Section */}
+                  <section>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Non-Indoor Amenities</h3>
+                    <div className="overflow-hidden rounded-lg border border-gray-200">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Non-Indoor Amenities ↑↓</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Included ↑↓</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">Swimming Pool</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Yes</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">Sand Volleyball Court</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Yes</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-900">Basketball Court</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">Yes</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  {/* Attachments Section */}
+                  <section>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-gray-900">Attachments</h3>
+                      <select className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700">
+                        <option>2025</option>
+                        <option>2024</option>
+                        <option>2023</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      {/* Policy Documents */}
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Policy Documents</p>
+                              <p className="text-xs text-gray-500">3 files</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Certificates & Evidence */}
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Certificates & Evidence</p>
+                              <p className="text-xs text-gray-500">5 files</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Loss / Risk Files */}
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Loss / Risk Files</p>
+                              <p className="text-xs text-gray-500">5 files</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Endorsements */}
+                      <div className="border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Endorsements</p>
+                              <p className="text-xs text-gray-500">5 files</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Export Modal */}
+      <AnimatePresence>
+        {showExportModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowExportModal(false)}
             />
 
             {/* Modal */}
@@ -702,81 +1523,113 @@ export default function PropertiesPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl z-[10000] overflow-hidden"
+              className="relative bg-white rounded-xl shadow-2xl w-full max-w-md z-[10000] overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{selectedPropertyModal.propertyName}</h3>
-                    <p className="text-sm text-gray-500">{selectedPropertyModal.address}</p>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Export</h3>
+                  <p className="text-sm text-gray-500">Select files to export</p>
                 </div>
                 <button
-                  onClick={closePropertyModal}
+                  onClick={() => setShowExportModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
 
-              {/* Modal Content - Coverage Table */}
-              <div className="p-5">
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-teal-500 text-white">
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Policy Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Limit Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">DED/SIR</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Premium</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Premium/V</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
-                      {selectedPropertyModal.coverages.map((coverage, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-600">{coverage.policyType}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{coverage.limitType}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.dedSir)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.premium)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(coverage.premiumV)}</td>
-                        </tr>
-                      ))}
-                      {/* Total Row */}
-                      <tr className="bg-gray-50 font-medium">
-                        <td className="px-4 py-3 text-sm text-gray-900" colSpan={2}>Total</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(selectedPropertyModal.coverages.reduce((sum, c) => sum + c.dedSir, 0))}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(selectedPropertyModal.coverages.reduce((sum, c) => sum + c.premium, 0))}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatCurrency(selectedPropertyModal.coverages.reduce((sum, c) => sum + c.premiumV, 0))}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+              {/* Modal Content */}
+              <div className="p-5 space-y-4">
+                {/* SOV Option */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">SOV</p>
+                    <p className="text-xs text-gray-500">Export SOV</p>
+                  </div>
+                  <button
+                    onClick={() => setExportSOV(!exportSOV)}
+                    className={cn(
+                      'relative w-11 h-6 rounded-full transition-colors',
+                      exportSOV ? 'bg-teal-500' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                        exportSOV ? 'translate-x-5' : 'translate-x-0'
+                      )}
+                    />
+                  </button>
                 </div>
+
+                {/* Other Documents Option */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Other Documents</p>
+                    <p className="text-xs text-gray-500">Export all property documents and reports</p>
+                  </div>
+                  <button
+                    onClick={() => setExportDocuments(!exportDocuments)}
+                    className={cn(
+                      'relative w-11 h-6 rounded-full transition-colors',
+                      exportDocuments ? 'bg-teal-500' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                        exportDocuments ? 'translate-x-5' : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* CSV Option */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">CSV</p>
+                    <p className="text-xs text-gray-500">Export all data to CSV file</p>
+                  </div>
+                  <button
+                    onClick={() => setExportCSV(!exportCSV)}
+                    className={cn(
+                      'relative w-11 h-6 rounded-full transition-colors',
+                      exportCSV ? 'bg-teal-500' : 'bg-gray-200'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                        exportCSV ? 'translate-x-5' : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Selected count */}
+                {selectedRows.size > 0 && (
+                  <p className="text-xs text-gray-500 pt-2">
+                    {selectedRows.size} {selectedRows.size === 1 ? 'property' : 'properties'} selected
+                  </p>
+                )}
               </div>
 
               {/* Modal Footer */}
               <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50">
                 <button
-                  onClick={closePropertyModal}
+                  onClick={() => setShowExportModal(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
                 >
-                  Close
+                  Cancel
                 </button>
-                <Link href={`/properties/${selectedPropertyModal.id}`}>
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors">
-                    View Property Details
-                  </button>
-                </Link>
+                <button
+                  onClick={handleExport}
+                  disabled={!exportSOV && !exportDocuments && !exportCSV}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirm
+                </button>
               </div>
             </motion.div>
           </div>
