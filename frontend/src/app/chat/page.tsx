@@ -1,166 +1,227 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import {
   Send,
   Loader2,
-  Bot,
-  User,
+  Upload,
+  Bell,
   FileText,
-  ExternalLink,
-  AlertCircle,
+  ChevronDown,
+  Paperclip,
+  Globe,
+  ThumbsUp,
+  Image,
+  ArrowLeft,
   Sparkles,
-  Building2,
-  Filter,
+  AlertCircle,
 } from 'lucide-react';
-import { Card, Button, Badge } from '@/components/primitives';
+import { Button } from '@/components/primitives';
 import { cn } from '@/lib/utils';
-import { staggerContainer, staggerItem } from '@/lib/motion/variants';
 import {
   streamChat,
   propertiesApi,
+  renewalsApi,
+  documentsApi,
   type ChatSource,
   type Property,
+  type RenewalAlert,
+  type Document,
 } from '@/lib/api';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: ChatSource[];
-  isStreaming?: boolean;
-  error?: string;
+type TaskStatus = 'Open' | 'Acknowledged' | 'Resolved';
+
+interface TaskViewState {
+  task: RenewalAlert;
+  response: string;
+  isLoading: boolean;
 }
 
-export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+// Mock tasks for demo when no real tasks exist
+const mockTasks: RenewalAlert[] = [
+  {
+    id: 'mock-1',
+    property_id: 'prop-1',
+    property_name: 'Solana Apartments',
+    policy_number: 'L1234567890',
+    expiration_date: '2025-03-15',
+    days_until_expiration: 45,
+    severity: 'warning',
+    title: 'Policy Renewal Required',
+    message: 'Policy expires in 45 days',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-2',
+    property_id: 'prop-2',
+    property_name: 'Solana Apartments',
+    policy_number: 'L1234567890',
+    expiration_date: '2025-03-20',
+    days_until_expiration: 50,
+    severity: 'info',
+    title: 'Policy Renewal Required',
+    message: 'Policy expires in 50 days',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-3',
+    property_id: 'prop-3',
+    property_name: 'Solana Apartments',
+    policy_number: 'L1234567890',
+    expiration_date: '2025-04-01',
+    days_until_expiration: 62,
+    severity: 'info',
+    title: 'Policy Renewal Required',
+    message: 'Policy expires in 62 days',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-4',
+    property_id: 'prop-4',
+    property_name: 'Solana Apartments',
+    policy_number: 'L1234567890',
+    expiration_date: '2025-04-15',
+    days_until_expiration: 76,
+    severity: 'info',
+    title: 'Policy Renewal Required',
+    message: 'Policy expires in 76 days',
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+];
+
+export default function AIAssistantPage() {
+  // Data state - initialize tasks with mock data
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [tasks, setTasks] = useState<RenewalAlert[]>(mockTasks);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Filter state
+  const [taskStatusFilter, setTaskStatusFilter] = useState<TaskStatus>('Open');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+
+  // Chat state
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [showFilters, setShowFilters] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch properties for filter
+  // View state - when viewing a specific task's AI response
+  const [taskView, setTaskView] = useState<TaskViewState | null>(null);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch data
   useEffect(() => {
-    propertiesApi.list()
-      .then((data) => {
-        // Handle various API response formats
-        setProperties(
-          Array.isArray(data) ? data :
-          (data as { properties?: Property[]; items?: Property[] })?.properties ||
-          (data as { items?: Property[] })?.items || []
-        );
-      })
-      .catch(console.error);
-  }, []);
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        const [propsData, alertsData, docsData] = await Promise.all([
+          propertiesApi.list(),
+          renewalsApi.getAlerts(),
+          documentsApi.list(),
+        ]);
 
-  // Scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+        // Handle various API response formats for properties
+        const propertiesList = Array.isArray(propsData)
+          ? propsData
+          : (propsData as { properties?: Property[] })?.properties || [];
+        setProperties(propertiesList);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+        // Handle alerts - use mock tasks if none exist
+        const alertsList = Array.isArray(alertsData) ? alertsData : [];
+        // Always use mock tasks if no real alerts, or merge them
+        if (alertsList.length === 0) {
+          setTasks(mockTasks);
+        } else {
+          setTasks(alertsList);
+        }
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 200)}px`;
-    }
-  }, [input]);
-
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
+        // Handle documents
+        const docsList = docsData?.documents || [];
+        setDocuments(docsList);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        // On error, still show mock tasks
+        setTasks(mockTasks);
+      } finally {
+        setIsLoadingData(false);
+      }
     };
 
-    const assistantMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: '',
-      isStreaming: true,
-    };
+    fetchData();
+  }, []);
 
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
-    setInput('');
-    setIsLoading(true);
+  // Filter tasks by status
+  const filteredTasks = tasks.filter((task) => {
+    if (taskStatusFilter === 'Open') return task.status === 'pending';
+    if (taskStatusFilter === 'Acknowledged') return task.status === 'acknowledged';
+    if (taskStatusFilter === 'Resolved') return task.status === 'resolved';
+    return true;
+  });
+
+  // Filter documents by property
+  const filteredDocuments = selectedPropertyId
+    ? documents.filter((doc) => doc.property_id === selectedPropertyId)
+    : documents;
+
+  // Handle viewing a task
+  const handleViewTask = async (task: RenewalAlert) => {
+    setTaskView({ task, response: '', isLoading: true });
+
+    const query = `Please provide a summary for the renewal task: Policy ${task.policy_number || 'N/A'} for property ${task.property_name}. Include property details, insurance policy summary, and next actions.`;
 
     try {
       let content = '';
-      let sources: ChatSource[] = [];
-
       await streamChat(
-        userMessage.content,
+        query,
         {
           onContent: (chunk) => {
             content += chunk;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessage.id
-                  ? { ...m, content, isStreaming: true }
-                  : m
-              )
-            );
+            setTaskView((prev) => (prev ? { ...prev, response: content } : null));
           },
-          onSources: (newSources) => {
-            sources = newSources;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessage.id
-                  ? { ...m, sources, isStreaming: true }
-                  : m
-              )
-            );
-          },
+          onSources: () => {},
           onDone: (newConversationId) => {
             setConversationId(newConversationId);
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessage.id
-                  ? { ...m, content, sources, isStreaming: false }
-                  : m
-              )
-            );
+            setTaskView((prev) => (prev ? { ...prev, isLoading: false } : null));
           },
           onError: (error) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessage.id
-                  ? { ...m, error, isStreaming: false }
-                  : m
-              )
+            setTaskView((prev) =>
+              prev ? { ...prev, response: `Error: ${error}`, isLoading: false } : null
             );
           },
         },
         conversationId,
-        selectedPropertyId || undefined
+        task.property_id
       );
     } catch (err) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMessage.id
-            ? {
-                ...m,
-                error: err instanceof Error ? err.message : 'Failed to get response',
-                isStreaming: false,
-              }
-            : m
-        )
+      setTaskView((prev) =>
+        prev
+          ? {
+              ...prev,
+              response: `Error: ${err instanceof Error ? err.message : 'Failed to get response'}`,
+              isLoading: false,
+            }
+          : null
       );
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  // Handle chat send
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const query = input.trim();
+    setInput('');
+    setIsLoading(true);
+
+    // For demo, just show an alert
+    alert(`Sending query: "${query}"\n\nIn production, this would start a new conversation.`);
+    setIsLoading(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -170,284 +231,320 @@ export default function ChatPage() {
     }
   };
 
-  const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
 
-  return (
-    <motion.div
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-      className="flex flex-col h-[calc(100vh-8rem)]"
-    >
-      {/* Header */}
-      <motion.div variants={staggerItem} className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            Insurance Assistant
-          </h1>
-          <p className="text-[var(--color-text-secondary)] mt-1">
-            Ask questions about your insurance documents
-          </p>
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just Now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getDocumentIcon = (docType: string) => {
+    return <FileText className="h-4 w-4 text-gray-400" />;
+  };
+
+  // Task View - when viewing a specific task's AI response
+  if (taskView) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-semibold text-gray-900">AI Assistant</h1>
+          <div className="flex items-center gap-3">
+            <button className="p-2 text-gray-400 hover:text-gray-600">
+              <Bell className="h-5 w-5" />
+            </button>
+            <Button variant="ghost" size="sm" leftIcon={<Upload className="h-4 w-4" />}>
+              Upload Document
+            </Button>
+          </div>
         </div>
-        <Button
-          variant={showFilters ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          {selectedPropertyId && (
-            <Badge variant="primary" className="ml-2">
-              1
-            </Badge>
-          )}
-        </Button>
-      </motion.div>
 
-      {/* Filters */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-4"
+        {/* Task Link */}
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            onClick={() => setTaskView(null)}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           >
-            <Card padding="md">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <label className="text-sm text-[var(--color-text-muted)] mb-1 block">
-                    Filter by Property
-                  </label>
-                  <select
-                    value={selectedPropertyId}
-                    onChange={(e) => setSelectedPropertyId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm"
-                  >
-                    <option value="">All Properties</option>
-                    {properties.map((property) => (
-                      <option key={property.id} value={property.id}>
-                        {property.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedPropertyId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedPropertyId('')}
-                    className="mt-5"
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Messages */}
-      <motion.div
-        variants={staggerItem}
-        className="flex-1 overflow-y-auto rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface)]"
-      >
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <div className="p-4 rounded-full bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-500)]/10 mb-4">
-              <Sparkles className="h-8 w-8 text-[var(--color-primary-500)]" />
-            </div>
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
-              How can I help you today?
-            </h2>
-            <p className="text-[var(--color-text-secondary)] max-w-md mb-6">
-              I can answer questions about your insurance policies, coverage details,
-              expiration dates, and more based on your uploaded documents.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg">
-              {[
-                'What policies are expiring soon?',
-                'Show me coverage gaps',
-                'What is my total insured value?',
-                'Which properties have compliance issues?',
-              ].map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  variant="ghost"
-                  className="justify-start text-left h-auto py-3 px-4"
-                  onClick={() => {
-                    setInput(suggestion);
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <span className="text-sm">{suggestion}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="p-4 space-y-4">
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </motion.div>
-
-      {/* Input */}
-      <motion.div variants={staggerItem} className="mt-4">
-        {selectedProperty && (
-          <div className="flex items-center gap-2 mb-2 text-sm text-[var(--color-text-muted)]">
-            <Building2 className="h-4 w-4" />
-            <span>Filtering by: {selectedProperty.name}</span>
-          </div>
-        )}
-        <div className="flex items-end gap-3">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question about your insurance documents..."
-              rows={1}
-              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] focus:border-transparent"
-              disabled={isLoading}
-            />
-          </div>
-          <Button
-            variant="primary"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="h-12 w-12 rounded-xl"
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+          <span className="text-sm text-gray-400">|</span>
+          <Sparkles className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-600">
+            View task for Policy #{taskView.task.policy_number || 'N/A'}
+          </span>
         </div>
-        <p className="text-xs text-[var(--color-text-muted)] mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line
-        </p>
-      </motion.div>
-    </motion.div>
-  );
-}
 
-function MessageBubble({ message }: { message: Message }) {
-  const isUser = message.role === 'user';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn('flex gap-3', isUser && 'flex-row-reverse')}
-    >
-      {/* Avatar */}
-      <div
-        className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-          isUser
-            ? 'bg-[var(--color-primary-500)] text-white'
-            : 'bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]'
-        )}
-      >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-      </div>
-
-      {/* Content */}
-      <div className={cn('flex-1 max-w-[80%]', isUser && 'text-right')}>
-        <div
-          className={cn(
-            'inline-block rounded-2xl px-4 py-3 text-sm',
-            isUser
-              ? 'bg-[var(--color-primary-500)] text-white rounded-tr-md'
-              : 'bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] rounded-tl-md'
-          )}
-        >
-          {message.error ? (
-            <div className="flex items-center gap-2 text-[var(--color-critical-500)]">
-              <AlertCircle className="h-4 w-4" />
-              <span>{message.error}</span>
+        {/* Response Content */}
+        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-gray-200 p-6">
+          {taskView.isLoading && !taskView.response ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
             </div>
           ) : (
-            <>
-              {isUser ? (
-                <div className="whitespace-pre-wrap">{message.content}</div>
-              ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-headings:my-2 prose-strong:text-[var(--color-text-primary)] prose-strong:font-semibold">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                </div>
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown>{taskView.response}</ReactMarkdown>
+              {taskView.isLoading && (
+                <span className="inline-block w-2 h-4 bg-teal-500 animate-pulse ml-1" />
               )}
-              {message.isStreaming && (
-                <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
-              )}
-            </>
+            </div>
+          )}
+
+          {!taskView.isLoading && taskView.response && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-500">Would you like me to assist with this?</p>
+            </div>
           )}
         </div>
 
-        {/* Sources */}
-        {message.sources && message.sources.length > 0 && (
-          <div className="mt-2 space-y-1">
-            <p className="text-xs text-[var(--color-text-muted)]">Sources:</p>
-            <div className="flex flex-wrap gap-2">
-              {message.sources.map((source, index) => (
-                <SourceChip key={index} source={source} />
-              ))}
+        {/* Chat Input */}
+        <div className="mt-4">
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSend={handleSend}
+            onKeyDown={handleKeyDown}
+            isLoading={isLoading}
+            inputRef={inputRef}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Main Dashboard View
+  return (
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">AI Assistant</h1>
+        <div className="flex items-center gap-3">
+          <button className="p-2 text-gray-400 hover:text-gray-600">
+            <Bell className="h-5 w-5" />
+          </button>
+          <Button variant="ghost" size="sm" leftIcon={<Upload className="h-4 w-4" />}>
+            Upload Document
+          </Button>
+        </div>
+      </div>
+
+      {/* Welcome Message */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">How can I help you today?</h2>
+        <p className="text-gray-500">
+          Ask me anything about your policies, documents, or upcoming renewals.
+        </p>
+      </div>
+
+      {/* Two Column Layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0 overflow-hidden">
+        {/* Tasks Section */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Tasks</h3>
+            <div className="relative">
+              <select
+                value={taskStatusFilter}
+                onChange={(e) => setTaskStatusFilter(e.target.value as TaskStatus)}
+                className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="Open">Open</option>
+                <option value="Acknowledged">Acknowledged</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
           </div>
-        )}
+
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No {taskStatusFilter.toLowerCase()} tasks
+              </div>
+            ) : (
+              filteredTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {task.property_name || 'Unknown Property'}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      Renew Policy #{task.policy_number || 'N/A'} &bull; {task.status}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleViewTask(task)}
+                    className="ml-3 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    View
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Documents Section */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Documents</h3>
+            <div className="relative">
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => setSelectedPropertyId(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-[180px]"
+              >
+                <option value="">All Properties</option>
+                {properties.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">No documents found</div>
+            ) : (
+              filteredDocuments.slice(0, 10).map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer"
+                >
+                  {getDocumentIcon(doc.document_type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {doc.file_name || 'Untitled Document'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Uploaded {formatDate(doc.created_at)}
+                      {doc.document_type && ` \u2022 ${doc.document_type}`}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
-    </motion.div>
+
+      {/* Chat Input */}
+      <div className="mt-6">
+        <ChatInput
+          value={input}
+          onChange={setInput}
+          onSend={handleSend}
+          onKeyDown={handleKeyDown}
+          isLoading={isLoading}
+          inputRef={inputRef}
+        />
+      </div>
+    </div>
   );
 }
 
-function SourceChip({ source }: { source: ChatSource }) {
-  const [showTooltip, setShowTooltip] = useState(false);
+// Chat Input Component
+interface ChatInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  isLoading: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}
 
+function ChatInput({ value, onChange, onSend, onKeyDown, isLoading, inputRef }: ChatInputProps) {
   return (
-    <div className="relative">
-      <button
-        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border-subtle)] text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-primary-300)] transition-colors"
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        onClick={() => window.open(`/documents/${source.document_id}`, '_blank')}
-      >
-        <FileText className="h-3 w-3" />
-        <span className="max-w-[150px] truncate">{source.document_name}</span>
-        {source.page && (
-          <Badge variant="secondary" className="text-[10px] px-1 py-0">
-            p.{source.page}
-          </Badge>
-        )}
-        <ExternalLink className="h-3 w-3" />
-      </button>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-transparent">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Ask AI anything"
+          className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+          disabled={isLoading}
+        />
 
-      {/* Tooltip */}
-      <AnimatePresence>
-        {showTooltip && source.snippet && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            className="absolute bottom-full left-0 mb-2 z-50 w-72 p-3 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] shadow-lg"
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Model Selector */}
+          <div className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-lg">
+            <span>GPT-5</span>
+            <ChevronDown className="h-3 w-3" />
+          </div>
+
+          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+            <Paperclip className="h-4 w-4" />
+          </button>
+          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+            <Globe className="h-4 w-4" />
+          </button>
+          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+            <ThumbsUp className="h-4 w-4" />
+          </button>
+          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+            <Image className="h-4 w-4" />
+          </button>
+
+          {/* Send Button */}
+          <button
+            onClick={onSend}
+            disabled={!value.trim() || isLoading}
+            className={cn(
+              'p-2 rounded-full transition-colors',
+              value.trim() && !isLoading
+                ? 'bg-teal-500 text-white hover:bg-teal-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            )}
           >
-            <p className="text-xs text-[var(--color-text-muted)] mb-1">Relevant excerpt:</p>
-            <p className="text-xs text-[var(--color-text-secondary)] line-clamp-4">
-              "{source.snippet}"
-            </p>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
-              <span className="text-[10px] text-[var(--color-text-muted)]">
-                Relevance: {Math.round(source.score * 100)}%
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+        <AlertCircle className="h-3 w-3" />
+        Openia is trained with insights from top brokers, consultants, and attorneys. Responses may
+        contain inaccuracies, please verify before taking action.
+      </p>
     </div>
   );
 }

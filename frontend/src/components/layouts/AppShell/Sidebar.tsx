@@ -9,11 +9,12 @@ import {
   Building2,
   AlertTriangle,
   RefreshCw,
-  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Shield,
   FileText,
+  HelpCircle,
+  Brain,
 } from 'lucide-react';
 import { Logo, LogoIcon } from '@/components/shared/Logo';
 
@@ -34,7 +35,8 @@ const navigation: Array<{
   { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
-  { name: 'Chat', href: '/chat', icon: MessageSquare },
+  { name: 'Help Center', href: '/help-center', icon: HelpCircle },
+  { name: 'AI Assistant', href: '/chat', icon: Brain },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
