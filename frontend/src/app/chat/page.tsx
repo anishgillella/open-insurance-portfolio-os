@@ -44,52 +44,72 @@ const mockTasks: RenewalAlert[] = [
     id: 'mock-1',
     property_id: 'prop-1',
     property_name: 'Solana Apartments',
+    policy_id: 'policy-1',
     policy_number: 'L1234567890',
+    threshold_days: 60,
     expiration_date: '2025-03-15',
     days_until_expiration: 45,
     severity: 'warning',
     title: 'Policy Renewal Required',
     message: 'Policy expires in 45 days',
     status: 'pending',
+    llm_priority_score: 85,
+    llm_renewal_strategy: 'Start renewal process immediately due to approaching deadline',
+    llm_key_actions: ['Contact broker', 'Review current coverage', 'Compare market rates'],
     created_at: new Date().toISOString(),
   },
   {
     id: 'mock-2',
     property_id: 'prop-2',
     property_name: 'Solana Apartments',
+    policy_id: 'policy-2',
     policy_number: 'L1234567890',
+    threshold_days: 60,
     expiration_date: '2025-03-20',
     days_until_expiration: 50,
     severity: 'info',
     title: 'Policy Renewal Required',
     message: 'Policy expires in 50 days',
     status: 'pending',
+    llm_priority_score: 70,
+    llm_renewal_strategy: 'Begin preliminary renewal discussions',
+    llm_key_actions: ['Schedule broker meeting', 'Gather property documentation'],
     created_at: new Date().toISOString(),
   },
   {
     id: 'mock-3',
     property_id: 'prop-3',
     property_name: 'Solana Apartments',
+    policy_id: 'policy-3',
     policy_number: 'L1234567890',
+    threshold_days: 90,
     expiration_date: '2025-04-01',
     days_until_expiration: 62,
     severity: 'info',
     title: 'Policy Renewal Required',
     message: 'Policy expires in 62 days',
     status: 'pending',
+    llm_priority_score: 55,
+    llm_renewal_strategy: 'Monitor and plan renewal in coming weeks',
+    llm_key_actions: ['Review policy terms', 'Identify potential improvements'],
     created_at: new Date().toISOString(),
   },
   {
     id: 'mock-4',
     property_id: 'prop-4',
     property_name: 'Solana Apartments',
+    policy_id: 'policy-4',
     policy_number: 'L1234567890',
+    threshold_days: 90,
     expiration_date: '2025-04-15',
     days_until_expiration: 76,
     severity: 'info',
     title: 'Policy Renewal Required',
     message: 'Policy expires in 76 days',
     status: 'pending',
+    llm_priority_score: 40,
+    llm_renewal_strategy: 'Standard renewal timeline - no immediate action needed',
+    llm_key_actions: ['Add to renewal calendar', 'Review in 30 days'],
     created_at: new Date().toISOString(),
   },
 ];
@@ -109,11 +129,59 @@ export default function AIAssistantPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const [selectedModel, setSelectedModel] = useState<'GPT-5' | 'GPT-4' | 'Claude'>('GPT-5');
 
   // View state - when viewing a specific task's AI response
   const [taskView, setTaskView] = useState<TaskViewState | null>(null);
 
+  // File input refs for attachments
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Handler functions for chat input buttons
+  const handleAttach = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileNames = Array.from(files).map((f) => f.name).join(', ');
+      alert(`Files selected: ${fileNames}\n\nFile upload functionality coming soon.`);
+      e.target.value = '';
+    }
+  }, []);
+
+  const handleWebSearch = useCallback(() => {
+    const searchEnabled = !input.trim();
+    if (searchEnabled) {
+      alert('Web search enabled. Enter your query and the AI will search the web for relevant information.');
+    } else {
+      setInput((prev) => `[Web Search] ${prev}`);
+    }
+  }, [input]);
+
+  const handleFeedback = useCallback(() => {
+    alert('Thank you for your feedback! This feature will allow you to rate AI responses and help improve the system.');
+  }, []);
+
+  const handleImageUpload = useCallback(() => {
+    imageInputRef.current?.click();
+  }, []);
+
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileNames = Array.from(files).map((f) => f.name).join(', ');
+      alert(`Images selected: ${fileNames}\n\nImage upload functionality coming soon.`);
+      e.target.value = '';
+    }
+  }, []);
+
+  const handleModelChange = useCallback((model: 'GPT-5' | 'GPT-4' | 'Claude') => {
+    setSelectedModel(model);
+  }, []);
 
   // Fetch data
   useEffect(() => {
@@ -322,8 +390,32 @@ export default function AIAssistantPage() {
             onKeyDown={handleKeyDown}
             isLoading={isLoading}
             inputRef={inputRef}
+            onAttach={handleAttach}
+            onWebSearch={handleWebSearch}
+            onFeedback={handleFeedback}
+            onImageUpload={handleImageUpload}
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
           />
         </div>
+
+        {/* Hidden file inputs */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          multiple
+          accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
+        />
+        <input
+          type="file"
+          ref={imageInputRef}
+          onChange={handleImageChange}
+          className="hidden"
+          multiple
+          accept="image/*"
+        />
       </div>
     );
   }
@@ -467,13 +559,39 @@ export default function AIAssistantPage() {
           onKeyDown={handleKeyDown}
           isLoading={isLoading}
           inputRef={inputRef}
+          onAttach={handleAttach}
+          onWebSearch={handleWebSearch}
+          onFeedback={handleFeedback}
+          onImageUpload={handleImageUpload}
+          selectedModel={selectedModel}
+          onModelChange={handleModelChange}
         />
       </div>
+
+      {/* Hidden file inputs */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        multiple
+        accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
+      />
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleImageChange}
+        className="hidden"
+        multiple
+        accept="image/*"
+      />
     </div>
   );
 }
 
 // Chat Input Component
+type ModelOption = 'GPT-5' | 'GPT-4' | 'Claude';
+
 interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -481,9 +599,44 @@ interface ChatInputProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
   isLoading: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  onAttach?: () => void;
+  onWebSearch?: () => void;
+  onFeedback?: () => void;
+  onImageUpload?: () => void;
+  selectedModel?: ModelOption;
+  onModelChange?: (model: ModelOption) => void;
 }
 
-function ChatInput({ value, onChange, onSend, onKeyDown, isLoading, inputRef }: ChatInputProps) {
+function ChatInput({
+  value,
+  onChange,
+  onSend,
+  onKeyDown,
+  isLoading,
+  inputRef,
+  onAttach,
+  onWebSearch,
+  onFeedback,
+  onImageUpload,
+  selectedModel = 'GPT-5',
+  onModelChange,
+}: ChatInputProps) {
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close model menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
+        setShowModelMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const modelOptions: ModelOption[] = ['GPT-5', 'GPT-4', 'Claude'];
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-transparent">
@@ -501,21 +654,61 @@ function ChatInput({ value, onChange, onSend, onKeyDown, isLoading, inputRef }: 
         {/* Action Buttons */}
         <div className="flex items-center gap-1">
           {/* Model Selector */}
-          <div className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-lg">
-            <span>GPT-5</span>
-            <ChevronDown className="h-3 w-3" />
+          <div className="relative" ref={modelMenuRef}>
+            <button
+              onClick={() => setShowModelMenu(!showModelMenu)}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <span>{selectedModel}</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            {showModelMenu && (
+              <div className="absolute bottom-full mb-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[100px] z-10">
+                {modelOptions.map((model) => (
+                  <button
+                    key={model}
+                    onClick={() => {
+                      onModelChange?.(model);
+                      setShowModelMenu(false);
+                    }}
+                    className={cn(
+                      'w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 transition-colors',
+                      model === selectedModel ? 'text-teal-600 font-medium' : 'text-gray-600'
+                    )}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+          <button
+            onClick={onAttach}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Attach file"
+          >
             <Paperclip className="h-4 w-4" />
           </button>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+          <button
+            onClick={onWebSearch}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Web search"
+          >
             <Globe className="h-4 w-4" />
           </button>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+          <button
+            onClick={onFeedback}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Give feedback"
+          >
             <ThumbsUp className="h-4 w-4" />
           </button>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
+          <button
+            onClick={onImageUpload}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Upload image"
+          >
             <Image className="h-4 w-4" />
           </button>
 

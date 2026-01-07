@@ -102,6 +102,18 @@ export async function apiDelete(endpoint: string): Promise<void> {
   // DELETE returns 204 No Content, so don't try to parse response
 }
 
+export async function apiPatch<T>(endpoint: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  return handleResponse<T>(response);
+}
+
 // ============ DASHBOARD API ============
 
 // Nested structures matching backend response
@@ -1355,6 +1367,155 @@ export const adminApi = {
   resetAllData: () => apiPost<ResetResponse>('/admin/reset'),
 };
 
+// ============ CLAIMS API ============
+
+export type ClaimStatus = 'open' | 'in_review' | 'processing' | 'closed' | 'pending' | 'denied';
+
+export interface ClaimContact {
+  role: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface ClaimAttachmentGroup {
+  category: string;
+  display_name: string;
+  count: number;
+  attachments: Array<{
+    id: string;
+    filename: string;
+    file_size: number | null;
+  }>;
+}
+
+export interface ClaimTimelineStep {
+  status: ClaimStatus;
+  label: string;
+  step_date: string | null;
+  is_current: boolean;
+  is_completed: boolean;
+}
+
+export interface ClaimListItem {
+  id: string;
+  claim_number: string | null;
+  property_id: string;
+  property_name: string | null;
+  status: string | null;
+  claim_type: string | null;
+  date_of_loss: string | null;
+  date_reported: string | null;
+  total_incurred: number | null;
+  attachment_count: number;
+  days_open: number | null;
+  has_alert: boolean;
+  created_at: string;
+}
+
+export interface ClaimDetail extends ClaimListItem {
+  policy_id: string | null;
+  litigation_status: string | null;
+  date_closed: string | null;
+  description: string | null;
+  cause_of_loss: string | null;
+  location_description: string | null;
+  location_address: string | null;
+  location_name: string | null;
+  carrier_name: string | null;
+  paid_loss: number | null;
+  paid_expense: number | null;
+  paid_medical: number | null;
+  paid_indemnity: number | null;
+  total_paid: number | null;
+  reserve_loss: number | null;
+  reserve_expense: number | null;
+  reserve_medical: number | null;
+  reserve_indemnity: number | null;
+  total_reserve: number | null;
+  incurred_loss: number | null;
+  incurred_expense: number | null;
+  total_incurred: number | null;
+  deductible_applied: number | null;
+  deductible_recovered: number | null;
+  salvage_amount: number | null;
+  subrogation_amount: number | null;
+  net_incurred: number | null;
+  claimant_name: string | null;
+  claimant_type: string | null;
+  injury_description: string | null;
+  notes: string | null;
+  timeline: ClaimTimelineStep[];
+  contacts: ClaimContact[];
+  attachment_groups: ClaimAttachmentGroup[];
+  updated_at: string | null;
+}
+
+export interface ClaimListResponse {
+  claims: ClaimListItem[];
+  total: number;
+  by_status: Record<string, number>;
+}
+
+export interface ClaimKanbanResponse {
+  open: ClaimListItem[];
+  in_review: ClaimListItem[];
+  processing: ClaimListItem[];
+  closed: ClaimListItem[];
+  total: number;
+}
+
+export interface ClaimSummary {
+  total_claims: number;
+  open_claims: number;
+  closed_claims: number;
+  total_incurred: number;
+  total_paid: number;
+  total_reserved: number;
+  avg_days_to_close: number | null;
+}
+
+export interface ClaimCreateRequest {
+  property_id: string;
+  claim_number?: string;
+  claim_type?: string;
+  status?: ClaimStatus;
+  date_of_loss?: string;
+  date_reported?: string;
+  description?: string;
+  cause_of_loss?: string;
+  carrier_name?: string;
+  location_address?: string;
+  claimant_name?: string;
+  notes?: string;
+}
+
+export interface ClaimUpdateRequest {
+  status?: ClaimStatus;
+  notes?: string;
+  description?: string;
+}
+
+export const claimsApi = {
+  list: (params?: { property_id?: string; status?: string; year?: number; limit?: number; offset?: number }) =>
+    apiGet<ClaimListResponse>('/claims', params as Record<string, string | undefined>),
+
+  getKanban: (params?: { property_id?: string; year?: number }) =>
+    apiGet<ClaimKanbanResponse>('/claims/kanban', params as Record<string, string | undefined>),
+
+  getSummary: (propertyId?: string) =>
+    apiGet<ClaimSummary>('/claims/summary', propertyId ? { property_id: propertyId } : undefined),
+
+  get: (claimId: string) => apiGet<ClaimDetail>(`/claims/${claimId}`),
+
+  create: (data: ClaimCreateRequest) => apiPost<ClaimDetail>('/claims', data),
+
+  update: (claimId: string, data: ClaimUpdateRequest) =>
+    apiPatch<ClaimDetail>(`/claims/${claimId}`, data),
+
+  delete: (claimId: string) => apiDelete(`/claims/${claimId}`),
+};
+
 export default {
   dashboard: dashboardApi,
   properties: propertiesApi,
@@ -1366,5 +1527,6 @@ export default {
   chat: chatApi,
   enrichment: enrichmentApi,
   admin: adminApi,
+  claims: claimsApi,
   streamChat,
 };
