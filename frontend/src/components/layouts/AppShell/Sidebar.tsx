@@ -17,6 +17,7 @@ import {
   Brain,
   BarChart3,
   ClipboardList,
+  Calculator,
 } from 'lucide-react';
 import { Logo, LogoIcon } from '@/components/shared/Logo';
 
@@ -37,6 +38,7 @@ const navigation: Array<{
   { name: 'Gaps', href: '/gaps', icon: AlertTriangle },
   { name: 'Compliance', href: '/compliance', icon: Shield },
   { name: 'Renewals', href: '/renewals', icon: RefreshCw },
+  { name: 'Acquisitions', href: '/acquisitions', icon: Calculator },
   { name: 'AI Assistant', href: '/chat', icon: Brain },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Claims', href: '/claims', icon: ClipboardList },

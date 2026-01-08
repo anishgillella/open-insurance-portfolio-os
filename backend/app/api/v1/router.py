@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    acquisitions,
     admin,
     chat,
     claims,
@@ -24,6 +25,9 @@ api_router = APIRouter()
 
 # Include endpoint routers
 api_router.include_router(health.router, tags=["health"])
+api_router.include_router(
+    acquisitions.router, prefix="/acquisitions", tags=["acquisitions"]
+)
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
