@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Search, Link as LinkIcon } from 'lucide-react';
+import { Search, Link as LinkIcon, Zap } from 'lucide-react';
 import { Button } from '@/components/primitives';
 import type { AcquisitionRequest } from '@/lib/api/client';
 
@@ -23,6 +23,66 @@ const initialFormState: AcquisitionRequest = {
   estimated_annual_income: 0,
   notes: '',
 };
+
+// Example properties for quick testing
+const EXAMPLE_PROPERTIES: Array<{
+  name: string;
+  description: string;
+  color: string;
+  data: AcquisitionRequest;
+}> = [
+  {
+    name: 'Modern Midwest',
+    description: 'New construction, low risk',
+    color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
+    data: {
+      address: '1500 Parkview Dr, Fort Wayne, IN 46845',
+      link: '',
+      unit_count: 180,
+      vintage: 2018,
+      stories: 3,
+      total_buildings: 8,
+      total_sf: 175000,
+      current_occupancy_pct: 94,
+      estimated_annual_income: 2800000,
+      notes: 'Recently built garden-style community with modern amenities. Close to shopping and interstate access.',
+    },
+  },
+  {
+    name: 'Lakefront Vintage',
+    description: 'Older property, flood risk',
+    color: 'bg-amber-100 text-amber-700 hover:bg-amber-200',
+    data: {
+      address: '200 Lakeside Blvd, Indianapolis, IN 46220',
+      link: '',
+      unit_count: 64,
+      vintage: 1962,
+      stories: 4,
+      total_buildings: 1,
+      total_sf: 58000,
+      current_occupancy_pct: 78,
+      estimated_annual_income: 720000,
+      notes: 'Historic lakefront property with water views. Built in 1962 with original knob-and-tube wiring and galvanized plumbing. Located in flood zone. Flat tar roof needs replacement. Currently 78% occupied due to ongoing renovations.',
+    },
+  },
+  {
+    name: 'Florida Coastal',
+    description: 'High wind/hurricane zone',
+    color: 'bg-rose-100 text-rose-700 hover:bg-rose-200',
+    data: {
+      address: '8500 Ocean Drive, Miami Beach, FL 33139',
+      link: '',
+      unit_count: 120,
+      vintage: 2005,
+      stories: 12,
+      total_buildings: 1,
+      total_sf: 145000,
+      current_occupancy_pct: 91,
+      estimated_annual_income: 4200000,
+      notes: 'Beachfront high-rise condo conversion. 2 blocks from Atlantic Ocean. Impact-rated windows installed 2019. Concrete construction.',
+    },
+  },
+];
 
 export function AcquisitionForm({
   onCalculate,
@@ -52,8 +112,41 @@ export function AcquisitionForm({
     onReset();
   }, [onReset]);
 
+  const handleLoadExample = useCallback((example: AcquisitionRequest) => {
+    setFormData(example);
+  }, []);
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 overflow-y-auto">
+      {/* Quick Examples Section */}
+      <div className="mb-6 pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="h-4 w-4 text-teal-600" />
+          <span className="text-sm font-medium text-gray-700">Quick Examples</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {EXAMPLE_PROPERTIES.map((example) => (
+            <button
+              key={example.name}
+              type="button"
+              onClick={() => handleLoadExample(example.data)}
+              disabled={isLoading}
+              className={`
+                px-3 py-1.5 rounded-full text-xs font-medium transition-colors
+                ${example.color}
+                disabled:opacity-50 disabled:cursor-not-allowed
+              `}
+              title={example.description}
+            >
+              {example.name}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          Click an example to auto-fill the form and see different LLM responses
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Address */}
         <div>
