@@ -1516,6 +1516,61 @@ export const claimsApi = {
   delete: (claimId: string) => apiDelete(`/claims/${claimId}`),
 };
 
+// ============ ACQUISITIONS API ============
+
+export interface AcquisitionRequest {
+  address: string;
+  link?: string;
+  unit_count: number;
+  vintage: number;
+  stories: number;
+  total_buildings: number;
+  total_sf: number;
+  current_occupancy_pct: number;
+  estimated_annual_income: number;
+  notes?: string;
+}
+
+export interface PremiumRange {
+  low: number;
+  mid: number;
+  high: number;
+}
+
+export interface ComparableProperty {
+  property_id: string;
+  name: string;
+  address: string;
+  premium_per_unit: number;
+  premium_date: string;
+  similarity_score: number;
+  similarity_reason?: string;
+}
+
+export interface RiskFactor {
+  name: string;
+  severity: 'info' | 'warning' | 'critical';
+  reason?: string;
+}
+
+export interface AcquisitionResult {
+  is_unique: boolean;
+  uniqueness_reason?: string;
+  confidence: 'high' | 'medium' | 'low';
+  premium_range?: PremiumRange;
+  premium_range_label?: string;
+  preliminary_estimate?: PremiumRange;
+  message?: string;
+  comparables: ComparableProperty[];
+  risk_factors: RiskFactor[];
+  llm_explanation?: string;
+}
+
+export const acquisitionsApi = {
+  calculate: (data: AcquisitionRequest) =>
+    apiPost<AcquisitionResult>('/acquisitions/calculate', data),
+};
+
 export default {
   dashboard: dashboardApi,
   properties: propertiesApi,
@@ -1528,5 +1583,6 @@ export default {
   enrichment: enrichmentApi,
   admin: adminApi,
   claims: claimsApi,
+  acquisitions: acquisitionsApi,
   streamChat,
 };
